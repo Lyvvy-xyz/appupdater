@@ -1,0 +1,28 @@
+# Old versions / backups
+AppUpdaterV506.ps1
+AppupdaterV507.ps1
+AppupdaterV507bak.ps1
+
+# Runtime artifacts & logs
+*.log
+*.exe
+*.intunewin
+
+# App manifest (user-specific / generated)
+appVersions.xml
+
+# External deployment scripts
+Deploy-NetDocuments_v5.ps1
+PSAppDeployToolkit/
+
+# Tool configs
+.claude/
+.superpowers/
+.vscode/
+
+# Temp subdirectory
+Temp/
+
+# Misc
+AGENTS.md
+AppUpdater.log
