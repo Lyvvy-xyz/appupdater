@@ -1,213 +1,403 @@
-# AppUpdater
+<div align="center">
 
-![Version](https://img.shields.io/badge/version-50.9.0-blue)
-![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-informational?logo=windows)
-![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?logo=powershell&logoColor=white)
-![Intune](https://img.shields.io/badge/Microsoft-Intune-0078d4?logo=microsoft&logoColor=white)
-![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)
-![License](https://img.shields.io/badge/license-Private-red)
+# 📦 AppUpdater
 
-> **WPF-based PowerShell tool for generating Microsoft Intune Win32 packages** — with an optional Cloudflare Worker backend for centralized manifest hosting, authentication, device telemetry, and a live status dashboard.
+**Zero-infrastructure Intune Win32 packaging for Windows IT admins**
 
----
+Builds deployment-ready packages from any `.exe` or `.msi` installer — and optionally connects to a Cloudflare Worker it deploys itself, giving you a live web dashboard, per-device telemetry, and TOTP-protected authentication.
 
-## ✨ Features
+<br/>
 
-- 🖥️ **Dark-theme WPF GUI** — keyboard-navigable interface with styled dialogs, pickers, and wizards
-- 📦 **Auto-generated artifacts** — produces `.intunewin` packages, registry-based detection scripts, and deploy scripts per app
-- ☁️ **Cloudflare Worker backend** — optional cloud mode with manifest hosting, web dashboard, and device telemetry
-- 🔐 **TOTP MFA** — time-based one-time password enrollment with QR-code flow
-- 🔑 **Windows Credential Manager** — bearer tokens stored via DPAPI, never on disk in plaintext
-- 🔒 **HMAC-signed sessions** — tamper-resistant cookies with 24 h TTL and rate-limited login
-- 🛡️ **Authenticode binary verification** — downloaded executables checked for valid Microsoft signatures before use
-- 📡 **Per-app event telemetry** — device-side events sent to Worker with HMAC secrets and rate limiting
-- 🔄 **Offline mode** — full package generation without any cloud dependency
-- 🧙 **First-run wizard** — guided Cloudflare setup or offline fallback on first launch
+![Version](https://img.shields.io/badge/version-50.9.0-blue?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-informational?style=flat-square&logo=windows&logoColor=white)
+![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=flat-square&logo=powershell&logoColor=white)
+![Intune](https://img.shields.io/badge/Microsoft-Intune-0078d4?style=flat-square&logo=microsoft&logoColor=white)
+![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white)
+![License](https://img.shields.io/badge/license-Private-red?style=flat-square)
+
+<br/>
+
+[Overview](#-overview) · [Quick Start](#-quick-start) · [The Interface](#️-the-interface) · [Building a Package](#-building-a-package) · [Cloudflare Mode](#️-cloudflare-mode) · [Security](#-security) · [Reference](#-reference)
+
+</div>
 
 ---
 
-## 🔀 Operating Modes
+## 🔍 Overview
 
-|  | ☁️ Cloudflare-Connected | 💾 Offline |
+AppUpdater runs on an IT admin's Windows machine and turns any installer into a complete Intune Win32 deployment in minutes. It auto-downloads every tool it needs — including `IntuneWinAppUtil.exe` and `PSAppDeployToolkit` — so there is nothing to install beforehand.
+
+Each build produces three output files ready for Intune:
+
+- A **`.intunewin` package** for upload to the Intune portal
+- A **detection script** that checks for the app using scheduled task + file existence
+- A **deploy script** that provisions a self-updating agent on the target device — creating a scheduled task, log files with proper ACLs, and a desktop shortcut that any user can click without needing admin rights
+
+> [!TIP]
+> **Everything is self-contained.** AppUpdater downloads `IntuneWinAppUtil.exe` from Microsoft's official GitHub repository on first build, verifies the Authenticode signature, and reuses it from then on. PSAppDeployToolkit is cached the same way. You only need PowerShell 5.1 and admin rights.
+
+### Feature Highlights
+
+<table>
+<tr>
+<td>🖥️ <strong>Dark-theme WPF GUI</strong> with keyboard shortcuts</td>
+<td>☁️ <strong>Optional Cloudflare Worker</strong> backend — auto-deployed</td>
+</tr>
+<tr>
+<td>📦 <strong>Auto-generates</strong> <code>.intunewin</code> + detect + deploy scripts</td>
+<td>🔐 <strong>TOTP MFA</strong> for the web dashboard</td>
+</tr>
+<tr>
+<td>🤖 <strong>Auto-downloads</strong> IntuneWinAppUtil &amp; PSAppDeployToolkit</td>
+<td>🔑 <strong>Windows Credential Manager</strong> (DPAPI) token storage</td>
+</tr>
+<tr>
+<td>🛡️ <strong>Authenticode verification</strong> of all downloaded binaries</td>
+<td>📡 <strong>Per-app event telemetry</strong> with HMAC secrets</td>
+</tr>
+<tr>
+<td>🔄 <strong>Full offline mode</strong> — no cloud required</td>
+<td>🧙 <strong>Guided first-run wizard</strong></td>
+</tr>
+<tr>
+<td>📋 <strong>PSADT v3 &amp; v4 export</strong> for close-apps prompts</td>
+<td>🔒 <strong>HMAC-signed sessions</strong>, rate-limited login</td>
+</tr>
+</table>
+
+### Operating Modes
+
+| | ☁️ Cloudflare-Connected | 💾 Offline |
 |---|---|---|
 | **Manifest hosting** | Cloudflare KV (`APP_MANIFEST` namespace) | Local `appVersions.xml` |
 | **Authentication** | TOTP + PBKDF2-SHA256 session | N/A |
-| **Device telemetry** | Per-device event log via `/event` | None |
-| **Web dashboard** | `/status` page on Worker subdomain | None |
+| **Device telemetry** | Per-device event log via Worker | None |
+| **Web dashboard** | `https://{worker}.workers.dev/status` | None |
 | **Token storage** | Windows Credential Manager (machine scope) | N/A |
-| **Setup required** | Cloudflare API token + account | None |
-| **Launch flag** | *(default)* | `-Offline` switch |
-
----
-
-## 🖥️ Requirements
-
-| Requirement | Detail |
-|---|---|
-| **OS** | Windows 10 / Windows 11 |
-| **PowerShell** | 5.1 or later |
-| **IntuneWinAppUtil.exe** | Place in the same directory as the script, or add to `$env:PATH`. [Download ↗](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool) |
-| **Cloudflare account** | Optional — required for cloud-connected mode only |
-| **Admin rights** | Required for ACL enforcement and Credential Manager access |
+| **Setup** | Cloudflare API token required (2 min wizard) | None |
+| **Launch** | `.\AppUpdaterV509.ps1` | `.\AppUpdaterV509.ps1 -Offline` |
 
 ---
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+| | |
+|---|---|
+| **OS** | Windows 10 or Windows 11 |
+| **PowerShell** | 5.1 or later *(already installed on all modern Windows)* |
+| **Admin rights** | Required for ACL enforcement and Credential Manager access |
+| **Cloudflare account** | Optional — cloud-connected mode only |
+
+> [!NOTE]
+> `IntuneWinAppUtil.exe` and `PSAppDeployToolkit` are **automatically downloaded and verified** on first use. You do not need to install or find them manually.
+
+### Launch
+
 ```powershell
-# Cloud-connected mode (default)
+# Cloud-connected mode (default — recommended)
 .\AppUpdaterV509.ps1
 
-# Offline mode — no Cloudflare required
+# Provide an installer directly — skips the file picker
+.\AppUpdaterV509.ps1 -InstallerPath "C:\Downloads\setup.exe"
+
+# Offline mode — no Cloudflare account required
 .\AppUpdaterV509.ps1 -Offline
 ```
 
-On first launch a setup wizard runs automatically:
+### First Launch Wizard
 
-1. **Choose mode** — Cloudflare-connected or Offline
-2. **If Cloudflare:** Enter your API token and organization name → the script deploys the Worker and configures KV
-3. **Set dashboard password** (≥ 12 chars, ≥ 1 letter + ≥ 1 digit)
-4. **Optionally enroll TOTP** for two-factor login to the web dashboard
+On first run a one-time setup wizard appears:
+
+```
+Step 1  Choose mode ─────────────────────────────────────────
+        [ Connect to Cloudflare ]  (recommended)
+        [ Build packages only   ]  (offline)
+
+Step 2  Enter your organisation name  (shown in device popups)
+        Default: "IT Services"
+
+Step 3  ─ If Cloudflare ─────────────────────────────────────
+        Cloudflare API token + 7-step automated deployment
+        Set dashboard password  (≥ 12 chars, 1 letter + 1 digit)
+        Optionally enrol TOTP MFA
+
+Step 4  Main menu opens — you're ready to build
+```
+
+> [!IMPORTANT]
+> The wizard only runs once. Settings are saved to `.appupdater-config` in the script directory with SYSTEM + Administrators–only ACLs. To redo setup, use **Main Menu → Full reset**.
 
 ---
 
-## 🗂️ GUI Overview
+## 🗺️ Application Flow
 
-The main menu is keyboard-driven. Press the number key or click a button:
+```mermaid
+flowchart TD
+    A([Launch AppUpdaterV509.ps1]) --> B{First run?}
+    B -->|Yes| C[First-run wizard]
+    C --> D{Mode?}
+    D -->|Cloudflare| E[7-step Cloudflare setup]
+    D -->|Offline| F[Main menu]
+    E --> F
 
-| Key | Button | Action |
-|---|---|---|
-| `1` / `D1` | 🟢 **Build app package** | Downloads installer → inspects it → generates `.intunewin` + detect/deploy scripts |
-| `2` / `D2` | **Open Output folder** | Opens `C:\ProgramData\AppUpdater\_output\` in Explorer |
-| `3` / `D3` | **Open status page** *or* **Connect to Cloudflare** | Opens the Worker dashboard in browser, or launches the Cloudflare setup wizard |
-| `4` / `D4` | **Worker / app options** | Manage apps, reset dashboard password, rotate bearer token *(disabled in offline mode)* |
-| `5` / `D5` | **Full reset** | Wipes all local configuration and credentials |
-| `6` / `D6` | **Manage local manifest** | Opens the manifest editor *(disabled if no local XML found)* |
-| `Esc` | **Exit** | Close the application |
+    F --> G{Menu choice}
+    G -->|1 - Build| H[Pick installer]
+    G -->|2 - Output| I[Open output folder]
+    G -->|3 - Status| J[Open Worker dashboard]
+    G -->|4 - Options| K[Worker / app options]
+    G -->|5 - Reset| L[Full reset]
+    G -->|6 - Manifest| M[Manifest manager]
+
+    H --> N[Auto-inspect installer]
+    N --> O[App form — review & edit fields]
+    O --> P{Output type}
+    P -->|.intunewin| Q[Download & verify IntuneWinAppUtil\nCreate .intunewin package]
+    P -->|Run locally| R[Execute Deploy script as admin]
+    P -->|Scripts only| S[Save Detect + Deploy .ps1 files]
+    P -->|PSADT export| T[Download & cache PSAppDeployToolkit\nWrap with v3 or v4]
+
+    Q --> U[Push manifest to Worker]
+    R --> U
+    S --> U
+    T --> U
+    U --> F
+```
 
 ---
 
-## 📦 Generated Artifacts
+## 🖥️ The Interface
+
+### Main Menu
+
+```
+╔══════════════════════════════════════╗
+║        AppUpdater  v50.9.0           ║
+╠══════════════════════════════════════╣
+║  [1]  Build app package              ║
+║  [2]  Open Output folder             ║
+║  [3]  Open status page               ║
+║  [4]  Worker / app options           ║
+║  [5]  Full reset                     ║
+║  [6]  Manage local manifest          ║
+║ [Esc] Exit                           ║
+╚══════════════════════════════════════╝
+```
+
+| Key | Button | Action | Notes |
+|---|---|---|---|
+| <kbd>1</kbd> | **Build app package** | Full package build wizard | Core feature |
+| <kbd>2</kbd> | **Open Output folder** | Opens `C:\ProgramData\AppUpdater\_output\` in Explorer | |
+| <kbd>3</kbd> | **Open status page** *or* **Connect to Cloudflare** | Opens Worker dashboard in browser, or runs setup wizard if not yet connected | Label changes based on connection state |
+| <kbd>4</kbd> | **Worker / app options** | Manage apps, reset password, rotate bearer token | Disabled in offline mode |
+| <kbd>5</kbd> | **Full reset** | Wipes all config, credentials, and Worker connection | Triggers re-run of first-launch wizard |
+| <kbd>6</kbd> | **Manage local manifest** | Opens the built-in manifest editor | Disabled if no `appVersions.xml` found |
+| <kbd>Esc</kbd> | **Exit** | Close AppUpdater | |
+
+---
+
+## 📦 Building a Package
+
+### Phase 1 — Pick Your Installer
+
+- Browse for an `.exe` or `.msi` using the GUI file picker
+- Or pass a path directly with `-InstallerPath` to skip the picker entirely
+- MSI and EXE formats are both supported; type is detected automatically
+
+### Phase 2 — Auto-Detection
+
+AppUpdater inspects the installer and pre-fills every field. All fields are editable before building.
+
+| Field | How it's determined |
+|---|---|
+| **App ID** | Derived from filename — alphanumeric + `. _ -`, max 64 chars, must start with letter or digit |
+| **Display Name** | Read from file description metadata |
+| **Silent Args** | Detected from installer type — MSI always gets `/qn /norestart` |
+| **Registry Display Name** | Queried from the Windows uninstall registry |
+| **Processes to Kill** | Executable names found alongside the installer |
+
+### Phase 3 — App Form
 
 <details>
-<summary><strong>Build output per app</strong> — click to expand</summary>
+<summary><strong>Full list of form fields — click to expand</strong></summary>
 
-Each app build writes to `C:\ProgramData\AppUpdater\_output\{AppID}\`:
+**Core Identity**
 
-| File | Purpose |
+| Field | Required | Notes |
+|---|---|---|
+| App ID | ✅ | Alphanumeric + `. _ -`, ≤ 64 chars. Locked once the app exists in the manifest |
+| Display Name | ✅ | Shown in the desktop shortcut and update popups |
+
+**Download**
+
+| Field | Required | Notes |
+|---|---|---|
+| Primary Download URL | ✅ | HTTPS only. The download is Authenticode-verified before install |
+| Fallback URL | ❌ | HTTPS only. Used if primary fails |
+
+**Installation**
+
+| Field | Required | Notes |
+|---|---|---|
+| Silent Install Arguments | ✅ | e.g. `/quiet /norestart`. Auto-detected for MSIs |
+| Registry Display Name | ✅ | Must exactly match the entry in **Add or Remove Programs** — used in the detection script |
+
+**Advanced** *(auto-detected, optional to change)*
+
+| Field | Notes |
+|---|---|
+| Processes to Kill | Comma-separated exe names (no `.exe`). Closed before install runs |
+| Launch exe after install | Path to exe to open when install completes |
+| Expected Publisher | Authenticode signer CN — verified on every device download |
+| SHA-256 Hash | 64 hex chars. Enables hash check before install. Offline packages only |
+
+**Package Type**
+
+| Type | Behaviour |
+|---|---|
+| **Runtime** *(default)* | Installs a self-updating agent: scheduled task, logs, desktop shortcut. App keeps itself current |
+| **Simple** | Bundles the installer directly — one-shot install, no runtime components left on the device |
+
+</details>
+
+### Phase 4 — Output Delivery
+
+Choose how to deliver the package after building:
+
+| Option | What happens |
+|---|---|
+| 📦 **Create `.intunewin`** | Downloads `IntuneWinAppUtil.exe` from Microsoft's GitHub (first use only), verifies Authenticode signature, packages everything into a `.intunewin` ready for Intune upload |
+| ▶️ **Run on this machine** | Executes the generated `Deploy-{AppID}.ps1` immediately on the admin machine as administrator |
+| 💾 **Save scripts only** | Writes `Detect-{AppID}.ps1` and `Deploy-{AppID}.ps1` to `C:\ProgramData\AppUpdater\_output\{AppID}\` |
+| 🧰 **Export as PSADT** | Downloads and caches `PSAppDeployToolkit` from GitHub releases (first use only), wraps the deployment with v3 or v4 for close-apps prompts and enterprise UI |
+
+> [!NOTE]
+> `IntuneWinAppUtil.exe` is downloaded from `https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool` on first use, verified against Microsoft's Authenticode certificate, then reused from the script directory. **No manual download required.**
+
+### Phase 5 — Manifest Update
+
+After every build, AppUpdater automatically:
+
+- Merges the app entry into `appVersions.xml`
+- If Cloudflare-connected: pushes the updated manifest to the Worker via `POST /manifest` (bearer-authenticated)
+- Stores a standalone `XMLEntry-{AppID}.xml` in the output folder
+
+---
+
+## 📋 Generated Artifacts
+
+### Build Machine Output
+
+All files land in `C:\ProgramData\AppUpdater\_output\{AppID}\`:
+
+| File | Description |
 |---|---|
 | `{AppID}.intunewin` | Intune Win32 package — upload directly to the Intune portal |
-| `Detect-{AppID}.ps1` | Detection script — registry key check, runs in SYSTEM context |
-| `Deploy-{AppID}.ps1` | Deploy script — downloads and installs silently, runs as admin |
+| `Detect-{AppID}.ps1` | Detection script — exits `0` if deployed, `1` if not |
+| `Deploy-{AppID}.ps1` | Deployment script — runs as SYSTEM via Intune |
+| `XMLEntry-{AppID}.xml` | Standalone manifest entry for this single app |
 
-**Runtime paths installed on enrolled devices:**
+### Detection Logic
+
+```powershell
+# Detect-{AppID}.ps1 — generated by AppUpdater
+$taskExists   = Get-ScheduledTask -TaskName 'AppUpdater-{AppID}' -ErrorAction SilentlyContinue
+$scriptExists = Test-Path 'C:\ProgramData\AppUpdater\{AppID}\{AppID}.ps1'
+
+if ($taskExists -and $scriptExists) { Write-Host 'Detected'; exit 0 } else { exit 1 }
+```
+
+Both the **scheduled task** and the **script file** must exist for detection to pass.
+
+### Deploy Script — What it Does on the Device
+
+<details>
+<summary><strong>All 8 deploy phases — click to expand</strong></summary>
+
+The generated `Deploy-{AppID}.ps1` runs as **SYSTEM** via Intune and performs these phases in order:
+
+**Phase 1 — Enable audit logging**
+
+Enables PowerShell Script Block Logging (`HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging`) so every PowerShell line executed on the device is written to the Windows Event Log (Event ID 4104) for forensic audit.
+
+**Phase 2 — Create folder structure with ACLs**
+
+Creates `C:\ProgramData\AppUpdater\{AppID}\` and `logs\` with strict NTFS permissions enforced via `takeown` and `icacls`:
+
+| Principal | Rights |
+|---|---|
+| `NT AUTHORITY\SYSTEM` | Full control (OI CI F) |
+| `BUILTIN\Administrators` | Full control (OI CI F) |
+| `BUILTIN\Users` | Read & Execute (OI CI RX) |
+
+**Phase 3 — Write the update script**
+
+Decodes and writes the base64-embedded `{AppID}.ps1` (the combined auto-update + UI script) to `C:\ProgramData\AppUpdater\{AppID}\`.
+
+**Phase 4 — Create log files with restricted ACLs**
+
+| File | Access |
+|---|---|
+| `update-detail.log` | SYSTEM + Administrators only — full verbose transcript |
+| `update-status.log` | User-readable — sanitised status lines |
+| `update-task-run.log` | User-readable — run timestamps and outcomes |
+
+**Phase 5 — Create staging folder**
+
+Creates `C:\ProgramData\AppUpdater\{AppID}\staging\` accessible only by SYSTEM and Administrators. Downloaded installers land here temporarily and are cleared after each run.
+
+**Phase 6 — Register the scheduled task**
+
+| Setting | Value |
+|---|---|
+| Task name | `AppUpdater-{AppID}` |
+| Runs as | `NT AUTHORITY\SYSTEM` |
+| Run level | Highest |
+| Execution policy | `RemoteSigned` |
+| Timeout | 2 hours |
+| Battery behaviour | AllowStartIfOnBatteries |
+
+**Phase 7 — Grant users task-trigger rights**
+
+Applies a COM DACL to the scheduled task so standard users can trigger it without UAC elevation. Uses a 15-second retry loop in case Task Scheduler is momentarily busy.
+
+**Phase 8 — Create desktop shortcut**
+
+Creates `C:\Users\Public\Desktop\Update {DisplayName}.lnk`. Falls back to the current user's desktop if Public Desktop is inaccessible.
+
+| Property | Value |
+|---|---|
+| Target | `powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "{AppDir}\{AppID}.ps1"` |
+| Icon | `shell32.dll,270` |
+| Description | `Checks and updates {DisplayName} — no admin rights needed` |
+
+</details>
+
+### Target Device Runtime Paths
 
 | Path | Purpose |
 |---|---|
-| `C:\ProgramData\AppUpdater\{AppID}\{AppID}.ps1` | Persistent update script, kept for re-run |
-| `C:\ProgramData\AppUpdater\{AppID}\logs\` | Per-app structured log directory |
-| `C:\Users\Public\Desktop\Update {DisplayName}.lnk` | Desktop shortcut for manual update trigger |
-
-</details>
-
----
-
-## 📋 App Manifest Format
-
-<details>
-<summary><strong>appVersions.xml schema</strong> — click to expand</summary>
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<AppManifest>
-  <App>
-    <ID>7Zip</ID>                          <!-- Unique identifier, alphanumeric -->
-    <DisplayName>7-Zip</DisplayName>       <!-- Shown in desktop shortcut & popups -->
-    <Version></Version>                    <!-- Auto-populated after build -->
-    <DownloadURL>https://...</DownloadURL> <!-- Direct link to installer (HTTPS only) -->
-    <FallbackURL></FallbackURL>            <!-- Optional secondary download URL -->
-    <SilentArgs>/S</SilentArgs>            <!-- Silent install flags (EXE) or auto for MSI -->
-    <RegistryDisplayName>7-Zip</RegistryDisplayName> <!-- Matches Add/Remove Programs entry -->
-    <ProcessesToKill></ProcessesToKill>    <!-- Comma-separated processes to close before install -->
-    <LaunchExe></LaunchExe>               <!-- Optional: exe to launch after install -->
-  </App>
-  <!-- Add more <App> blocks for additional applications -->
-</AppManifest>
-```
-
-**Notes:**
-- `ID` must be alphanumeric only (`A-Z`, `a-z`, `0-9`) — used as folder and filename
-- `DownloadURL` must be HTTPS; the downloaded binary is Authenticode-verified before use
-- MSI packages have silent args auto-detected (`/qn /norestart`)
-- Multiple `<App>` entries are supported in one manifest file
-
-</details>
+| `C:\ProgramData\AppUpdater\{AppID}\{AppID}.ps1` | Auto-update + UI script, persists on device |
+| `C:\ProgramData\AppUpdater\{AppID}\logs\update-detail.log` | Full verbose log (admin-only) |
+| `C:\ProgramData\AppUpdater\{AppID}\logs\update-status.log` | Sanitised status (user-readable) |
+| `C:\ProgramData\AppUpdater\{AppID}\logs\update-task-run.log` | Run timestamps & outcomes (user-readable) |
+| `C:\ProgramData\AppUpdater\{AppID}\staging\` | Temporary download area, cleared after each run |
+| `C:\Users\Public\Desktop\Update {DisplayName}.lnk` | Desktop shortcut — no admin required |
+| Scheduled Task `AppUpdater-{AppID}` | SYSTEM-level task, user-triggerable without UAC |
 
 ---
 
-## ☁️ Cloudflare Worker API
+## ☁️ Cloudflare Mode
 
-<details>
-<summary><strong>All endpoints</strong> — click to expand</summary>
+Cloudflare mode adds a web dashboard, per-device telemetry, and centralised manifest hosting — all on Cloudflare's free tier. AppUpdater deploys the Worker automatically from your API token.
 
-The embedded Worker is deployed to your Cloudflare account at `https://app-updater.{subdomain}.workers.dev`.
+### 7-Step Setup Wizard
 
-**Auth types:**
-- 🔒 **Session** — HMAC-SHA256 signed cookie (browser / dashboard flows)
-- 🗝️ **Bearer** — `X-Auth-Token` header (PowerShell machine-to-Worker calls)
+> [!IMPORTANT]
+> The wizard runs automatically when you choose "Connect to Cloudflare" on first launch. You only need a Cloudflare API token — everything else is automated.
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/health` | None | Liveness check — returns `200 OK` |
-| `GET` | `/login` | None | Render login page |
-| `POST` | `/login` | None | Submit password (+ TOTP if enrolled) |
-| `POST` | `/logout` | 🔒 Session | Invalidate current session |
-| `POST` | `/logout-all` | 🔒 Session | Invalidate all active sessions |
-| `GET` | `/set-password` | None | First-run password setup page |
-| `POST` | `/set-password` | None | Save initial dashboard password |
-| `GET` | `/change-password` | 🔒 Session | Change password page |
-| `POST` | `/change-password` | 🔒 Session | Update password |
-| `GET` | `/totp-setup` | 🔒 Session | TOTP enrollment page (QR code) |
-| `POST` | `/totp-setup` | 🔒 Session | Confirm TOTP enrollment |
-| `POST` | `/totp-disable` | 🔒 Session | Remove TOTP requirement |
-| `GET` | `/status` | 🔒 Session | Main dashboard — app list + device telemetry |
-| `GET` | `/app/{id}` | 🔒 Session | Per-app detail view + event log |
-| `POST` | `/manifest` | 🗝️ Bearer | Upload/replace app manifest |
-| `DELETE` | `/app/{id}` | 🗝️ Bearer | Remove an app and all its telemetry |
-| `GET` | `/deploy/{id}` | None | Download deploy script for an app |
-| `POST` | `/deploy-store/{id}` | 🗝️ Bearer | Push deploy script from build machine to Worker |
-| `POST` | `/event` | App secret | Ingest telemetry event from enrolled device |
-| `GET` | `/evtsec-export` | 🗝️ Bearer | Export event HMAC secret (for script embedding) |
-
-</details>
-
----
-
-## 🔐 Security Model
-
-| Component | Mechanism |
-|---|---|
-| **Bearer token** | Windows Credential Manager, target `AppUpdater-ManifestToken` (LocalMachine scope, DPAPI-encrypted) |
-| **Dashboard password** | PBKDF2-SHA256, 100 000 iterations, stored only in Cloudflare KV (`auth_password`) |
-| **Session cookie** | HMAC-SHA256 signed, `HttpOnly`, `Secure`, `SameSite=Strict`, 24 h `Max-Age` |
-| **Login rate limit** | 5 failures / IP / 15 minutes, then locked |
-| **TOTP** | RFC 6238 (time-based OTP), secret stored in KV as `totp_secret` |
-| **Event telemetry secret** | 32-byte random base64, per-app, auto-rotates on every Worker re-deploy |
-| **Binary integrity** | Microsoft Authenticode signature verified before any downloaded `.exe` is executed |
-| **Generated scripts** | NTFS ACL–enforced (not Authenticode-signed); deployment share permissions applied via `icacls` |
-| **Script Block Logging** | Enabled at runtime for audit trail |
-
-> **Trust boundary:** Local Administrators can read the Credential Manager token. Limit machine access accordingly.
-
----
-
-## 🔧 Cloudflare Setup
-
-> Skip this section if using **Offline mode**.
-
-### 1 — Create an API Token
-
-Go to [Cloudflare → Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens) and create a token with:
+**Required API token scopes:**
 
 | Permission | Level |
 |---|---|
@@ -215,66 +405,260 @@ Go to [Cloudflare → Profile → API Tokens](https://dash.cloudflare.com/profil
 | Workers KV Storage | Edit |
 | Account Settings | Read |
 
-### 2 — Run the Wizard
+Create your token at [dash.cloudflare.com/profile/api-tokens →](https://dash.cloudflare.com/profile/api-tokens)
 
-Launch the script and choose **Cloudflare-connected** on first run. When prompted:
+<details>
+<summary><strong>What each wizard step does — click to expand</strong></summary>
 
-```
-Cloudflare API Token : <paste token>
-Organization name    : <your org name — shown in update popups>
-```
+| Step | What happens |
+|---|---|
+| **1 / 7 — API Token** | Token validated against `/user/tokens/verify`. Stored in Windows Credential Manager (SYSTEM + Admins only) |
+| **2 / 7 — Account** | Fetches your Cloudflare accounts. If you have more than one, a picker appears. Account ID stored for all subsequent calls |
+| **3 / 7 — Domain** | Fetches your zones. Use the free `*.workers.dev` URL or choose a custom domain + subdomain (default: `updates`) |
+| **4 / 7 — KV Namespace** | Creates (or finds) the `AppUpdater-Manifest` KV namespace that stores app data, sessions, and secrets |
+| **5 / 7 — Deploy Worker** | Uploads the embedded JavaScript Worker via multipart form, binds the KV namespace, enables `workers.dev` routing, stores the bearer token as Worker Secret `AUTH_TOKEN`, and schedules an hourly health-check cron |
+| **6 / 7 — Resolve URL** | Gets your Worker URL. If using a custom domain, provisions the Workers Custom Domain and waits for certificate issuance |
+| **7 / 7 — Auth & Telemetry** | Generates a 32-byte session secret (stored in KV) and a 32-byte event-telemetry secret (stored as Worker Secret `EVTSEC`). Uploads the starter manifest. Opens the dashboard for first-time password setup |
 
-The wizard will:
-1. Validate your token and resolve your Account ID
-2. Create the `APP_MANIFEST` KV namespace
-3. Compile and deploy the embedded Worker
-4. Store the bearer token securely in Windows Credential Manager
-5. Open the dashboard URL in your browser for password setup
+After setup, a `HOW TO USE.txt` file is written to the script directory with your Worker URL and next steps.
 
-### 3 — Set Dashboard Password
+</details>
 
-On first open, set a password (≥ 12 chars, ≥ 1 letter + ≥ 1 digit) and optionally enroll TOTP.
+### What's on the Dashboard
+
+After authenticating at `https://{your-worker}.workers.dev/status`:
+
+- **App list** — every app in the manifest with version and last-seen date
+- **Per-device telemetry** — which devices have checked in, last run time, success/failure
+- **Per-app detail view** — full event log for each enrolled device
+- **Session management** — log out all sessions from any device
+
+### Worker API Reference
+
+<details>
+<summary><strong>All 20 endpoints — click to expand</strong></summary>
+
+**Authentication types:**
+
+- 🔒 **Session cookie** — HMAC-SHA256 signed, browser / dashboard flows
+- 🗝️ **Bearer token** — `X-Auth-Token` header, PowerShell machine-to-Worker calls
+- 📡 **App secret** — per-app HMAC telemetry secret, embedded in deploy scripts
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/health` | None | Liveness check — returns `200 OK` |
+| `GET` | `/login` | None | Render login page |
+| `POST` | `/login` | None | Submit password + TOTP (if enrolled). Rate-limited: 5 failures/IP/15 min |
+| `POST` | `/logout` | 🔒 Session | Invalidate current session |
+| `POST` | `/logout-all` | 🔒 Session | Invalidate **all** active sessions across all devices |
+| `GET` | `/set-password` | None | First-run password setup page |
+| `POST` | `/set-password` | None | Save initial dashboard password |
+| `GET` | `/change-password` | 🔒 Session | Change password form |
+| `POST` | `/change-password` | 🔒 Session | Update dashboard password |
+| `GET` | `/totp-setup` | 🔒 Session | TOTP enrollment page with QR code |
+| `POST` | `/totp-setup` | 🔒 Session | Confirm TOTP enrollment with a valid code |
+| `POST` | `/totp-disable` | 🔒 Session | Remove TOTP requirement |
+| `GET` | `/status` | 🔒 Session | Main dashboard — app list + device telemetry |
+| `GET` | `/app/{id}` | 🔒 Session | Per-app detail view and event log |
+| `POST` | `/manifest` | 🗝️ Bearer | Upload or replace the full app manifest |
+| `DELETE` | `/app/{id}` | 🗝️ Bearer | Remove an app and all its telemetry data |
+| `GET` | `/deploy/{id}` | None | Download deploy script for an app |
+| `POST` | `/deploy-store/{id}` | 🗝️ Bearer | Push a generated deploy script from the build machine |
+| `POST` | `/event` | 📡 App secret | Ingest a telemetry event from an enrolled device |
+| `GET` | `/evtsec-export` | 🗝️ Bearer | Export the event HMAC secret (for embedding in scripts) |
+
+</details>
 
 ---
 
-## 📝 Logging
+## 🔐 Security
 
-AppUpdater uses a **three-tier logging system** with restricted ACLs per file:
+AppUpdater was designed for environments where endpoint security matters. Every secret has a defined storage mechanism, trust boundary, and rotation path.
 
-| Tier | Purpose | Location |
+### Security Model
+
+| Component | Mechanism |
+|---|---|
+| **Bearer token** | Windows Credential Manager, target `AppUpdater-ManifestToken`, LocalMachine scope — DPAPI-backed, readable only by SYSTEM and local Administrators |
+| **Dashboard password** | PBKDF2-SHA256, 100 000 iterations, stored only in Cloudflare KV (`auth_password`) — never transmitted in plaintext |
+| **Session cookie** | HMAC-SHA256 signed, `HttpOnly`, `Secure`, `SameSite=Strict`, 24-hour `Max-Age` |
+| **Login rate limiting** | 5 failures per IP per 15 minutes, then locked |
+| **TOTP** | RFC 6238 time-based OTP, secret stored in Cloudflare KV as `totp_secret` |
+| **Event telemetry secret** | 32-byte random base64, per-app, auto-rotates on every Worker re-deploy |
+| **Binary integrity** | Microsoft Authenticode signature verified before any downloaded `.exe` is executed |
+| **Config file** | `.appupdater-config` locked to SYSTEM + Administrators via `icacls` — no standard user read access |
+| **Script Block Logging** | Enabled at runtime on target devices — all PowerShell logged to Event ID 4104 |
+| **Generated scripts** | NTFS ACL–enforced via `icacls` and `takeown` — no Authenticode signing |
+
+> [!WARNING]
+> Local Administrators on the build machine can read the bearer token from Windows Credential Manager. Limit local admin access to the machine running AppUpdater accordingly.
+
+### Bearer Token Rotation
+
+The bearer token (`X-Auth-Token`) authenticates all PowerShell calls from the build machine to the Worker. To rotate it:
+
+1. Open **Main Menu → Worker / app options → Reset bearer token**
+2. AppUpdater generates a new token, stores it in Credential Manager, and updates the Worker Secret (`AUTH_TOKEN`) — all in one step, no manual Cloudflare configuration required
+
+### Session Security
+
+Sessions are HMAC-SHA256 signed with a 32-byte secret stored only in Cloudflare KV. The secret is generated during wizard setup and never exposed through the API. To invalidate all active sessions (e.g. after a suspected credential compromise), use **POST /logout-all** from the dashboard.
+
+### Binary Verification
+
+Every binary AppUpdater downloads — `IntuneWinAppUtil.exe`, app installers, PSADT archives — is verified before use:
+
+- **Authenticode** signature must be present and valid
+- **Publisher** must match the expected signer (configurable per-app via the *Expected Publisher* field)
+- **TLS 1.2+** enforced for all downloads via `[Net.ServicePointManager]::SecurityProtocol`
+- Any download that fails verification is deleted immediately and the operation is aborted
+
+---
+
+## 📁 Reference
+
+### App Manifest Format
+
+<details>
+<summary><strong>appVersions.xml schema — click to expand</strong></summary>
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<AppManifest>
+  <App>
+    <!-- Required: unique identifier. Alphanumeric + ._- only, max 64 chars,
+         must start with a letter or digit. Used as folder name, task name,
+         and script filename on target devices. -->
+    <ID>SevenZip</ID>
+
+    <!-- Required: shown in desktop shortcut label and update popups on devices -->
+    <DisplayName>7-Zip</DisplayName>
+
+    <!-- Auto-populated after first build. Leave blank on creation. -->
+    <Version></Version>
+
+    <!-- Required: HTTPS direct-download link. Authenticode-verified on device before install. -->
+    <DownloadURL>https://example.com/7z2301-x64.exe</DownloadURL>
+
+    <!-- Optional: HTTPS fallback URL if primary fails -->
+    <FallbackURL></FallbackURL>
+
+    <!-- Required: silent install flags. MSIs always receive /qn /norestart automatically. -->
+    <SilentArgs>/S</SilentArgs>
+
+    <!-- Required: must exactly match the Add or Remove Programs display name.
+         Used in the generated detection script registry check. -->
+    <RegistryDisplayName>7-Zip</RegistryDisplayName>
+
+    <!-- Optional: comma-separated exe names (no .exe extension) to close before install -->
+    <ProcessesToKill>7zFM,7zG</ProcessesToKill>
+
+    <!-- Optional: full path to exe to launch after install completes -->
+    <LaunchExe></LaunchExe>
+  </App>
+
+  <!-- Add more <App> entries for additional applications -->
+</AppManifest>
+```
+
+</details>
+
+### Script Parameters
+
+```powershell
+.\AppUpdaterV509.ps1 [-InstallerPath <string>] [-Offline]
+```
+
+| Parameter | Type | Description |
 |---|---|---|
-| **Detail** | Full verbose trace of all operations | `AppUpdater.log` (working directory) |
-| **Task-run** | Per-build summary with timestamps | `C:\ProgramData\AppUpdater\{AppID}\logs\` |
-| **Status** | Short success/failure outcome per app | `C:\ProgramData\AppUpdater\{AppID}\logs\` |
+| `-InstallerPath` | `string` | Optional path to an `.exe` or `.msi`. Skips the file picker and pre-fills the app form with auto-detected metadata. Quotes are stripped automatically (handles drag-drop paths with spaces) |
+| `-Offline` | `switch` | Skips Cloudflare connectivity checks and opens in offline mode. Can be connected to Cloudflare later via **Main Menu → Option 3** |
 
-Console output uses styled prefixes: `[OK]` `[WARN]` `[FAIL]` `[INFO]` `[STEP]` with matching colours.
+### Config File
+
+AppUpdater saves its state to `.appupdater-config` (JSON) in the script directory, locked to SYSTEM + Administrators via `icacls`.
+
+| Key | Description |
+|---|---|
+| `WorkerURL` | Cloudflare Worker URL (custom domain if configured) |
+| `WorkerDevURL` | `*.workers.dev` fallback URL |
+| `ManifestToken` | Set to `"CREDMGR"` — actual token lives in Windows Credential Manager |
+| `AccountID` | Cloudflare Account ID |
+| `OrgName` | Organisation name shown in device update popups |
+| `SetupDate` | ISO 8601 timestamp of when the wizard last ran |
+
+### File & Path Reference
+
+<details>
+<summary><strong>All paths — click to expand</strong></summary>
+
+**Build machine:**
+
+| Path | Description |
+|---|---|
+| `$ScriptDir\.appupdater-config` | JSON config (SYSTEM + Admins only) |
+| `$ScriptDir\appVersions.xml` | Local app manifest |
+| `$ScriptDir\IntuneWinAppUtil.exe` | Auto-downloaded from Microsoft GitHub on first build |
+| `$ScriptDir\PSAppDeployToolkit\` | Auto-downloaded & cached PSADT framework |
+| `$ScriptDir\AppUpdater.log` | Full verbose session log |
+| `$ScriptDir\Temp\{AppID}\` | Per-build temp files (cleaned after each run) |
+| `$ScriptDir\HOW TO USE.txt` | Generated by Cloudflare wizard — Worker URL & next steps |
+| `C:\ProgramData\AppUpdater\_output\{AppID}\` | Generated build artifacts |
+
+**Windows Credential Manager:**
+
+| Target | Description |
+|---|---|
+| `AppUpdater-ManifestToken` | Bearer token for all Worker API calls |
+
+**Target device** *(after `Deploy-{AppID}.ps1` runs)*:
+
+| Path | Description |
+|---|---|
+| `C:\ProgramData\AppUpdater\{AppID}\{AppID}.ps1` | Auto-update + UI script |
+| `C:\ProgramData\AppUpdater\{AppID}\logs\update-detail.log` | Admin-only verbose log |
+| `C:\ProgramData\AppUpdater\{AppID}\logs\update-status.log` | User-readable status |
+| `C:\ProgramData\AppUpdater\{AppID}\logs\update-task-run.log` | User-readable run log |
+| `C:\ProgramData\AppUpdater\{AppID}\staging\` | Temporary download area |
+| `C:\Users\Public\Desktop\Update {DisplayName}.lnk` | Desktop shortcut |
+| Scheduled Task `AppUpdater-{AppID}` | SYSTEM task, user-triggerable without UAC |
+
+</details>
+
+### Logging
+
+AppUpdater uses a three-tier logging system with different access controls at each tier:
+
+| Tier | File | Access | Content |
+|---|---|---|---|
+| **Detail** | `AppUpdater.log` *(build machine)* | Admin-only | Full verbose trace of every operation |
+| **Task-run** | `update-task-run.log` *(device)* | User-readable | Timestamps and outcomes per scheduled run |
+| **Status** | `update-status.log` *(device)* | User-readable | Sanitised success/failure lines |
+
+Console output on the build machine uses consistent prefixes:
+
+| Prefix | Meaning |
+|---|---|
+| `[OK]` | Operation succeeded |
+| `[WARN]` | Non-fatal issue, continuing |
+| `[FAIL]` | Operation failed — check detail log |
+| `[INFO]` | Informational message |
+| `[STEP]` | Progress through a multi-phase operation |
 
 ---
 
 ## ⚠️ Known Limitations
 
-- 📄 **Log rotation not implemented** — logs append indefinitely; prune manually if needed
-- 🔒 **Single-instance mutex** — uses global namespace; may conflict if another instance is already running
-- 🪟 **Windows-only** — depends on WPF, NTFS ACLs, DPAPI, and Windows Credential Manager
-- 🌐 **Cloud features require internet** — offline mode is available but telemetry and dashboard are unavailable
-- ✍️ **Generated scripts are not Authenticode-signed** — NTFS ACL protection is the only code integrity control
+- **No log rotation** — `AppUpdater.log` appends indefinitely; prune manually if disk space is a concern
+- **Single-instance mutex** — uses a global Windows mutex; a second instance on the same machine will fail to start
+- **Windows-only** — depends on WPF, NTFS ACLs, DPAPI, and Windows Credential Manager; not portable to other platforms
+- **Cloud requires internet** — the offline build path is fully functional, but dashboard, telemetry, and manifest sync are unavailable without connectivity
+- **Generated scripts are not Authenticode-signed** — NTFS ACL enforcement is the only code integrity control on the deployment share
 
 ---
 
-## 📁 Key Files
+<div align="center">
 
-| File | Description |
-|---|---|
-| `AppUpdaterV509.ps1` | Main script — 10 500+ lines, embeds the full Cloudflare Worker JS source |
-| `appVersions.xml` | Local app manifest (offline mode or initial seeding) |
-| `IntuneWinAppUtil.exe` | Microsoft Win32 Content Prep Tool — required for `.intunewin` generation |
+Built for Windows IT administrators who need repeatable, secure Intune deployments without managing infrastructure.
 
----
-
-## 🏷️ Version History
-
-| Version | Notes |
-|---|---|
-| **50.9.0** | Current — Cloudflare Worker backend, TOTP MFA, Credential Manager token storage |
-| 50.7.0 | Session auth, event telemetry, PBKDF2 passwords |
-| 50.6.0 | Initial WPF GUI, offline mode |
+</div>
