@@ -13,7 +13,7 @@ Builds deployment-ready packages from any `.exe` or `.msi` installer — and opt
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=flat-square&logo=powershell&logoColor=white)
 ![Intune](https://img.shields.io/badge/Microsoft-Intune-0078d4?style=flat-square&logo=microsoft&logoColor=white)
 ![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white)
-![License](https://img.shields.io/badge/license-Private-red?style=flat-square)
+[![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-orange?style=flat-square)](LICENSE)
 
 <br/>
 
@@ -654,6 +654,23 @@ Console output on the build machine uses consistent prefixes:
 - **Windows-only** — depends on WPF, NTFS ACLs, DPAPI, and Windows Credential Manager; not portable to other platforms
 - **Cloud requires internet** — the offline build path is fully functional, but dashboard, telemetry, and manifest sync are unavailable without connectivity
 - **Generated scripts are not Authenticode-signed** — NTFS ACL enforcement is the only code integrity control on the deployment share
+
+---
+
+## 📄 License
+
+AppUpdater is licensed under the **[Business Source License 1.1](LICENSE)** (BUSL-1.1).
+
+| | |
+|---|---|
+| **Licensor** | Lyvvy-xyz |
+| **Source available** | ✅ Yes — free to view, modify, and use for non-production purposes |
+| **Internal IT use** | ✅ Permitted — use freely for your own device management |
+| **Hosted / embedded resale** | ❌ Not permitted without a commercial licence |
+| **Change Date** | 2030-05-27 — converts to GPL 2.0+ on this date |
+
+> [!NOTE]
+> The full licence text is in the [LICENSE](LICENSE) file. In short: you can use AppUpdater freely for internal IT administration. You cannot offer it as a hosted service or embedded product to third parties. On 27 May 2030 the licence automatically converts to GPL 2.0 and becomes fully open source.
 
 ---
 
