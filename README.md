@@ -388,6 +388,62 @@ Creates `C:\Users\Public\Desktop\Update {DisplayName}.lnk`. Falls back to the cu
 
 ---
 
+## 🖨️ Printer Packages
+
+Alongside the standard `.exe`/`.msi` installer path, the build wizard's **00 · kind** step
+also offers **Printer** — deploys a printer queue, driver, and port via native Windows
+printer cmdlets (`Add-PrinterDriver`, `Add-PrinterPort`, `Add-Printer`) instead of running
+an installer. No `.exe`/`.msi` needed at all.
+
+### Driver Library
+
+Rather than re-supplying a driver source on every build, AppUpdater keeps a local
+**driver library** (`driverLibrary.json`, next to the script — same "shareable JSON index"
+pattern as `appVersions.xml`). Each entry is Authenticode-verified against its expected
+publisher at import time and extracted once under `C:\ProgramData\AppUpdater\_drivers\{DriverID}\`.
+
+Some driver packages cover a whole product family from one INF (e.g. Brother's HL-series
+driver installs 18 different printer models). For those, a library entry can carry a
+**Models** list — picking a model in the Printer build form auto-fills the driver name
+without needing a separate library entry per model.
+
+### Built-in Driver Families
+
+The **Import built-in driver families** button (Printer build step, next to *+ Add driver
+to library*) seeds the library with 11 curated vendor families in one click:
+
+| Manufacturer | Families |
+|---|---|
+| Brother | HL Series (18 models), TD Series (6 models) |
+| Fuji Xerox | PrimeLink C9000 Series, ApeosPort Series |
+| HP | LaserJet Pro M304/M305/M404/M405, Color LaserJet Pro M478f/M479, generic Universal Printing PCL 6 |
+| Canon | Generic Plus PCL6 |
+| Ricoh | MP Series, P Series, SP Series |
+
+> [!NOTE]
+> This seeds **metadata only** — driver IDs, display names, and INF filenames — not the
+> vendor driver `.zip` files themselves (third-party binaries aren't bundled). A seeded
+> entry shows **"driver files not yet supplied"** in the driver dropdown and is blocked
+> from building until you supply the real driver package for that `DriverID` via
+> **+ Add driver to library** (same ID, so it fills in over the seeded metadata without
+> losing it). Safe to click more than once — re-importing never overwrites a driver file
+> you've already supplied.
+
+### Generated Artifacts (Printer packages)
+
+| File | Description |
+|---|---|
+| `printer-config.json` | Printer name, driver name/INF, port, location — read by all three scripts below |
+| `Install-Printer.ps1` | Idempotent installer: registers the driver, creates the port, creates/corrects the printer |
+| `Detect-Printer.ps1` | Verifies Spooler is running, then that the printer exists with the expected driver/port — distinguishes "not installed" from "Spooler down" rather than throwing on both |
+| `Uninstall-Printer.ps1` | Removes the printer queue, and the port/driver too if nothing else on the device still uses them |
+
+These three scripts are static and embedded in `host.ps1` itself (not downloaded), so they
+carry no separate Authenticode burden — only the driver *payload* they operate on is
+verified, inside `Install-Printer.ps1`.
+
+---
+
 ## ☁️ Cloudflare Mode
 
 Cloudflare mode adds a web dashboard, per-device telemetry, and centralised manifest hosting — all on Cloudflare's free tier. AppUpdater deploys the Worker automatically from your API token.
