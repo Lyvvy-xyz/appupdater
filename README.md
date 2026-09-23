@@ -8,7 +8,7 @@ Builds deployment-ready packages from any `.exe` or `.msi` installer — and opt
 
 <br/>
 
-![Version](https://img.shields.io/badge/version-50.9.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-52.0.0-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-informational?style=flat-square&logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=flat-square&logo=powershell&logoColor=white)
 ![Intune](https://img.shields.io/badge/Microsoft-Intune-0078d4?style=flat-square&logo=microsoft&logoColor=white)
@@ -17,7 +17,7 @@ Builds deployment-ready packages from any `.exe` or `.msi` installer — and opt
 
 <br/>
 
-[Overview](#-overview) · [Quick Start](#-quick-start) · [The Interface](#️-the-interface) · [Building a Package](#-building-a-package) · [Cloudflare Mode](#️-cloudflare-mode) · [Security](#-security) · [Reference](#-reference)
+[Overview](#-overview) · [See it in action](#-see-it-in-action) · [Why AppUpdater](#-why-appupdater) · [How it works](#️-how-it-works) · [Quick Start](#-quick-start) · [The Interface](#️-the-interface) · [Building a Package](#-building-a-package) · [Cloudflare Mode](#️-cloudflare-mode) · [Security](#-security) · [Reference](#-reference)
 
 </div>
 
@@ -40,7 +40,7 @@ Each build produces three output files ready for Intune:
 
 <table>
 <tr>
-<td>🖥️ <strong>Dark-theme WPF GUI</strong> with keyboard shortcuts</td>
+<td>🖥️ <strong>Dark-theme WebView2 GUI</strong> with guided tour &amp; accessibility modes</td>
 <td>☁️ <strong>Optional Cloudflare Worker</strong> backend — auto-deployed</td>
 </tr>
 <tr>
@@ -57,7 +57,7 @@ Each build produces three output files ready for Intune:
 </tr>
 <tr>
 <td>🔄 <strong>Full offline mode</strong> — no cloud required</td>
-<td>🧙 <strong>Guided first-run wizard</strong></td>
+<td>🧙 <strong>Guided tour</strong> on first launch</td>
 </tr>
 <tr>
 <td>📋 <strong>PSADT v3 &amp; v4 export</strong> for close-apps prompts</td>
@@ -75,7 +75,71 @@ Each build produces three output files ready for Intune:
 | **Web dashboard** | `https://{worker}.workers.dev/status` | None |
 | **Token storage** | Windows Credential Manager (machine scope) | N/A |
 | **Setup** | Cloudflare API token required (2 min wizard) | None |
-| **Launch** | `.\AppUpdaterV509.ps1` | `.\AppUpdaterV509.ps1 -Offline` |
+| **Launch** | `.\host.ps1`, then **Worker & settings → Connect** | `.\host.ps1` (the default until you connect) |
+
+---
+
+## 🎬 See it in action
+
+**Building a package** — pick an installer, AppUpdater reads its publisher, version, silent switches and blocking process, then generates the deploy script, detect script, manifest entry and `.intunewin` in one pass:
+
+![Building a Firefox package end to end](assets/build.gif)
+
+**Getting around** — Home dashboard, App fleet (built / deployed / update-available status per app), History, and Client profiles with a live PSADT branding preview:
+
+![Navigating the Home, Fleet, History and Client profiles screens](assets/tour.gif)
+
+> [!NOTE]
+> These recordings are the real `host.ps1` interface rendered headlessly, with the PowerShell side replaced by a stub that returns sample data (Firefox, VLC, 7-Zip, Notepad++). Paths, timings and sizes shown are illustrative.
+
+---
+
+## 💡 Why AppUpdater
+
+Getting one third-party app into Intune as a Win32 app normally means stitching several tools together by hand — and then doing it all again every time the vendor ships an update.
+
+| Step | 🛠️ By hand (IntuneWinAppUtil + PSADT + scripts) | 📦 AppUpdater |
+|---|---|---|
+| **Find install switches** | Search vendor docs, trial-and-error `/S`, `/qn`, `/VERYSILENT` | Auto-detected from the installer (NSIS, Inno, InstallShield, MSI…) |
+| **Get the tooling** | Download IntuneWinAppUtil and PSADT, keep them current | Downloaded on first use, Authenticode-verified, cached |
+| **Detection rule** | Hand-write a registry / file / version check | `Detect-{AppID}.ps1` generated for you |
+| **Close running apps** | Hand-edit PSADT `Deploy-Application.ps1` | Blocking process detected; PSADT v3/v4 wrapped with your branding |
+| **Package** | Run IntuneWinAppUtil with the right folder/setup args | One click → `.intunewin` |
+| **Updates** | Repeat everything for every new version | Runtime mode: devices self-update from the manifest — no repackaging |
+| **Visibility** | Intune portal only, delayed reporting | Local fleet + history, optional live Cloudflare dashboard |
+| **Per-client branding (MSPs)** | Copy and edit toolkit folders per client | Client profiles applied at build time |
+
+**Compared with the other common alternatives:**
+
+- **Winget / Intune Enterprise App Catalog** — great when the app is in the catalog. AppUpdater covers everything that isn't: in-house installers, vendor-portal downloads, pinned versions, printers.
+- **Paid packaging tools (e.g. Patch My PC, Advanced Installer)** — broader catalogs, but licensed per seat or device. AppUpdater is a single PowerShell script with zero infrastructure; the optional Cloudflare backend runs in your own Cloudflare account.
+- **PSADT on its own** — AppUpdater still uses PSADT under the hood for PSADT-mode packages; it just generates the wrapper, branding and detection so you don't hand-edit them.
+
+---
+
+## ⚙️ How it works
+
+AppUpdater is one file, `host.ps1`, containing three layers:
+
+```mermaid
+flowchart LR
+    subgraph host.ps1
+      UI["HTML/CSS/JS UI<br/>(embedded string)"]
+      Shell["WPF window + WebView2<br/>(PowerShell host)"]
+      Engine["Packaging engine<br/>(embedded base64)"]
+    end
+    UI <-- "postMessage bridge<br/>{action, payload} / {type, payload}" --> Shell
+    Shell -- "dot-sources" --> Engine
+    Engine --> Tools["IntuneWinAppUtil · PSADT<br/>(auto-downloaded, signature-checked)"]
+    Engine --> Out["_output\{AppID}\<br/>.intunewin · Detect · Deploy"]
+    Engine -. optional .-> CF["Cloudflare Worker<br/>manifest · dashboard · telemetry"]
+```
+
+1. **Startup** — `host.ps1` self-elevates, fetches the pinned WebView2 SDK from nuget.org into `wv2\` if missing (and installs the WebView2 Runtime if the machine lacks it), decodes the embedded engine to a temp file and dot-sources it so all packaging functions are in scope.
+2. **UI** — a borderless WPF window hosts a WebView2 control; the UI is loaded with `NavigateToString`, so there are no loose HTML files to tamper with.
+3. **Bridge** — every button posts `{ action, payload }` to PowerShell (`build-package`, `get-fleet`, `browse-installer`, …). The host runs the matching handler and replies with `{ type, payload }` messages (`build-progress`, `build-log`, `build-done`, `fleet-data`, …) that the page renders.
+4. **Build** — the engine inspects the installer, writes the deploy and detect scripts, updates the manifest (local `appVersions.xml` or Cloudflare KV), and wraps the result as `.intunewin` or a PSADT package. Progress streams back live to the progress screen.
+5. **On the device** — Intune runs the deploy script, which installs a scheduled task that checks the manifest and updates the app, so new versions roll out without rebuilding the package.
 
 ---
 
@@ -96,38 +160,22 @@ Each build produces three output files ready for Intune:
 ### Launch
 
 ```powershell
-# Cloud-connected mode (default — recommended)
-.\AppUpdaterV509.ps1
-
-# Provide an installer directly — skips the file picker
-.\AppUpdaterV509.ps1 -InstallerPath "C:\Downloads\setup.exe"
-
-# Offline mode — no Cloudflare account required
-.\AppUpdaterV509.ps1 -Offline
+# Right-click → Run with PowerShell, or from a console:
+.\host.ps1
 ```
 
-### First Launch Wizard
+`host.ps1` re-launches itself elevated (UAC prompt), downloads the WebView2 SDK into `wv2\` on first run, and opens the app. Everything else — IntuneWinAppUtil, PSADT, the packaging engine — is either embedded or fetched on demand.
 
-On first run a one-time setup wizard appears:
+### First Launch
 
-```
-Step 1  Choose mode ─────────────────────────────────────────
-        [ Connect to Cloudflare ]  (recommended)
-        [ Build packages only   ]  (offline)
+On first run a **guided tour** walks through each screen (Escape / arrow keys / Enter to navigate). It can be replayed any time from **Docs & help → Replay tour**.
 
-Step 2  Enter your organisation name  (shown in device popups)
-        Default: "IT Services"
-
-Step 3  ─ If Cloudflare ─────────────────────────────────────
-        Cloudflare API token + 7-step automated deployment
-        Set dashboard password  (≥ 12 chars, 1 letter + 1 digit)
-        Optionally enrol TOTP MFA
-
-Step 4  Main menu opens — you're ready to build
-```
+- You start in **offline mode** — packages build locally and the manifest is `appVersions.xml`.
+- To go cloud-connected, open **Worker & settings → Connect**. This runs the 7-step Cloudflare setup (API token, Worker deploy, dashboard password, optional TOTP MFA).
+- Set your **organisation name** (shown in end-user popups) under Worker & settings, or per-client in **Client profiles**.
 
 > [!IMPORTANT]
-> The wizard only runs once. Settings are saved to `.appupdater-config` in the script directory with SYSTEM + Administrators–only ACLs. To redo setup, use **Main Menu → Full reset**.
+> Settings are saved to `.appupdater-config` with SYSTEM + Administrators–only ACLs.
 
 ---
 
@@ -135,65 +183,57 @@ Step 4  Main menu opens — you're ready to build
 
 ```mermaid
 flowchart TD
-    A([Launch AppUpdaterV509.ps1]) --> B{First run?}
-    B -->|Yes| C[First-run wizard]
-    C --> D{Mode?}
-    D -->|Cloudflare| E[7-step Cloudflare setup]
-    D -->|Offline| F[Main menu]
-    E --> F
+    A([Run host.ps1]) --> B[Elevate · fetch WebView2 SDK · load engine]
+    B --> C{First launch?}
+    C -->|Yes| D[Guided tour]
+    C -->|No| E[Home]
+    D --> E
 
-    F --> G{Menu choice}
-    G -->|1 - Build| H[Pick installer]
-    G -->|2 - Output| I[Open output folder]
-    G -->|3 - Status| J[Open Worker dashboard]
-    G -->|4 - Options| K[Worker / app options]
-    G -->|5 - Reset| L[Full reset]
-    G -->|6 - Manifest| M[Manifest manager]
+    E --> F[Package builder]
+    E --> G[App fleet]
+    E --> H[Client profiles]
+    E --> I[History]
+    E --> J[Worker & settings]
 
-    H --> N[Auto-inspect installer]
-    N --> O[App form — review & edit fields]
-    O --> P{Output type}
-    P -->|.intunewin| Q[Download & verify IntuneWinAppUtil\nCreate .intunewin package]
-    P -->|Run locally| R[Execute Deploy script as admin]
-    P -->|Scripts only| S[Save Detect + Deploy .ps1 files]
-    P -->|PSADT export| T[Download & cache PSAppDeployToolkit\nWrap with v3 or v4]
+    F --> K{Kind}
+    K -->|App| L[Pick .exe / .msi → auto-inspect]
+    K -->|Printer| M[Pick driver from library · name · port]
+    L --> N[Identity · behaviour · profile]
+    M --> N
+    N --> O{Package type}
+    O -->|AppUpdater Runtime| P[Self-updating agent + scheduled task]
+    O -->|Simple Package| Q{Target}
+    Q -->|.intunewin| R[IntuneWinAppUtil wrap]
+    Q -->|PSADT| S[PSADT v3 / v4 / both, branded]
+    P --> R
+    R --> T[Update manifest — local XML or Cloudflare KV]
+    S --> T
+    T --> U[Package ready → Fleet]
 
-    Q --> U[Push manifest to Worker]
-    R --> U
-    S --> U
-    T --> U
-    U --> F
+    G --> V[Test locally · Mark deployed · Rebuild · Remove]
+    J --> W[Connect to Cloudflare · org name · recovery bundle]
 ```
+
+The pipeline rail at the top of the builder tracks the same stages: **Source → Identity → Configure → Wrap → Deliver**.
 
 ---
 
 ## 🖥️ The Interface
 
-### Main Menu
+A borderless window with a left sidebar. Every screen is part of the same page, so switching is instant.
 
-```
-╔══════════════════════════════════════╗
-║        AppUpdater  v50.9.0           ║
-╠══════════════════════════════════════╣
-║  [1]  Build app package              ║
-║  [2]  Open Output folder             ║
-║  [3]  Open status page               ║
-║  [4]  Worker / app options           ║
-║  [5]  Full reset                     ║
-║  [6]  Manage local manifest          ║
-║ [Esc] Exit                           ║
-╚══════════════════════════════════════╝
-```
+| Screen | What it's for |
+|---|---|
+| 🏠 **Home** | Fleet stats (total / deployed / updates / pending), recent activity, getting-started checklist, shortcut to build |
+| 📦 **Package builder** | Drop or browse an installer (or switch to **Printer**), review auto-detected identity, choose Runtime vs Simple and `.intunewin` vs PSADT, live v3/v4 branding preview, **Build** |
+| 📋 **App fleet** | Every app in the manifest with version, target and status badge; filter, bulk-select, **Test locally**, **Mark deployed**, **Rebuild**, **Remove** |
+| 🎨 **Client profiles** | Named branding sets (org name, logo, banner, default target) applied per build — handy for MSPs |
+| 🕑 **History** | Timeline of every build, deploy and removal |
+| ⚙️ **Worker & settings** | Connect / disconnect Cloudflare, open the status dashboard, Worker options, default org name, recovery bundle export/import, release check |
+| ♿ **Accessibility** | Reduce motion, high contrast, colour-blind safe palette (Okabe-Ito + shape cues) |
+| ❓ **Docs & help** | Replay the guided tour, reset onboarding |
 
-| Key | Button | Action | Notes |
-|---|---|---|---|
-| <kbd>1</kbd> | **Build app package** | Full package build wizard | Core feature |
-| <kbd>2</kbd> | **Open Output folder** | Opens `C:\ProgramData\AppUpdater\_output\` in Explorer | |
-| <kbd>3</kbd> | **Open status page** *or* **Connect to Cloudflare** | Opens Worker dashboard in browser, or runs setup wizard if not yet connected | Label changes based on connection state |
-| <kbd>4</kbd> | **Worker / app options** | Manage apps, reset password, rotate bearer token | Disabled in offline mode |
-| <kbd>5</kbd> | **Full reset** | Wipes all config, credentials, and Worker connection | Triggers re-run of first-launch wizard |
-| <kbd>6</kbd> | **Manage local manifest** | Opens the built-in manifest editor | Disabled if no `appVersions.xml` found |
-| <kbd>Esc</kbd> | **Exit** | Close AppUpdater | |
+Keyboard: <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> with a visible focus ring everywhere, <kbd>Esc</kbd> closes dialogs, arrow keys / <kbd>Enter</kbd> drive the tour.
 
 ---
 
@@ -201,8 +241,7 @@ flowchart TD
 
 ### Phase 1 — Pick Your Installer
 
-- Browse for an `.exe` or `.msi` using the GUI file picker
-- Or pass a path directly with `-InstallerPath` to skip the picker entirely
+- Click the drop zone in **Package builder** to browse for an `.exe` or `.msi`
 - MSI and EXE formats are both supported; type is detected automatically
 
 ### Phase 2 — Auto-Detection
@@ -553,7 +592,7 @@ AppUpdater was designed for environments where endpoint security matters. Every 
 
 The bearer token (`X-Auth-Token`) authenticates all PowerShell calls from the build machine to the Worker. To rotate it:
 
-1. Open **Main Menu → Worker / app options → Reset bearer token**
+1. Open **Worker & settings → More worker options… → Reset bearer token**
 2. AppUpdater generates a new token, stores it in Credential Manager, and updates the Worker Secret (`AUTH_TOKEN`) — all in one step, no manual Cloudflare configuration required
 
 ### Session Security
@@ -622,13 +661,14 @@ Every binary AppUpdater downloads — `IntuneWinAppUtil.exe`, app installers, PS
 ### Script Parameters
 
 ```powershell
-.\AppUpdaterV509.ps1 [-InstallerPath <string>] [-Offline]
+.\host.ps1 [-Wv2AssemblyDir <string>]
 ```
 
-| Parameter | Type | Description |
-|---|---|---|
-| `-InstallerPath` | `string` | Optional path to an `.exe` or `.msi`. Skips the file picker and pre-fills the app form with auto-detected metadata. Quotes are stripped automatically (handles drag-drop paths with spaces) |
-| `-Offline` | `switch` | Skips Cloudflare connectivity checks and opens in offline mode. Can be connected to Cloudflare later via **Main Menu → Option 3** |
+| Parameter / variable | Description |
+|---|---|
+| `-Wv2AssemblyDir` | Where the WebView2 SDK DLLs live (default `wv2\` next to `host.ps1`). Downloaded there automatically if missing |
+| `$env:APPUPDATER_DEBUG_PORT` | Opens a Chrome DevTools Protocol port on the WebView2 control — used by `click-test.ps1` |
+| `$env:APPUPDATER_NO_ELEVATE` | Skips the UAC self-elevation (unattended test runs only; admin-only actions will fail) |
 
 ### Config File
 
