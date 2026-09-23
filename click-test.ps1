@@ -184,7 +184,8 @@ window.__log = [];
     }
   }
   if ($ws -and $ws.State -eq 'Open') {
-    $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'done', [Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null
+    # Best-effort: after close-window the app has already dropped the socket.
+    try { $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'done', [Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null } catch {}
   }
   Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
 }
