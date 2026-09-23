@@ -141,11 +141,13 @@ window.__log = [];
   # inspect over CDP), only that the bridge round-trips without an
   # exception - the same signal that would have caught the AsHashtable bug.
   Eval-Js "send('minimize-window', {})" | Out-Null
-  Eval-Js "send('close-window', {})" | Out-Null
-
   Start-Sleep -Milliseconds 500
   $clientErrors = Eval-Js "window.__log.filter(a => a === 'client-error').length"
   Assert ($clientErrors -eq 0) "no client-error events fired during the run"
+
+  # Last: close-window tears down the page, so nothing can be evaluated after it.
+  Eval-Js "send('close-window', {})" | Out-Null
+  Assert ($proc.WaitForExit(15000)) "close-window exits the app"
 
 } catch {
   if ($env:GITHUB_ACTIONS) {
