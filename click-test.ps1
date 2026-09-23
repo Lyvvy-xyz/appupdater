@@ -152,6 +152,18 @@ window.__log = [];
     Write-Host "::error::click-test threw: $($_.Exception.Message)"
     $wins = Get-Process | Where-Object MainWindowTitle | ForEach-Object { "$($_.ProcessName): $($_.MainWindowTitle)" }
     Write-Host "::notice title=Open windows::$($wins -join '%0A')"
+    # Tell the main window apart from a same-titled MessageBox by its text.
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+    $root = [Windows.Automation.AutomationElement]::RootElement
+    $cond = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
+    $names = foreach ($w in $root.FindAll('Children', $cond)) {
+      $w.FindAll('Descendants', [Windows.Automation.Condition]::TrueCondition) | Select-Object -First 25 |
+        ForEach-Object { "$($_.Current.ControlType.ProgrammaticName) '$($_.Current.Name)'" }
+    }
+    Write-Host "::notice title=AppUpdater window contents::$($names -join '%0A')"
+    $wv2Dlls = @(Get-ChildItem (Join-Path (Split-Path $HostPath) 'wv2') -ErrorAction SilentlyContinue).Name -join ', '
+    $edgeProcs = @(Get-Process msedgewebview2 -ErrorAction SilentlyContinue).Count
+    Write-Host "::notice title=WebView2 state::wv2 dlls: [$wv2Dlls]; msedgewebview2 processes: $edgeProcs"
   }
   throw
 } finally {
