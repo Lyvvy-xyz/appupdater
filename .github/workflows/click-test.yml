@@ -28,7 +28,10 @@ jobs:
 
       - name: Smoke-test host.ps1 over CDP (Windows PowerShell 5.1)
         shell: powershell
-        run: .\click-test.ps1 -Reset
+        run: |
+          try { .\click-test.ps1 -Reset }
+          catch { Write-Host "::error::$($_.Exception.Message)%0A$($_.InvocationInfo.PositionMessage -replace "`r?`n", '%0A')"; exit 1 }
+          if ($LASTEXITCODE) { Write-Host "::error::click-test.ps1 exit code $LASTEXITCODE"; exit $LASTEXITCODE }
 
       # Surface the tail of the app log as an annotation - readable without a token.
       - name: App log
