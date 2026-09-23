@@ -41,7 +41,11 @@ $script:fails = @()
 
 function Assert($cond, $msg) {
   if ($cond) { Write-Host "OK   $msg" -ForegroundColor Green }
-  else { Write-Host "FAIL $msg" -ForegroundColor Red; $script:fails += $msg }
+  else {
+    Write-Host "FAIL $msg" -ForegroundColor Red; $script:fails += $msg
+    # Annotations are readable on a public repo without a token (job logs are not).
+    if ($env:GITHUB_ACTIONS) { Write-Host "::error::$msg" }
+  }
 }
 
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()

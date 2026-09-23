@@ -1,0 +1,26 @@
+name: click-test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Smoke-test host.ps1 over CDP (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\click-test.ps1 -Reset
+
+      # Surface the tail of the app log as an annotation - readable without a token.
+      - name: App log
+        if: always()
+        shell: powershell
+        run: |
+          if (Test-Path AppUpdater.log) {
+            $tail = (Get-Content AppUpdater.log -Tail 15) -join '%0A'
+            Write-Host "::notice title=AppUpdater.log tail::$tail"
+          }
