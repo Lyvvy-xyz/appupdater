@@ -149,7 +149,8 @@ window.__log = [];
 
 } catch {
   if ($env:GITHUB_ACTIONS) {
-    Write-Host "::error::click-test threw: $($_.Exception.Message)"
+    $chain = @(); $ex = $_.Exception; while ($ex) { $chain += "$($ex.GetType().Name): $($ex.Message)"; $ex = $ex.InnerException }
+    Write-Host "::error::click-test threw: $($chain -join '%0A  <- ')%0Aat: $($_.InvocationInfo.PositionMessage -replace "`r?`n", '%0A')"
     $wins = Get-Process | Where-Object MainWindowTitle | ForEach-Object { "$($_.ProcessName): $($_.MainWindowTitle)" }
     Write-Host "::notice title=Open windows::$($wins -join '%0A')"
     # Tell the main window apart from a same-titled MessageBox by its text.
