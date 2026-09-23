@@ -64,9 +64,14 @@ $logStartLen = 0
 if (Test-Path $logFile) { $logStartLen = (Get-Item $logFile).Length }
 
 $env:APPUPDATER_DEBUG_PORT = "$Port"
+# In CI nobody sees host.ps1's console window, so capture it for annotations.
+$redirect = @{}
+if ($env:GITHUB_ACTIONS) {
+  $redirect = @{ RedirectStandardOutput = "$env:RUNNER_TEMP\host.out.txt"; RedirectStandardError = "$env:RUNNER_TEMP\host.err.txt" }
+}
 $proc = Start-Process -FilePath 'powershell.exe' `
   -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$HostPath`"") `
-  -PassThru
+  -PassThru @redirect
 $ws = $null
 
 try {
@@ -142,7 +147,18 @@ window.__log = [];
   $clientErrors = Eval-Js "window.__log.filter(a => a === 'client-error').length"
   Assert ($clientErrors -eq 0) "no client-error events fired during the run"
 
+} catch {
+  if ($env:GITHUB_ACTIONS) { Write-Host "::error::click-test threw: $($_.Exception.Message)" }
+  throw
 } finally {
+  if ($env:GITHUB_ACTIONS) {
+    Write-Host "::notice::host.ps1 exited: $($proc.HasExited)"
+    foreach ($f in $redirect.Values) {
+      if ((Test-Path $f) -and (Get-Item $f).Length) {
+        Write-Host "::error title=$(Split-Path $f -Leaf)::$((Get-Content $f -Tail 30) -join '%0A')"
+      }
+    }
+  }
   if ($ws -and $ws.State -eq 'Open') {
     $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'done', [Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null
   }
