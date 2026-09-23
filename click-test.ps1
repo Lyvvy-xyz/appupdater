@@ -164,6 +164,11 @@ window.__log = [];
     $wv2Dlls = @(Get-ChildItem (Join-Path (Split-Path $HostPath) 'wv2') -ErrorAction SilentlyContinue).Name -join ', '
     $edgeProcs = @(Get-Process msedgewebview2 -ErrorAction SilentlyContinue).Count
     Write-Host "::notice title=WebView2 state::wv2 dlls: [$wv2Dlls]; msedgewebview2 processes: $edgeProcs"
+    $edgeIds = @(Get-Process msedgewebview2 -ErrorAction SilentlyContinue).Id
+    $listen = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $edgeIds -contains $_.OwningProcess } |
+      ForEach-Object { "$($_.LocalAddress):$($_.LocalPort)" }
+    $cmd = (Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Select-Object -First 1).CommandLine
+    Write-Host "::notice title=WebView2 CDP::listening: [$($listen -join ', ')]; env port: $env:APPUPDATER_DEBUG_PORT%0Acmdline: $cmd"
   }
   throw
 } finally {
