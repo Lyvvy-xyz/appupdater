@@ -148,7 +148,11 @@ window.__log = [];
   Assert ($clientErrors -eq 0) "no client-error events fired during the run"
 
 } catch {
-  if ($env:GITHUB_ACTIONS) { Write-Host "::error::click-test threw: $($_.Exception.Message)" }
+  if ($env:GITHUB_ACTIONS) {
+    Write-Host "::error::click-test threw: $($_.Exception.Message)"
+    $wins = Get-Process | Where-Object MainWindowTitle | ForEach-Object { "$($_.ProcessName): $($_.MainWindowTitle)" }
+    Write-Host "::notice title=Open windows::$($wins -join '%0A')"
+  }
   throw
 } finally {
   if ($env:GITHUB_ACTIONS) {
