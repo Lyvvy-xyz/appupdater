@@ -76,15 +76,15 @@ $ws = $null
 
 try {
   $target = $null
-  for ($i = 0; $i -lt 40; $i++) {
+  for ($i = 0; $i -lt 120; $i++) {
     Start-Sleep -Milliseconds 500
     try {
-      $list = Invoke-RestMethod "http://localhost:$Port/json/list" -TimeoutSec 2
+      $list = Invoke-RestMethod "http://127.0.0.1:$Port/json/list" -TimeoutSec 2
       $target = $list | Where-Object { $_.type -eq 'page' } | Select-Object -First 1
       if ($target) { break }
     } catch {}
   }
-  if (-not $target) { throw "CDP endpoint never came up on port $Port after 20s - app may not have launched (check for a stuck UAC prompt, or WebView2 runtime missing)." }
+  if (-not $target) { throw "CDP endpoint never came up on port $Port after 60s - app may not have launched (check for a stuck UAC prompt, or WebView2 runtime missing)." }
 
   $ws = [System.Net.WebSockets.ClientWebSocket]::new()
   $ws.ConnectAsync([Uri]$target.webSocketDebuggerUrl, [Threading.CancellationToken]::None).GetAwaiter().GetResult()
