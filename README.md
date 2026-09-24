@@ -13,6 +13,7 @@ Builds deployment-ready packages from any `.exe` or `.msi` installer — and opt
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=flat-square&logo=powershell&logoColor=white)
 ![Intune](https://img.shields.io/badge/Microsoft-Intune-0078d4?style=flat-square&logo=microsoft&logoColor=white)
 ![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white)
+[![click-test](https://github.com/Lyvvy-xyz/Appupdater/actions/workflows/click-test.yml/badge.svg)](https://github.com/Lyvvy-xyz/Appupdater/actions/workflows/click-test.yml)
 [![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-orange?style=flat-square)](LICENSE)
 
 <br/>
@@ -740,6 +741,22 @@ Console output on the build machine uses consistent prefixes:
 | `[FAIL]` | Operation failed — check detail log |
 | `[INFO]` | Informational message |
 | `[STEP]` | Progress through a multi-phase operation |
+
+---
+
+## 🧪 Testing
+
+`click-test.ps1` smoke-tests the real app: it launches `host.ps1` with a Chrome DevTools Protocol port open, uses the page's own JS to open the Fleet, Client profiles, History and Worker screens, checks that each one asks the PowerShell side for its data, then closes the window and confirms the app exits.
+
+```powershell
+.\click-test.ps1          # test against the host.ps1 next to it
+.\click-test.ps1 -Reset   # wipe app state first for a repeatable run
+```
+
+It doesn't need admin rights. When it isn't elevated, it sets `APPUPDATER_NO_ELEVATE=1` so the run doesn't hang on a UAC prompt. The **click-test** GitHub Actions workflow runs it on every push, on `windows-latest` under Windows PowerShell 5.1, and installs the WebView2 Runtime first if the runner doesn't have it. Failures and the last lines of `AppUpdater.log` show up as run annotations.
+
+> [!NOTE]
+> Native Win32 dialogs such as the installer and image file pickers sit outside the WebView2 page, so this test doesn't cover them.
 
 ---
 
