@@ -1,8 +1,11 @@
 name: release
 
+# Releases whenever main carries an engine version that has no release yet,
+# so bumping $global:Version is all it takes to ship.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,17 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Tag must match the embedded engine version
-        run: python3 .github/check-version.py "$GITHUB_REF_NAME"
-
       # Stable asset name so .../releases/latest/download/AppUpdater.ps1 always works.
-      - name: Publish release with host.ps1 as AppUpdater.ps1
+      - name: Publish host.ps1 as AppUpdater.ps1 if this version is unreleased
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          tag="v$(python3 .github/check-version.py)"
+          if gh release view "$tag" >/dev/null 2>&1; then echo "$tag already released"; exit 0; fi
           cp host.ps1 AppUpdater.ps1
-          gh release create "$GITHUB_REF_NAME" AppUpdater.ps1 \
-            --title "AppUpdater $GITHUB_REF_NAME" \
+          gh release create "$tag" AppUpdater.ps1 --target "$GITHUB_SHA" \
+            --title "AppUpdater $tag" \
             --generate-notes \
             --notes "Download \`AppUpdater.ps1\` and run it in Windows PowerShell 5.1 as admin - it fetches everything else (WebView2 SDK and runtime, IntuneWinAppUtil, PSAppDeployToolkit) on first run.
 
