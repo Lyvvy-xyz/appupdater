@@ -1,0 +1,30 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag must match the embedded engine version
+        run: python3 .github/check-version.py "$GITHUB_REF_NAME"
+
+      # Stable asset name so .../releases/latest/download/AppUpdater.ps1 always works.
+      - name: Publish release with host.ps1 as AppUpdater.ps1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp host.ps1 AppUpdater.ps1
+          gh release create "$GITHUB_REF_NAME" AppUpdater.ps1 \
+            --title "AppUpdater $GITHUB_REF_NAME" \
+            --generate-notes \
+            --notes "Download \`AppUpdater.ps1\` and run it in Windows PowerShell 5.1 as admin - it fetches everything else (WebView2 SDK and runtime, IntuneWinAppUtil, PSAppDeployToolkit) on first run.
+
+          Always-latest link: https://github.com/${{ github.repository }}/releases/latest/download/AppUpdater.ps1"
