@@ -18,6 +18,10 @@ Builds deployment-ready packages from any `.exe` or `.msi` installer — and opt
 
 <br/>
 
+**[⬇ Download AppUpdater.ps1](https://github.com/Lyvvy-xyz/Appupdater/releases/latest/download/AppUpdater.ps1)** — one file; it fetches every dependency on first run.
+
+<br/>
+
 [Overview](#-overview) · [See it in action](#-see-it-in-action) · [Why AppUpdater](#-why-appupdater) · [How it works](#️-how-it-works) · [Quick Start](#-quick-start) · [The Interface](#️-the-interface) · [Building a Package](#-building-a-package) · [Cloudflare Mode](#️-cloudflare-mode) · [Security](#-security) · [Reference](#-reference)
 
 </div>
