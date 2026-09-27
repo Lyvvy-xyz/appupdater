@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📦 AppUpdater
+# AppUpdater
 
 **Zero-infrastructure Intune Win32 packaging for Windows IT admins**
 
@@ -18,17 +18,17 @@ Builds deployment-ready packages from any `.exe` or `.msi` installer — and opt
 
 <br/>
 
-**[⬇ Download AppUpdater.ps1](https://github.com/Lyvvy-xyz/Appupdater/releases/latest/download/AppUpdater.ps1)** — one file; it fetches every dependency on first run.
+**[Download AppUpdater.ps1](https://github.com/Lyvvy-xyz/Appupdater/releases/latest/download/AppUpdater.ps1)** — one file; it fetches every dependency on first run.
 
 <br/>
 
-[Overview](#-overview) · [See it in action](#-see-it-in-action) · [Why AppUpdater](#-why-appupdater) · [How it works](#️-how-it-works) · [Quick Start](#-quick-start) · [The Interface](#️-the-interface) · [Building a Package](#-building-a-package) · [Cloudflare Mode](#️-cloudflare-mode) · [Security](#-security) · [Reference](#-reference)
+[Overview](#overview) · [See it in action](#see-it-in-action) · [Why AppUpdater](#why-appupdater) · [How it works](#how-it-works) · [Quick Start](#quick-start) · [The Interface](#the-interface) · [Building a Package](#building-a-package) · [Cloudflare Mode](#cloudflare-mode) · [Security](#security) · [Reference](#reference)
 
 </div>
 
 ---
 
-## 🔍 Overview
+## Overview
 
 AppUpdater runs on an IT admin's Windows machine and turns any installer into a complete Intune Win32 deployment in minutes. It auto-downloads every tool it needs — including `IntuneWinAppUtil.exe` and `PSAppDeployToolkit` — so there is nothing to install beforehand.
 
@@ -45,34 +45,34 @@ Each build produces three output files ready for Intune:
 
 <table>
 <tr>
-<td>🖥️ <strong>Dark-theme WebView2 GUI</strong> with guided tour &amp; accessibility modes</td>
-<td>☁️ <strong>Optional Cloudflare Worker</strong> backend — auto-deployed</td>
+<td><strong>Dark-theme WebView2 GUI</strong> with guided tour &amp; accessibility modes</td>
+<td><strong>Optional Cloudflare Worker</strong> backend — auto-deployed</td>
 </tr>
 <tr>
-<td>📦 <strong>Auto-generates</strong> <code>.intunewin</code> + detect + deploy scripts</td>
-<td>🔐 <strong>TOTP MFA</strong> for the web dashboard</td>
+<td><strong>Auto-generates</strong> <code>.intunewin</code> + detect + deploy scripts</td>
+<td><strong>TOTP MFA</strong> for the web dashboard</td>
 </tr>
 <tr>
-<td>🤖 <strong>Auto-downloads</strong> IntuneWinAppUtil &amp; PSAppDeployToolkit</td>
-<td>🔑 <strong>Windows Credential Manager</strong> (DPAPI) token storage</td>
+<td><strong>Auto-downloads</strong> IntuneWinAppUtil &amp; PSAppDeployToolkit</td>
+<td><strong>Windows Credential Manager</strong> (DPAPI) token storage</td>
 </tr>
 <tr>
-<td>🛡️ <strong>Authenticode verification</strong> of all downloaded binaries</td>
-<td>📡 <strong>Per-app event telemetry</strong> with HMAC secrets</td>
+<td><strong>Authenticode verification</strong> of all downloaded binaries</td>
+<td><strong>Per-app event telemetry</strong> with HMAC secrets</td>
 </tr>
 <tr>
-<td>🔄 <strong>Full offline mode</strong> — no cloud required</td>
-<td>🧙 <strong>Guided tour</strong> on first launch</td>
+<td><strong>Full offline mode</strong> — no cloud required</td>
+<td><strong>Guided tour</strong> on first launch</td>
 </tr>
 <tr>
-<td>📋 <strong>PSADT v3 &amp; v4 export</strong> for close-apps prompts</td>
-<td>🔒 <strong>HMAC-signed sessions</strong>, rate-limited login</td>
+<td><strong>PSADT v3 &amp; v4 export</strong> for close-apps prompts</td>
+<td><strong>HMAC-signed sessions</strong>, rate-limited login</td>
 </tr>
 </table>
 
 ### Operating Modes
 
-| | ☁️ Cloudflare-Connected | 💾 Offline |
+| | Cloudflare-Connected | Offline |
 |---|---|---|
 | **Manifest hosting** | Cloudflare KV (`APP_MANIFEST` namespace) | Local `appVersions.xml` |
 | **Authentication** | TOTP + PBKDF2-SHA256 session | N/A |
@@ -84,7 +84,7 @@ Each build produces three output files ready for Intune:
 
 ---
 
-## 🎬 See it in action
+## See it in action
 
 **Building a package** — pick an installer, AppUpdater reads its publisher, version, silent switches and blocking process, then generates the deploy script, detect script, manifest entry and `.intunewin` in one pass:
 
@@ -99,11 +99,11 @@ Each build produces three output files ready for Intune:
 
 ---
 
-## 💡 Why AppUpdater
+## Why AppUpdater
 
 Getting one third-party app into Intune as a Win32 app normally means stitching several tools together by hand — and then doing it all again every time the vendor ships an update.
 
-| Step | 🛠️ By hand (IntuneWinAppUtil + PSADT + scripts) | 📦 AppUpdater |
+| Step | By hand (IntuneWinAppUtil + PSADT + scripts) | AppUpdater |
 |---|---|---|
 | **Find install switches** | Search vendor docs, trial-and-error `/S`, `/qn`, `/VERYSILENT` | Auto-detected from the installer (NSIS, Inno, InstallShield, MSI…) |
 | **Get the tooling** | Download IntuneWinAppUtil and PSADT, keep them current | Downloaded on first use, Authenticode-verified, cached |
@@ -122,7 +122,7 @@ Getting one third-party app into Intune as a Win32 app normally means stitching 
 
 ---
 
-## ⚙️ How it works
+## How it works
 
 AppUpdater is one file, `host.ps1`, containing three layers:
 
@@ -148,7 +148,7 @@ flowchart LR
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -184,7 +184,7 @@ On first run a **guided tour** walks through each screen (Escape / arrow keys / 
 
 ---
 
-## 🗺️ Application Flow
+## Application Flow
 
 ```mermaid
 flowchart TD
@@ -223,26 +223,26 @@ The pipeline rail at the top of the builder tracks the same stages: **Source →
 
 ---
 
-## 🖥️ The Interface
+## The Interface
 
 A borderless window with a left sidebar. Every screen is part of the same page, so switching is instant.
 
 | Screen | What it's for |
 |---|---|
-| 🏠 **Home** | Fleet stats (total / deployed / updates / pending), recent activity, getting-started checklist, shortcut to build |
-| 📦 **Package builder** | Drop or browse an installer (or switch to **Printer**), review auto-detected identity, choose Runtime vs Simple and `.intunewin` vs PSADT, live v3/v4 branding preview, **Build** |
-| 📋 **App fleet** | Every app in the manifest with version, target and status badge; filter, bulk-select, **Test locally**, **Mark deployed**, **Rebuild**, **Remove** |
-| 🎨 **Client profiles** | Named branding sets (org name, logo, banner, default target) applied per build — handy for MSPs |
-| 🕑 **History** | Timeline of every build, deploy and removal |
-| ⚙️ **Worker & settings** | Connect / disconnect Cloudflare, open the status dashboard, Worker options, default org name, recovery bundle export/import, release check |
-| ♿ **Accessibility** | Reduce motion, high contrast, colour-blind safe palette (Okabe-Ito + shape cues) |
-| ❓ **Docs & help** | Replay the guided tour, reset onboarding |
+| **Home** | Fleet stats (total / deployed / updates / pending), recent activity, getting-started checklist, shortcut to build |
+| **Package builder** | Drop or browse an installer (or switch to **Printer**), review auto-detected identity, choose Runtime vs Simple and `.intunewin` vs PSADT, live v3/v4 branding preview, **Build** |
+| **App fleet** | Every app in the manifest with version, target and status badge; filter, bulk-select, **Test locally**, **Mark deployed**, **Rebuild**, **Remove** |
+| **Client profiles** | Named branding sets (org name, logo, banner, default target) applied per build — handy for MSPs |
+| **History** | Timeline of every build, deploy and removal |
+| **Worker & settings** | Connect / disconnect Cloudflare, open the status dashboard, Worker options, default org name, recovery bundle export/import, release check |
+| **Accessibility** | Reduce motion, high contrast, colour-blind safe palette (Okabe-Ito + shape cues) |
+| **Docs & help** | Replay the guided tour, reset onboarding |
 
 Keyboard: <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> with a visible focus ring everywhere, <kbd>Esc</kbd> closes dialogs, arrow keys / <kbd>Enter</kbd> drive the tour.
 
 ---
 
-## 📦 Building a Package
+## Building a Package
 
 ### Phase 1 — Pick Your Installer
 
@@ -270,22 +270,22 @@ AppUpdater inspects the installer and pre-fills every field. All fields are edit
 
 | Field | Required | Notes |
 |---|---|---|
-| App ID | ✅ | Alphanumeric + `. _ -`, ≤ 64 chars. Locked once the app exists in the manifest |
-| Display Name | ✅ | Shown in the desktop shortcut and update popups |
+| App ID | Yes | Alphanumeric + `. _ -`, ≤ 64 chars. Locked once the app exists in the manifest |
+| Display Name | Yes | Shown in the desktop shortcut and update popups |
 
 **Download**
 
 | Field | Required | Notes |
 |---|---|---|
-| Primary Download URL | ✅ | HTTPS only. The download is Authenticode-verified before install |
-| Fallback URL | ❌ | HTTPS only. Used if primary fails |
+| Primary Download URL | Yes | HTTPS only. The download is Authenticode-verified before install |
+| Fallback URL | No | HTTPS only. Used if primary fails |
 
 **Installation**
 
 | Field | Required | Notes |
 |---|---|---|
-| Silent Install Arguments | ✅ | e.g. `/quiet /norestart`. Auto-detected for MSIs |
-| Registry Display Name | ✅ | Must exactly match the entry in **Add or Remove Programs** — used in the detection script |
+| Silent Install Arguments | Yes | e.g. `/quiet /norestart`. Auto-detected for MSIs |
+| Registry Display Name | Yes | Must exactly match the entry in **Add or Remove Programs** — used in the detection script |
 
 **Advanced** *(auto-detected, optional to change)*
 
@@ -311,10 +311,10 @@ Choose how to deliver the package after building:
 
 | Option | What happens |
 |---|---|
-| 📦 **Create `.intunewin`** | Downloads `IntuneWinAppUtil.exe` from Microsoft's GitHub (first use only), verifies Authenticode signature, packages everything into a `.intunewin` ready for Intune upload |
-| ▶️ **Run on this machine** | Executes the generated `Deploy-{AppID}.ps1` immediately on the admin machine as administrator |
-| 💾 **Save scripts only** | Writes `Detect-{AppID}.ps1` and `Deploy-{AppID}.ps1` to `C:\ProgramData\AppUpdater\_output\{AppID}\` |
-| 🧰 **Export as PSADT** | Downloads and caches `PSAppDeployToolkit` from GitHub releases (first use only), wraps the deployment with v3 or v4 for close-apps prompts and enterprise UI |
+| **Create `.intunewin`** | Downloads `IntuneWinAppUtil.exe` from Microsoft's GitHub (first use only), verifies Authenticode signature, packages everything into a `.intunewin` ready for Intune upload |
+| **Run on this machine** | Executes the generated `Deploy-{AppID}.ps1` immediately on the admin machine as administrator |
+| **Save scripts only** | Writes `Detect-{AppID}.ps1` and `Deploy-{AppID}.ps1` to `C:\ProgramData\AppUpdater\_output\{AppID}\` |
+| **Export as PSADT** | Downloads and caches `PSAppDeployToolkit` from GitHub releases (first use only), wraps the deployment with v3 or v4 for close-apps prompts and enterprise UI |
 
 > [!NOTE]
 > `IntuneWinAppUtil.exe` is downloaded from `https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool` on first use, verified against Microsoft's Authenticode certificate, then reused from the script directory. **No manual download required.**
@@ -329,7 +329,7 @@ After every build, AppUpdater automatically:
 
 ---
 
-## 📋 Generated Artifacts
+## Generated Artifacts
 
 ### Build Machine Output
 
@@ -432,7 +432,7 @@ Creates `C:\Users\Public\Desktop\Update {DisplayName}.lnk`. Falls back to the cu
 
 ---
 
-## 🖨️ Printer Packages
+## Printer Packages
 
 Alongside the standard `.exe`/`.msi` installer path, the build wizard's **00 · kind** step
 also offers **Printer** — deploys a printer queue, driver, and port via native Windows
@@ -488,7 +488,7 @@ verified, inside `Install-Printer.ps1`.
 
 ---
 
-## ☁️ Cloudflare Mode
+## Cloudflare Mode
 
 Cloudflare mode adds a web dashboard, per-device telemetry, and centralised manifest hosting — all on Cloudflare's free tier. AppUpdater deploys the Worker automatically from your API token.
 
@@ -540,38 +540,38 @@ After authenticating at `https://{your-worker}.workers.dev/status`:
 
 **Authentication types:**
 
-- 🔒 **Session cookie** — HMAC-SHA256 signed, browser / dashboard flows
-- 🗝️ **Bearer token** — `X-Auth-Token` header, PowerShell machine-to-Worker calls
-- 📡 **App secret** — per-app HMAC telemetry secret, embedded in deploy scripts
+- **Session cookie** — HMAC-SHA256 signed, browser / dashboard flows
+- **Bearer token** — `X-Auth-Token` header, PowerShell machine-to-Worker calls
+- **App secret** — per-app HMAC telemetry secret, embedded in deploy scripts
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | `GET` | `/health` | None | Liveness check — returns `200 OK` |
 | `GET` | `/login` | None | Render login page |
 | `POST` | `/login` | None | Submit password + TOTP (if enrolled). Rate-limited: 5 failures/IP/15 min |
-| `POST` | `/logout` | 🔒 Session | Invalidate current session |
-| `POST` | `/logout-all` | 🔒 Session | Invalidate **all** active sessions across all devices |
+| `POST` | `/logout` | Session | Invalidate current session |
+| `POST` | `/logout-all` | Session | Invalidate **all** active sessions across all devices |
 | `GET` | `/set-password` | None | First-run password setup page |
 | `POST` | `/set-password` | None | Save initial dashboard password |
-| `GET` | `/change-password` | 🔒 Session | Change password form |
-| `POST` | `/change-password` | 🔒 Session | Update dashboard password |
-| `GET` | `/totp-setup` | 🔒 Session | TOTP enrollment page with QR code |
-| `POST` | `/totp-setup` | 🔒 Session | Confirm TOTP enrollment with a valid code |
-| `POST` | `/totp-disable` | 🔒 Session | Remove TOTP requirement |
-| `GET` | `/status` | 🔒 Session | Main dashboard — app list + device telemetry |
-| `GET` | `/app/{id}` | 🔒 Session | Per-app detail view and event log |
-| `POST` | `/manifest` | 🗝️ Bearer | Upload or replace the full app manifest |
-| `DELETE` | `/app/{id}` | 🗝️ Bearer | Remove an app and all its telemetry data |
+| `GET` | `/change-password` | Session | Change password form |
+| `POST` | `/change-password` | Session | Update dashboard password |
+| `GET` | `/totp-setup` | Session | TOTP enrollment page with QR code |
+| `POST` | `/totp-setup` | Session | Confirm TOTP enrollment with a valid code |
+| `POST` | `/totp-disable` | Session | Remove TOTP requirement |
+| `GET` | `/status` | Session | Main dashboard — app list + device telemetry |
+| `GET` | `/app/{id}` | Session | Per-app detail view and event log |
+| `POST` | `/manifest` | Bearer | Upload or replace the full app manifest |
+| `DELETE` | `/app/{id}` | Bearer | Remove an app and all its telemetry data |
 | `GET` | `/deploy/{id}` | None | Download deploy script for an app |
-| `POST` | `/deploy-store/{id}` | 🗝️ Bearer | Push a generated deploy script from the build machine |
-| `POST` | `/event` | 📡 App secret | Ingest a telemetry event from an enrolled device |
-| `GET` | `/evtsec-export` | 🗝️ Bearer | Export the event HMAC secret (for embedding in scripts) |
+| `POST` | `/deploy-store/{id}` | Bearer | Push a generated deploy script from the build machine |
+| `POST` | `/event` | App secret | Ingest a telemetry event from an enrolled device |
+| `GET` | `/evtsec-export` | Bearer | Export the event HMAC secret (for embedding in scripts) |
 
 </details>
 
 ---
 
-## 🔐 Security
+## Security
 
 AppUpdater was designed for environments where endpoint security matters. Every secret has a defined storage mechanism, trust boundary, and rotation path.
 
@@ -615,7 +615,7 @@ Every binary AppUpdater downloads — `IntuneWinAppUtil.exe`, app installers, PS
 
 ---
 
-## 📁 Reference
+## Reference
 
 ### App Manifest Format
 
@@ -748,7 +748,7 @@ Console output on the build machine uses consistent prefixes:
 
 ---
 
-## 🧪 Testing
+## Testing
 
 `click-test.ps1` smoke-tests the real app: it launches `host.ps1` with a Chrome DevTools Protocol port open, uses the page's own JS to open the Fleet, Client profiles, History and Worker screens, checks that each one asks the PowerShell side for its data, then closes the window and confirms the app exits.
 
@@ -764,7 +764,7 @@ It doesn't need admin rights. When it isn't elevated, it sets `APPUPDATER_NO_ELE
 
 ---
 
-## ⚠️ Known Limitations
+## Known Limitations
 
 - **No log rotation** — `AppUpdater.log` appends indefinitely; prune manually if disk space is a concern
 - **Single-instance mutex** — uses a global Windows mutex; a second instance on the same machine will fail to start
@@ -774,16 +774,16 @@ It doesn't need admin rights. When it isn't elevated, it sets `APPUPDATER_NO_ELE
 
 ---
 
-## 📄 License
+## License
 
 AppUpdater is licensed under the **[Business Source License 1.1](LICENSE)** (BUSL-1.1).
 
 | | |
 |---|---|
 | **Licensor** | Lyvvy-xyz |
-| **Source available** | ✅ Yes — free to view, modify, and use for non-production purposes |
-| **Internal IT use** | ✅ Permitted — use freely for your own device management |
-| **Hosted / embedded resale** | ❌ Not permitted without a commercial licence |
+| **Source available** | Yes — free to view, modify, and use for non-production purposes |
+| **Internal IT use** | Permitted — use freely for your own device management |
+| **Hosted / embedded resale** | Not permitted without a commercial licence |
 | **Change Date** | 2030-05-27 — converts to GPL 2.0+ on this date |
 
 > [!NOTE]
