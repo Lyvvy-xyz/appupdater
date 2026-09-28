@@ -4,9 +4,11 @@ $hostSource = [IO.File]::ReadAllText((Resolve-Path $HostPath))
 $block = [regex]::Match($hostSource, '(?ms)^\$__CoreB64Chunks = @\(\r?\n(.*?)^\)').Groups[1].Value
 $encoded = ([regex]::Matches($block, "'([A-Za-z0-9+/=]+)'") | ForEach-Object { $_.Groups[1].Value }) -join ''
 $coreSource = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encoded))
-$tokens = $null; $parseErrors = $null
-[Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot '../click-test.ps1'), [ref]$tokens, [ref]$parseErrors) | Out-Null
-if ($parseErrors) { throw ($parseErrors.Message -join '; ') }
+foreach ($testScript in @('../click-test.ps1','package-roundtrip.ps1')) {
+  $tokens = $null; $parseErrors = $null
+  [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $testScript), [ref]$tokens, [ref]$parseErrors) | Out-Null
+  if ($parseErrors) { throw ($parseErrors.Message -join '; ') }
+}
 foreach ($source in @($coreSource, $hostSource)) {
   $tokens = $null; $parseErrors = $null
   $ast = [Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$parseErrors)
@@ -62,6 +64,11 @@ try {
   $store = Get-DeployStatusStore
   Assert ($store.Example -is [hashtable] -and $store.Example.deployedAt) 'Deployment status survives save/reload/update'
   Assert (@(Get-DeployHistory).Count -eq 2) 'History appends after reload'
+  $savedStatusWriter = (Get-Item Function:\Save-DeployStatusStore).ScriptBlock
+  function Save-DeployStatusStore { param($Store) throw 'Simulated write failure' }
+  Assert-Throws { Set-DeployStatus -AppID Example -MarkDeployed } 'Status write failure reaches the caller'
+  Assert (@(Get-DeployHistory).Count -eq 2) 'Failed status writes do not create successful history entries'
+  Set-Item Function:\Save-DeployStatusStore -Value $savedStatusWriter
   Assert (Test-Path "$DeployStatusFile.bak") 'Atomic writes retain previous state'
   [IO.File]::WriteAllText($DeployStatusFile, '{broken')
   Assert-Throws { Set-DeployStatus -AppID Example -MarkDeployed } 'Corrupt state blocks writes instead of erasing records'

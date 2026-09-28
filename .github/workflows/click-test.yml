@@ -32,6 +32,10 @@ jobs:
         shell: powershell
         run: ./tests/reliability.ps1
 
+      - name: Real Intune package round trip
+        shell: powershell
+        run: ./tests/package-roundtrip.ps1
+
       # Server images ship Edge but not always the registered WebView2 Runtime;
       # without it host.ps1 installs it or shows a blocking MessageBox.
       - name: Ensure WebView2 Runtime
@@ -50,10 +54,12 @@ jobs:
             throw 'WebView2 runtime installation failed.'
           }
 
-      - name: Smoke-test host.ps1 over CDP (Windows PowerShell 5.1)
+      - name: Smoke-test AppUpdater.ps1 over CDP (Windows PowerShell 5.1)
         shell: powershell
         run: |
-          try { .\click-test.ps1 -Reset }
+          Copy-Item -LiteralPath host.ps1 -Destination AppUpdater.ps1
+          if ((Get-FileHash host.ps1).Hash -ne (Get-FileHash AppUpdater.ps1).Hash) { throw 'Release filename copy differs from host.ps1.' }
+          try { .\click-test.ps1 -HostPath (Join-Path $PWD 'AppUpdater.ps1') -Reset }
           catch { Write-Host "::error::$($_.Exception.Message)%0A$($_.InvocationInfo.PositionMessage -replace "`r?`n", '%0A')"; exit 1 }
           if ($LASTEXITCODE) { Write-Host "::error::click-test.ps1 exit code $LASTEXITCODE"; exit $LASTEXITCODE }
 
