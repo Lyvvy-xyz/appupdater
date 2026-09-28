@@ -18,7 +18,7 @@
 
 .USAGE
   .\click-test.ps1                    # launch host.ps1 next to this script, smoke test
-  .\click-test.ps1 -Reset             # wipe app state first for a deterministic run
+  .\click-test.ps1 -Reset             # compatibility option; every run uses isolated state
   .\click-test.ps1 -HostPath C:\...\host.ps1 -Port 9333
 
 .REQUIRES
@@ -48,17 +48,26 @@ function Assert($cond, $msg) {
   }
 }
 
+$originalNoElevate = $env:APPUPDATER_NO_ELEVATE
+$originalDebugPort = $env:APPUPDATER_DEBUG_PORT
+$originalProgramData = $env:ProgramData
+$originalLocalAppData = $env:LOCALAPPDATA
+$proc = $ws = $null
+$redirect = @{}
+try {
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
   Write-Host "Not elevated - launching host.ps1 with APPUPDATER_NO_ELEVATE=1 to skip the UAC prompt."
   $env:APPUPDATER_NO_ELEVATE = '1'
 }
 
-if ($Reset) {
-  Write-Host "Resetting app state for a clean run..."
-  Remove-Item -Recurse -Force (Join-Path $env:ProgramData 'AppUpdater') -ErrorAction SilentlyContinue
-  Remove-Item -Recurse -Force (Join-Path $env:LOCALAPPDATA 'AppUpdater') -ErrorAction SilentlyContinue
-}
+# Every run gets isolated state; -Reset remains accepted for existing callers.
+$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('appupdater-click-' + [guid]::NewGuid().ToString('N'))
+$env:ProgramData = Join-Path $testRoot 'ProgramData'
+$env:LOCALAPPDATA = Join-Path $testRoot 'LocalAppData'
+New-Item -ItemType Directory -Path (Join-Path $env:ProgramData 'AppUpdater'), $env:LOCALAPPDATA -Force | Out-Null
+$seed = @{ OfflineMode = $true; WorkerURL = ''; ManifestToken = ''; OrgName = 'Test organisation'; OnboardingSeen = $true; DisableReleaseCheck = $true }
+$seed | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $env:ProgramData 'AppUpdater/.appupdater-config') -Encoding UTF8
 
 $logStartLen = 0
 if (Test-Path $logFile) { $logStartLen = (Get-Item $logFile).Length }
@@ -72,11 +81,9 @@ if ($env:GITHUB_ACTIONS) {
 $proc = Start-Process -FilePath 'powershell.exe' `
   -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$HostPath`"") `
   -PassThru @redirect
-$ws = $null
-
-try {
   $target = $null
   for ($i = 0; $i -lt 120; $i++) {
+    if ($proc.HasExited) { throw "AppUpdater exited before becoming ready (exit $($proc.ExitCode))." }
     Start-Sleep -Milliseconds 500
     try {
       $list = Invoke-RestMethod "http://127.0.0.1:$Port/json/list" -TimeoutSec 2
@@ -87,22 +94,35 @@ try {
   if (-not $target) { throw "CDP endpoint never came up on port $Port after 60s - app may not have launched (check for a stuck UAC prompt, or WebView2 runtime missing)." }
 
   $ws = [System.Net.WebSockets.ClientWebSocket]::new()
-  $ws.ConnectAsync([Uri]$target.webSocketDebuggerUrl, [Threading.CancellationToken]::None).GetAwaiter().GetResult()
+  $connectTimeout = [Threading.CancellationTokenSource]::new(15000)
+  try { $ws.ConnectAsync([Uri]$target.webSocketDebuggerUrl, $connectTimeout.Token).GetAwaiter().GetResult() }
+  finally { $connectTimeout.Dispose() }
 
   $script:cdpId = 0
   function Send-Cdp([string]$method, [hashtable]$cdpParams = @{}) {
     $script:cdpId++
     $payload = @{ id = $script:cdpId; method = $method; params = $cdpParams } | ConvertTo-Json -Depth 10 -Compress
     $bytes = [Text.Encoding]::UTF8.GetBytes($payload)
-    $ws.SendAsync([ArraySegment[byte]]::new($bytes), 'Text', $true, [Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null
-    $buffer = [byte[]]::new(4mb)
-    $text = ''
-    do {
-      $seg = [ArraySegment[byte]]::new($buffer)
-      $result = $ws.ReceiveAsync($seg, [Threading.CancellationToken]::None).GetAwaiter().GetResult()
-      $text += [Text.Encoding]::UTF8.GetString($buffer, 0, $result.Count)
-    } until ($result.EndOfMessage)
-    return ($text | ConvertFrom-Json)
+    $timeout = [Threading.CancellationTokenSource]::new(15000)
+    try {
+      $ws.SendAsync([ArraySegment[byte]]::new($bytes), 'Text', $true, $timeout.Token).GetAwaiter().GetResult() | Out-Null
+      $buffer = [byte[]]::new(65536)
+      do {
+        $message = [IO.MemoryStream]::new()
+        try {
+          do {
+            $result = $ws.ReceiveAsync([ArraySegment[byte]]::new($buffer), $timeout.Token).GetAwaiter().GetResult()
+            if ($result.MessageType -eq 'Close') { throw 'Browser connection closed.' }
+            $message.Write($buffer, 0, $result.Count)
+            if ($message.Length -gt 8mb) { throw 'Browser response exceeds the test limit.' }
+          } until ($result.EndOfMessage)
+          $response = [Text.Encoding]::UTF8.GetString($message.ToArray()) | ConvertFrom-Json
+        } finally { $message.Dispose() }
+        # CDP events may arrive between a request and its matching reply.
+      } until ($response.id -eq $script:cdpId)
+      if ($response.error) { throw ($response.error | ConvertTo-Json -Compress) }
+      return $response
+    } finally { $timeout.Dispose() }
   }
 
   function Eval-Js([string]$expr) {
@@ -111,7 +131,15 @@ try {
     return $r.result.result.value
   }
 
-  Start-Sleep -Seconds 2   # let the page's initial get-settings/get-config/get-fleet round trip land
+  function Wait-Js([string]$Expression, [int]$TimeoutSeconds = 15) {
+    $elapsed = [Diagnostics.Stopwatch]::StartNew()
+    do {
+      if (Eval-Js $Expression) { return }
+      Start-Sleep -Milliseconds 100
+    } while ($elapsed.Elapsed.TotalSeconds -lt $TimeoutSeconds)
+    throw "Timed out waiting for browser condition: $Expression"
+  }
+  Wait-Js "typeof window.send === 'function' && window._defaultOrgName !== undefined"
 
   Assert ([bool](Eval-Js "typeof window.chrome.webview !== 'undefined'")) "WebView2 bridge object exists"
 
@@ -136,6 +164,13 @@ window.__log = [];
   Assert ([bool](Eval-Js "window._gotFleetData === true")) "fleet-data response was received and rendered"
   Assert ([bool](Eval-Js "window.__log.includes('get-config')")) "'worker' screen requested config"
   Assert ([bool](Eval-Js "window._defaultOrgName !== undefined")) "config-data response was received"
+  Eval-Js "toast('Test', '<img src=x onerror=window.__injected=true>', true)" | Out-Null
+  Assert (-not [bool](Eval-Js "!!document.querySelector('#toasts img') || window.__injected === true")) 'Messages render as text, not executable HTML'
+  Eval-Js "window._defaultOrgName = undefined; window.chrome.webview.postMessage(null)" | Out-Null
+  Eval-Js "send('get-config', {})" | Out-Null
+  Wait-Js "document.getElementById('toasts').textContent.includes('Invalid application message')"
+  Wait-Js "window._defaultOrgName !== undefined"
+  Assert ([bool](Eval-Js "window._defaultOrgName !== undefined")) 'Bridge survives malformed input'
 
   # These don't verify the actual OS window action (no native window to
   # inspect over CDP), only that the bridge round-trips without an
@@ -146,7 +181,8 @@ window.__log = [];
   Assert ($clientErrors -eq 0) "no client-error events fired during the run"
 
   # Last: close-window tears down the page, so nothing can be evaluated after it.
-  Eval-Js "send('close-window', {})" | Out-Null
+  try { Eval-Js "send('close-window', {})" | Out-Null }
+  catch { if (-not $proc.WaitForExit(15000)) { throw } }
   Assert ($proc.WaitForExit(15000)) "close-window exits the app"
 
 } catch {
@@ -183,11 +219,12 @@ window.__log = [];
       }
     }
   }
-  if ($ws -and $ws.State -eq 'Open') {
-    # Best-effort: after close-window the app has already dropped the socket.
-    try { $ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'done', [Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null } catch {}
-  }
-  Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+  if ($ws) { $ws.Abort(); $ws.Dispose() }
+  if ($proc) { if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }; $proc.Dispose() }
+  $env:ProgramData = $originalProgramData
+  $env:LOCALAPPDATA = $originalLocalAppData
+  $env:APPUPDATER_NO_ELEVATE = $originalNoElevate
+  $env:APPUPDATER_DEBUG_PORT = $originalDebugPort
 }
 
 if (Test-Path $logFile) {

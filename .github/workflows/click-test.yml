@@ -2,29 +2,53 @@ name: click-test
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static bridge checks
+        run: bash check.sh
+      - name: Release failure regressions
+        run: python3 -B -m unittest discover -s tests -p 'test_*.py'
+      - name: Reliability regressions
+        shell: pwsh
+        run: ./tests/reliability.ps1
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      - name: PowerShell 5.1 reliability regressions
+        shell: powershell
+        run: ./tests/reliability.ps1
 
       # Server images ship Edge but not always the registered WebView2 Runtime;
       # without it host.ps1 installs it or shows a blocking MessageBox.
       - name: Ensure WebView2 Runtime
         shell: powershell
         run: |
-          $id = '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
-          $keys = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\$id", "HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\$id"
-          $pv = $keys | ForEach-Object { (Get-ItemProperty $_ -Name pv -ErrorAction SilentlyContinue).pv } | Select-Object -First 1
-          if (-not $pv) {
-            Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile "$env:RUNNER_TEMP\wv2setup.exe" -UseBasicParsing
-            Start-Process "$env:RUNNER_TEMP\wv2setup.exe" '/silent /install' -Wait
-            $pv = $keys | ForEach-Object { (Get-ItemProperty $_ -Name pv -ErrorAction SilentlyContinue).pv } | Select-Object -First 1
-            Write-Host "::notice::WebView2 Runtime was missing; installed $pv"
-          } else { Write-Host "::notice::WebView2 Runtime present: $pv" }
+          $tokens = $null; $errors = $null
+          $ast = [Management.Automation.Language.Parser]::ParseFile((Resolve-Path host.ps1), [ref]$tokens, [ref]$errors)
+          if ($errors) { throw ($errors.Message -join '; ') }
+          foreach ($node in $ast.EndBlock.Statements) {
+            if ($node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+                $node.Name -in @('Test-WebView2RuntimeInstalled', 'Install-WebView2Runtime')) {
+              . ([scriptblock]::Create($node.Extent.Text))
+            }
+          }
+          if (-not (Test-WebView2RuntimeInstalled) -and -not (Install-WebView2Runtime)) {
+            throw 'WebView2 runtime installation failed.'
+          }
 
       - name: Smoke-test host.ps1 over CDP (Windows PowerShell 5.1)
         shell: powershell
