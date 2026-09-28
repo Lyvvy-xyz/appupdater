@@ -2932,10 +2932,11 @@ function Get-ImageDataUrl {
 function Set-DeployStatus {
   param([string]$AppID, [string]$AppName, [string]$Target, [string]$ProfileName, [string]$OutputDir, [switch]$MarkDeployed)
   $store = Get-DeployStatusStore
+  # Validate history before changing status, then record only a saved transition.
+  Get-DeployHistory | Out-Null
   if (-not $store.ContainsKey($AppID)) { $store[$AppID] = @{} }
   if ($MarkDeployed) {
     $store[$AppID]['deployedAt'] = (Get-Date -Format 'o')
-    Add-DeployHistoryEvent -AppID $AppID -AppName $AppName -Event 'deployed' -Target $store[$AppID]['target'] -ProfileName $store[$AppID]['profile']
   } else {
     $store[$AppID]['builtAt'] = (Get-Date -Format 'o')
     $store[$AppID]['name'] = $AppName
@@ -2943,9 +2944,9 @@ function Set-DeployStatus {
     $store[$AppID]['profile'] = $ProfileName
     $store[$AppID]['outputDir'] = $OutputDir
     $store[$AppID]['deployedAt'] = $null
-    Add-DeployHistoryEvent -AppID $AppID -AppName $AppName -Event 'built' -Target $Target -ProfileName $ProfileName
   }
   Save-DeployStatusStore -Store $store
+  Add-DeployHistoryEvent -AppID $AppID -AppName $AppName -Event $(if ($MarkDeployed) { 'deployed' } else { 'built' }) -Target $store[$AppID]['target'] -ProfileName $store[$AppID]['profile']
 }
 
 function Get-FleetPayload {
