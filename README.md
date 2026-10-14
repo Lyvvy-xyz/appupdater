@@ -8,7 +8,7 @@ Builds deployment-ready packages from any `.exe` or `.msi` installer — and opt
 
 <br/>
 
-![Version](https://img.shields.io/badge/version-52.0.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-52.0.1-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-informational?style=flat-square&logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=flat-square&logo=powershell&logoColor=white)
 ![Intune](https://img.shields.io/badge/Microsoft-Intune-0078d4?style=flat-square&logo=microsoft&logoColor=white)
