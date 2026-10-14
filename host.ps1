@@ -1486,7 +1486,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       name = window._selectedInstaller ? window._selectedInstaller.split(/[\\/]/).pop() : null;
       if (!name) { $('#build-summary').textContent = 'Select an installer to begin.'; return; }
     }
-    const parts = [name, mode, org ? `${org} branding` : null, `&#8594; ${target}`].filter(Boolean);
+    const esc = s => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+    const parts = [esc(name), mode, org ? `${esc(org)} branding` : null, `&#8594; ${target}`].filter(Boolean);
     $('#build-summary').innerHTML = parts.join('<span class="sep">&middot;</span>');
   }
 
