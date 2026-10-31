@@ -9,8 +9,7 @@
   cannot reach into the DOM. host.ps1 already exposes a CDP debug port via
   $env:APPUPDATER_DEBUG_PORT (see host.ps1 around line 2984), so this script
   launches the app with that set, connects over a raw WebSocket (built into
-  .NET, no extra install), and drives the page's own JS directly - the same
-  channel used to diagnose the bridge bug in SESSION_STATUS.txt.
+  .NET, no extra install), and drives the page's own JS directly.
 
   Native, non-DOM dialogs (the installer/image OpenFileDialog boxes) are
   Win32 dialogs outside the page and are NOT exercised here - they need a
