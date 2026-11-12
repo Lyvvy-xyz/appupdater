@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Static self-check for host.ps1's embedded UI <-> PowerShell bridge.
-# Can't run the WebView2 GUI on Linux, but this catches the exact bug class
-# that has broken the app before: a JS syntax error silently killing the
-# whole script, or a JS action / PS Send-ToPage event with no matching
-# handler on the other side (see SESSION_STATUS.txt Phase 1 and Phase 7).
+# Static check of host.ps1's UI <-> PowerShell bridge: JS syntax errors, and
+# JS actions or PS Send-ToPage events with no handler on the other side.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -20,7 +17,7 @@ awk '/<script>/{f=1;next}/<\/script>/{f=0}f' "$tmp/ui.html" > "$tmp/ui.js"
 if node --check "$tmp/ui.js"; then
   echo "OK"
 else
-  echo "FAIL: JS syntax error would silently break the whole bridge (see Phase 1 in SESSION_STATUS.txt)"
+  echo "FAIL: JS syntax error would silently break the whole bridge"
   fail=1
 fi
 
