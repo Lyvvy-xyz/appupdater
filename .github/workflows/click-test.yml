@@ -36,8 +36,7 @@ jobs:
         shell: powershell
         run: ./tests/package-roundtrip.ps1
 
-      # Server images ship Edge but not always the registered WebView2 Runtime;
-      # without it host.ps1 installs it or shows a blocking MessageBox.
+      # Server images do not always register the WebView2 Runtime.
       - name: Ensure WebView2 Runtime
         shell: powershell
         run: |
@@ -63,7 +62,6 @@ jobs:
           catch { Write-Host "::error::$($_.Exception.Message)%0A$($_.InvocationInfo.PositionMessage -replace "`r?`n", '%0A')"; exit 1 }
           if ($LASTEXITCODE) { Write-Host "::error::click-test.ps1 exit code $LASTEXITCODE"; exit $LASTEXITCODE }
 
-      # Surface the tail of the app log as an annotation - readable without a token.
       - name: App log
         if: always()
         shell: powershell

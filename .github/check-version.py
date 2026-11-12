@@ -1,6 +1,4 @@
-# Prints $global:Version from inside host.ps1's base64 engine - the app compares
-# that value against the latest release tag to decide whether an update exists,
-# so releases are tagged with exactly this.
+# Prints the embedded engine's $global:Version; release tags must match it.
 import base64, re
 
 src = open('host.ps1', encoding='utf-8-sig').read()

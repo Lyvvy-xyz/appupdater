@@ -1,7 +1,6 @@
 name: release
 
-# Releases whenever main carries an engine version that has no release yet,
-# so bumping $global:Version is all it takes to ship.
+# Publishes when main carries an engine version with no release yet.
 on:
   push:
     branches: [main]

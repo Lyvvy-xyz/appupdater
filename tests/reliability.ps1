@@ -13,7 +13,6 @@ foreach ($source in @($coreSource, $hostSource)) {
   $tokens = $null; $parseErrors = $null
   $ast = [Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$parseErrors)
   if ($parseErrors) { throw ($parseErrors.Message -join '; ') }
-  # Load declarations only: never elevate, launch the UI, or install software.
   foreach ($node in $ast.EndBlock.Statements) {
     if ($node -is [Management.Automation.Language.FunctionDefinitionAst]) {
       . ([scriptblock]::Create($node.Extent.Text))
@@ -99,7 +98,6 @@ try {
   $PSADTCacheDir = Join-Path $root 'toolkit'
   $config = @{ OfflineMode = $true; WorkerURL = ''; ManifestToken = ''; OrgName = "O'Brien" }
   $form = @{ AppID = 'Example'; DisplayName = "O'Brien & Sons"; PackageKind = 'App'; Mode = 'simple'; SimplePkgTarget = 'intunewin'; PSADTVersion = 'v3'; InstallerPath = $installer; RegistryName = "O'Brien & Sons" }
-  # Exercise the real generators; only the external executable is replaced.
   function Test-DownloadAuthenticode { param($FilePath, $ExpectedPublisher) }
   if ($env:OS -ne 'Windows_NT') {
     function Unblock-File { [CmdletBinding()]param([Parameter(ValueFromPipeline)]$InputObject) process {} }
@@ -147,7 +145,6 @@ try {
   $result = Invoke-HeadlessPackageBuild -Config $config -FormData $form -Profile @{}
   Assert ([IO.File]::ReadAllText($XmlFile) -ceq $manifestBefore -and -not (Test-Path "$XmlFile.bak")) 'Simple builds leave the runtime manifest untouched'
 
-  # Toolkit fixtures check generation/routing only; no toolkit code executes.
   [IO.Directory]::CreateDirectory((Join-Path $PSADTCacheDir 'AppDeployToolkit')) | Out-Null
   [IO.Directory]::CreateDirectory((Join-Path $PSADTCacheDir 'PSAppDeployToolkit')) | Out-Null
   [IO.File]::WriteAllText((Join-Path $PSADTCacheDir 'AppDeployToolkit/AppDeployToolkitMain.ps1'), '# toolkit fixture')
@@ -235,8 +232,7 @@ function Start-Process {
   Invoke-TestWorker 'Start-LocalTestJob' $testVariables $processSetup
   Assert ($testDone.Count -eq 1 -and -not $testDone[0].ok -and $testCalls.Count -eq 0) 'Damaged archive fails without running loose scripts'
   [IO.File]::Move((Join-Path $testFolder 'damaged.intunewin'), (Join-Path $root 'damaged.saved'))
-  # Build an AES-CBC encrypted ZIP fixture, exercising real streaming extraction.
-  # This checks extraction, not Microsoft packager compatibility or signatures.
+  # AES-CBC encrypted ZIP fixture.
   Add-Type -AssemblyName System.IO.Compression.FileSystem
   $inner = Join-Path $root 'inner'
   $outer = Join-Path $root 'outer'
@@ -280,7 +276,6 @@ function Start-Process {
   Microsoft.PowerShell.Utility\Write-Host 'All reliability checks passed.'
   $passed = $true
 } finally {
-  # Only this test-owned GUID directory; never application data.
   if ($passed) { [IO.Directory]::Delete($root, $true) }
   else { Microsoft.PowerShell.Utility\Write-Host "Failure fixtures retained at $root" }
 }

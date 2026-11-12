@@ -28,7 +28,6 @@ $extracted = Join-Path $root 'extracted'
 $IntuneWinUtilPath = Join-Path $root 'IntuneWinAppUtil.exe'
 $IntuneWinUtilURL = 'https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe'
 try {
-  # Package inert files; neither installation nor detection scripts are executed.
   [IO.File]::WriteAllText((Join-Path $inputFolder 'install.ps1'), 'exit 0')
   [IO.Directory]::CreateDirectory((Join-Path $inputFolder 'nested')) | Out-Null
   [IO.File]::WriteAllText((Join-Path $inputFolder 'nested/payload.txt'), "O'Brien & Sons fixture")
