@@ -91,19 +91,16 @@ input,textarea,select{font:inherit;color:inherit}
   filter:blur(.5px);box-shadow:0 0 8px var(--signal);animation:packet 1.1s linear infinite}
 @keyframes packet{from{left:-12px}to{left:100%}}
 
-/* Guided tour spotlight overlay. */
 #tour-overlay{position:fixed;inset:0;z-index:200;display:none}
 #tour-spot{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(4,4,10,.82);
   border:1.5px solid var(--signal);transition:top .35s var(--ease),left .35s var(--ease),width .35s var(--ease),height .35s var(--ease);pointer-events:none}
 #tour-card{position:absolute;width:300px;background:var(--panel);border:1px solid var(--edge-hi);border-radius:12px;
   padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.6);transition:top .35s var(--ease),left .35s var(--ease)}
 
-/* Reduced-motion mode: disables animations and transitions app-wide. */
 body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after{
   animation-duration:.001ms!important;animation-delay:0s!important;animation-iteration-count:1!important;
   transition-duration:.001ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
 
-/* High-contrast mode. */
 body.high-contrast{
   --ink:#FFFFFF; --dim:#C7C9DC; --faint:#8A8DB0;
   --edge:#4A4D70; --edge-hi:#7276A8; --panel:#0A0A14; --panel-2:#14152A}
@@ -119,7 +116,6 @@ body.colorblind-safe .badge.ok i, body.colorblind-safe .chip.g i{border-radius:5
 body.colorblind-safe .badge.wn i, body.colorblind-safe .chip.w i{border-radius:1px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
 body.colorblind-safe .toast.err b i{border-radius:1px}
 
-/* Keyboard focus indicator. */
 :focus-visible{outline:2px solid var(--signal)!important;outline-offset:2px}
 
 .screens{flex:1;position:relative;overflow:hidden}
@@ -268,9 +264,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 .toast .life{position:absolute;bottom:0;left:0;height:2px;background:var(--grad);animation:life 4s linear forwards}
 @keyframes life{from{width:100%}to{width:0}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-/* Build screen only: denser spacing so the whole screen fits the 640-800px
-   window without scrolling - scoped to #screen-build so other screens (which
-   don't have this many stacked cards) keep the normal roomier spacing. */
+/* Denser spacing so the Build screen fits a 640-800px window without scrolling. */
 #screen-build{padding-top:16px;padding-bottom:16px}
 #screen-build .card-h{padding:8px 18px 0}
 #screen-build .card-b{padding:9px 18px 11px}
@@ -1131,11 +1125,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     if (bridge) bridge.postMessage({ action, payload });
     else console.warn('WebView2 bridge unavailable â€” running outside host?', action, payload);
   }
-  // DevTools are disabled in production (AreDevToolsEnabled = $false), so an
-  // uncaught exception anywhere in this script would otherwise be completely
-  // silent - no console, no log, nothing - and could leave e.g. "Loadingâ€¦"
-  // placeholders stuck forever if it fires before later setup code runs.
-  // This is the only way to ever see what actually happened.
+  // DevTools are off, so report uncaught exceptions to the host log.
   window.addEventListener('error', e => {
     try { send('client-error', { message: e.message, stack: (e.error && e.error.stack) || '', source: e.filename + ':' + e.lineno }); } catch (_) {}
   });
@@ -1143,7 +1133,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     try { send('client-error', { message: 'Unhandled promise rejection: ' + (e.reason && e.reason.message || e.reason), stack: (e.reason && e.reason.stack) || '' }); } catch (_) {}
   });
 
-  /* ---------- toasts ---------- */
   function toast(title, msg, isErr) {
     const t = document.createElement('div');
     t.className = 'toast' + (isErr ? ' err' : '');
@@ -1152,7 +1141,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 4000);
   }
 
-  /* ---------- segmented control w/ sliding thumb ---------- */
   function segInit(seg, onChange) {
     const th = seg.querySelector('.thumb'), btns = [...seg.querySelectorAll('button')];
     function place(b) { th.style.left = b.offsetLeft + 'px'; th.style.width = b.offsetWidth + 'px'; }
@@ -1164,7 +1152,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     new ResizeObserver(() => place(seg.querySelector('button.on') || btns[0])).observe(seg);
   }
 
-  /* ---------- pipeline rail ---------- */
   const pipeLabels = ['Source', 'Identity', 'Configure', 'Wrap', 'Deliver'];
   function renderPipe(activeIdx, doneUpTo, flowIdx) {
     const pipe = $('#pipe');
@@ -1178,7 +1165,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     }).join('');
   }
 
-  /* ---------- custom title bar: drag, minimize, close ---------- */
   document.getElementById('drag-region').addEventListener('mousedown', (e) => {
     if (e.target.closest('#win-minimize, #win-close')) return;
     if (e.button !== 0) return;
@@ -1199,9 +1185,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     $('#buildbar').style.display = (id === 'build') ? 'flex' : 'none';
     if (id === 'build') {
       renderPipe(0, inspected ? 2 : 0);
-      // Skipped while the guided tour is active - the tour's own step text
-      // already covers this, and this panel would render invisibly behind
-      // the tour's dimming overlay (z-index below #tour-overlay) if shown here.
+      // Skipped during the tour; it would sit behind the tour overlay.
       if (!window._tourActive && !window._modeExplainerSeen && !window._modeExplainerShownThisSession) {
         window._modeExplainerShownThisSession = true;
         updateModeExplainerText();
@@ -1217,17 +1201,13 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     if (id === 'worker') { send('get-config', {}); send('get-settings', {}); send('get-fleet', {}); }
   }
   document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) goTo(g.dataset.go); });
-  // Enter/Space activates any [data-go] element, including non-<button> ones
-  // (e.g. the home build-CTA card, recent-activity rows) that only carry
-  // role="button" tabindex="0" - native <button>s already get this for free
-  // but handling it here too is harmless and keeps the logic in one place.
+  // Enter/Space for role="button" elements carrying data-go.
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       const g = e.target.closest('[data-go][role="button"]');
       if (g) { e.preventDefault(); goTo(g.dataset.go); return; }
     }
     if (e.key === 'Escape') {
-      // Close whichever overlay/panel is currently open, most-specific first.
       const testModal = $('#test-modal');
       if (testModal && testModal.style.display !== 'none') { testModal.style.display = 'none'; return; }
       const drAdd = $('#driver-lib-add-panel');
@@ -1239,7 +1219,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     }
   });
 
-  /* ---------- form state (field names match Invoke-PackageBuilder / Export-PSADTPackage) ---------- */
   const form = { Kind: 'app', Mode: 'runtime', SimplePkgTarget: 'intunewin', PSADTVersion: 'v3', ProfileName: '', closeAppsOn: true, allowDefer: true, ProcessesToKill: '' };
   let inspected = false;
 
@@ -1339,8 +1318,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       send('mark-mode-explainer-seen', {});
     }
   });
-  // Explains whichever mode/target is CURRENTLY selected, not a generic
-  // combined blurb - reads live from `form` so it's accurate whenever shown.
   function updateModeExplainerText() {
     const modeText = form.Mode === 'runtime'
       ? '<b>AppUpdater Runtime</b> (selected) installs the app plus a small background task that keeps checking for new versions and updates it automatically - "set it and forget it".'
@@ -1350,9 +1327,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       : '<b>.intunewin</b> (selected) packages straight for Intune Win32 upload as-is, with no extra install-time prompts.';
     $('#mode-explainer-text').innerHTML = modeText + '<br><br>' + targetText;
   }
-  // Guides the user to the explainer each time they change mode/target - until
-  // they permanently dismiss it via "Got it, stop guiding me". Never fires
-  // during the guided tour (tour already explains this via its own steps).
+  // Points at the explainer on mode/target change until dismissed; never during the tour.
   function guideToModeExplainer() {
     updateModeExplainerText();
     if (!window._tourActive && !window._modeExplainerSeen) {
@@ -1559,7 +1534,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     send('build-package', payload);
   });
 
-  /* ---------- host bridge messages ---------- */
   if (bridge) {
     bridge.addEventListener('message', (e) => {
       const { type, payload } = e.data;
@@ -1770,14 +1744,11 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     });
   }
 
-  /* ---------- client profiles ---------- */
   function renderProfiles(profiles, lastUsed) {
     const grid = $('#profiles-strip');
     const sel = $('#f-profile');
     sel.innerHTML = '<option value="">Default (uses Settings organisation name)</option>' +
       profiles.map(function(p){ return '<option value="' + escapeHtml(p.Name) + '">' + escapeHtml(p.Name) + '</option>'; }).join('');
-    // Compact chip strip - clicking a chip loads that profile straight into
-    // the builder below, which is always visible on this screen.
     grid.innerHTML = profiles.map(function(p){
       var active = p.Name === editingProfile ? ' style="border-color:var(--signal);color:var(--signal)"' : '';
       return '<button class="btn sm" data-edit-profile="' + escapeHtml(p.Name) + '"' + active + '>' + escapeHtml(p.Name) +
@@ -1785,10 +1756,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     }).join('') +
       '<button class="btn sm primary" id="new-profile-card">+ New profile</button>';
   }
-  // Default-org select on Worker & Settings is backed by Client Profiles -
-  // picking one copies that profile's org name in as the fallback used when
-  // a build has no profile selected. Preserves a legacy/custom value (typed
-  // before this was profile-backed) as its own option so it isn't silently lost.
+  // Default org comes from Client Profiles; a custom value is kept as its own option.
   function renderOrgNameSettingsSelect() {
     const sel = $('#f-orgname-settings');
     if (!sel) return;
@@ -1829,7 +1797,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     updateProfilePreview();
     renderProfiles(window._profiles || [], window._lastUsedProfile);
   }
-  // Renders the branding preview for the profile editor.
   function updateProfilePreview() {
     const name = $('#pf-name').value.trim() || 'Example App';
     const org = $('#pf-orgname').value.trim() || 'Acme Corp';
@@ -1892,7 +1859,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     });
   });
 
-  /* ---------- settings: everything auto-saves the instant it changes ---------- */
   function saveSettingsNow() {
     send('save-settings', {
       orgName: $('#f-orgname-settings').value,
@@ -1905,7 +1871,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       showCloudflareNav: $('#tgl-cf-nav').classList.contains('on')
     });
   }
-  // Returns 0 when reduced motion is on, otherwise the given delay.
   function motionMs(ms) { return document.body.classList.contains('reduce-motion') ? 0 : ms; }
   function flashSaved() {
     var el = $('#settings-saved-flash');
@@ -2003,7 +1968,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     });
   }
 
-  /* ---------- fleet ---------- */
   let lastFleet = [];
   window._realHistoryEvents = [];
   const DEMO_FLEET = [
@@ -2074,7 +2038,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       </div>`).join('');
   }
 
-  /* ---------- guided tour ---------- */
   const TOUR_STEPS = [
     { screen: 'home', selector: '#screen-home h1', title: 'Welcome to AppUpdater', text: 'This is your packaging console. Fleet stats, recent activity, and quick actions all live on this Home screen.' },
     { screen: 'home', selector: '#home-stats', title: 'Fleet at a glance', text: 'How many apps you\'re tracking, how many are deployed, and which need attention - computed from your local records.' },
@@ -2085,10 +2048,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     { screen: 'build', selector: '#segTarget', title: 'Choose an output format', text: '.intunewin packages straight for Intune Win32 app upload. PSADT wraps the install with PSAppDeployToolkit instead - close-running-apps prompts, deferrals, and a branded install dialog your users actually see.', onShow: () => { $('#segTarget button[data-val="psadt"]').click(); } },
     { screen: 'build', selector: '#f-profile', title: 'Branding for this build', text: 'Pick a client profile to apply their logo, banner, and organisation name to this build - or leave it on Default to use your own Settings organisation name.' },
     { screen: 'build', selector: '#bp-panel', title: 'A real preview, not a guess', text: 'This mirrors the actual install dialog your PSADT choice produces - logo, banner, and app name all update live as you fill in the form above. If you picked "Both" versions, a small switch lets you flip between the v3 and v4 look.', onShow: () => {
-      // Panel is collapsed by default (see #bp-disclosure), so there's
-      // nothing to spotlight yet - play a simulated click on the toggle,
-      // then let the real click handler expand it, before the spotlight
-      // moves in. Returns the delay (ms) proceed() should wait for.
+      // Panel starts collapsed: simulate a click to open it, return the delay before spotlighting.
       if (window._bpExpanded) { updateBuildBrandingPreview(); return 0; }
       const disclosure = $('#bp-disclosure');
       disclosure.classList.add('tour-click-sim');
@@ -2105,13 +2065,11 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
   ];
   let tourIndex = 0;
   function tourStepsForCurrentNav() {
-    // Filters out the fleet step if the Fleet nav item is hidden.
     return TOUR_STEPS.filter(s => window._showCfNav !== false || s.screen !== 'fleet');
   }
   function startTour() {
     window._tourActive = true;
     tourIndex = 0;
-    // Shows demo data on the Fleet/History screens for the duration of the tour.
     if (lastFleet.length === 0) { window._tourDemoFleet = true; lastFleet = DEMO_FLEET; paintFleet(); }
     if (window._realHistoryEvents.length === 0) { window._tourDemoHistory = true; renderHistory(DEMO_HISTORY); }
     $('#fleet-demo-badge').style.display = window._tourDemoFleet ? 'inline-block' : 'none';
@@ -2150,9 +2108,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     tourIndex = i;
     const step = steps[i];
     const proceed = () => {
-      // onShow may return a ms delay (e.g. to let a simulated click/expand
-      // animation play before the spotlight jumps to the now-visible
-      // target) - falsy/undefined means show immediately, as before.
+      // onShow may return a delay in ms before the spotlight moves.
       const delay = step.onShow ? step.onShow() : 0;
       const spotlight = () => {
         const target = document.querySelector(step.selector);
@@ -2178,10 +2134,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     showTourStep(tourIndex + 1);
   });
   $('#tour-back').addEventListener('click', () => showTourStep(tourIndex - 1));
-  // A scoped one-step spotlight (reuses the tour overlay/spot/card) for
-  // guiding into Client Profiles from wherever "not set yet" is shown -
-  // deliberately does NOT touch the real guided-tour step index or its
-  // mark-onboarding-seen completion, since this isn't the first-run tour.
+  // One-step spotlight into Client Profiles; does not touch the tour's step index or completion.
   function showProfileGuide() {
     goTo('profiles');
     window._tourActive = true;
@@ -2253,9 +2206,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
   });
 
   function renderFleet(apps) {
-    // Array.isArray guard, not just `|| []`: a PS-side serialization edge case
-    // can send an empty fleet as {} instead of [], which is truthy and would
-    // otherwise slip through `|| []` and crash paintFleet()'s .filter() call.
+    // PS can serialize an empty fleet as {}, which `|| []` would let through.
     lastFleet = Array.isArray(apps) ? apps : [];
     paintFleet();
     renderHomeStats(lastFleet);
@@ -2447,7 +2398,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
   }
   if ($('#fleet-filter')) $('#fleet-filter').addEventListener('input', paintFleet);
 
-  /* ---------- worker & settings ---------- */
   $('#connect-preview-btn').addEventListener('click', () => {
     const demo = $('#connect-demo');
     demo.style.display = demo.style.display === 'none' ? 'block' : 'none';
@@ -2491,14 +2441,12 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     if (confirm('Disconnect this worker? You will need to reconnect via the setup wizard to restore the URL and manifest token.')) send('disconnect-worker', {});
   });
 
-  // Loads initial data for Home, Worker & settings, Profiles, and History.
   send('get-fleet', {});
   send('get-settings', {});
   send('get-profiles', {});
   send('get-history', {});
   send('get-psadt-stock-assets', {});
 
-  // Falls back to an empty fleet if fleet-data doesn't arrive within 5s.
   window._gotFleetData = false;
   setTimeout(() => {
     if (!window._gotFleetData) renderFleet([]);
@@ -2509,13 +2457,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 
 '@
 
-# ---------------------------------------------------------------------------
-# Requests administrator elevation if not already running as admin.
-# $env:APPUPDATER_NO_ELEVATE=1 skips this for automated/unattended test runs
-# (e.g. click-test.ps1) where the caller is already running as a non-admin
-# and can't answer a UAC prompt. Not for normal use - anything the app does
-# that genuinely needs admin will just fail without it.
-# ---------------------------------------------------------------------------
+# APPUPDATER_NO_ELEVATE=1 skips elevation for unattended test runs.
 $__principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not $__principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -and $env:APPUPDATER_NO_ELEVATE -ne '1') {
   $__args = @('-Sta', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ('"{0}"' -f $PSCommandPath))
@@ -2525,10 +2467,7 @@ if (-not $__principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
-# ---------------------------------------------------------------------------
-# Embedded copy of the AppUpdaterV520.ps1 core script, base64-encoded and
-# decoded here into a script block.
-# ---------------------------------------------------------------------------
+# Embedded AppUpdaterV520.ps1 core engine (base64).
 $__CoreB64Chunks = @(
   'PCMKLlNZTk9QU0lTCiAgQXBwVXBkYXRlciB2NTAg4oCUIEludHVuZSBXaW4zMiBwYWNrYWdlIGdlbmVyYXRvciB3aXRoIG9wdGlvbmFsIENsb3VkZmxhcmUtV29ya2VyCiAgbWFuaWZlc3QgYmFja2VuZCwgc2lnbmVkIHNlc3Npb25zLCBUT1RQIE1GQSwgYW5kIFdpbmRvd3MgQ3JlZGVudGlhbCBNYW5hZ2VyIHByb3RlY3Rpb24uCgouREVTQ1JJUFRJT04KICBBbGwgVUkgaXMgV1BGLiBUd28gb3BlcmF0aW5nIG1vZGVzOgogICAgKiBDbG91ZGZsYXJlLWNvbm5lY3RlZCDigJQgV29ya2VyIGhvc3RzIG1hbmlmZXN0LCBkYXNoYm9hcmQsIGF1dGgsIGhlYWx0aC4KICAgICogT2ZmbGluZSAgICAgICAgICAgICAg4oCUIHBhY2thZ2VzIGJ1aWx0IGxvY2FsbHk7IG1hbmlmZXN0IHN0YXlzIG9uIGRpc2suCgogIEdlbmVyYXRlZCBhcnRlZmFjdHMgKHBlciBhcHApOgogICAgQzpcUHJvZ3JhbURhdGFcQXBwVXBkYXRlclxfb3V0cHV0XHtBcHBJRH1ce0FwcElEfS5pbnR1bmV3aW4gICDihpAgSW50dW5lIFdpbjMyIHBhY2thZ2UKICAgIEM6XFByb2dyYW1EYXRhXEFwcFVwZGF0ZXJcX291dHB1dFx7QXBwSUR9XERldGVjdC17QXBwSUR9LnBzMSAg4oaQIEludHVuZSBkZXRlY3Rpb24gc2NyaXB0CiAgICBDOlxQcm9ncmFtRGF0YVxBcHBVcGRhdGVyXF9vdXRwdXRce0FwcElEfVxEZXBsb3kte0FwcElEfS5wczEgIOKGkCBEZXBsb3kgc2NyaXB0IChydW4gYXMgYWRtaW4pCiAgUnVudGltZSBhcnRlZmFjdHMgY3JlYXRlZCBvbiB0YXJnZXQgZGV2aWNlcyBieSB0aGUgZGVwbG95IHNjcmlwdDoKICAgIEM6XFByb2dyYW1EYXRhXEFwcFVwZGF0ZXJce0FwcElEfVx7QXBwSUR9LnBzMQogICAgQzpcUHJvZ3JhbURhdGFcQXBwVXBkYXRlclx7QXBwSUR9XGxvZ3Nc4oCmCiAgICBDOlxVc2Vyc1xQdWJsaWNcRGVza3RvcFxVcGRhdGUge0Rpc3BsYXlOYW1lfS5sbmsKCi5QQVJBTUVURVIgSW5zdGFsbGVyUGF0aAogIE9wdGlvbmFsIHBhdGggdG8gYSAuZXhlIC8gLm1zaSB0byBzZWVkIHRoZSBwYWNrYWdlIGJ1aWxkZXIgKGRyYWctZHJvcCBlbnRyeSkuCgouUEFSQU1FVEVSIE9mZmxpbmUKICBTa2lwIENsb3VkZmxhcmUgY29ubmVjdGl2aXR5IGF0IHN0YXJ0dXAuCgouTk9URVMKICBTRUNVUklUWSBNT0RFTCAocmVhZCBiZWZvcmUgZGVwbG95aW5nKToKICAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAgVHJ1c3QgYm91bmRhcnk6IGFueSBhY2NvdW50IHRoYXQgY2FuIHJ1biBhZG1pbiBQb3dlclNoZWxsIG9uIHRoZSBidWlsZCBtYWNoaW5lCiAgaXMgZnVsbHkgdHJ1c3RlZCDigJQgdGhleSBjYW4gcmV0cmlldmUgdGhlIENsb3VkZmxhcmUgYmVhcmVyIHRva2VuIGZyb20gV2luZG93cwogIENyZWRlbnRpYWwgTWFuYWdlciAoVGFyZ2V0ID0gQXBwVXBkYXRlci1NYW5pZmVzdFRva2VuLCBzY29wZWQgdG8gTG9jYWxNYWNoaW5lKS4KCiAgV2hhdCB0aGlzIG1lYW5zIGluIHByYWN0aWNlOgogICogQmVhcmVyIHRva2VuIChBVVRIX1RPS0VOKTogc3RvcmVkIGluIFdpbmRvd3MgQ3JlZGVudGlhbCBNYW5hZ2VyLCBhY2Nlc3NpYmxlIHRvCiAgICBsb2NhbCBBZG1pbmlzdHJhdG9ycy4gUHJvdGVjdHMgdGhlIFdvcmtlciBBUEkg4oCUIHJvdGF0ZSB2aWEgV29ya2VyIE9wdGlvbnMgPiBSZXNldC4KICAqIERhc2hib2FyZCBwYXNzd29yZDogc2V0IGJ5IHRoZSBhZG1pbiBkdXJpbmcgZmlyc3QtcnVuIHNldHVwOyBoYXNoZWQgd2l0aAogICAgUEJLREYyLVNIQTI1NiAoMTAwIGsgaXRlcmF0aW9ucykgYW5kIHN0b3JlZCBvbmx5IGluIENsb3VkZmxhcmUgS1YuCiAgKiBFdmVudC10ZWxlbWV0cnkgc2VjcmV0IChFVlRTRUMpOiBlbWJlZGRlZCBpbiBldmVyeSBnZW5lcmF0ZWQgZGVwbG95IHNjcmlwdAogICAgKGJ5IGRlc2lnbiDigJQgcm90YXRlcyBhdXRvbWF0aWNhbGx5IG9uIGVhY2ggcmUtZGVwbG95KS4KICAqIEdlbmVyYXRlZCBkZXBsb3kgc2NyaXB0cyBhcmUgTk9UIEF1dGhlbnRpY29kZS1zaWduZWQuIFJlbHkgb24gTlRGUyBBQ0xzIG9uIHRoZQogICAgZGVwbG95bWVudCBzaGFyZTsgc2lnbiB0aGVtIHlvdXJzZWxmIGlmIHlvdXIgZW52aXJvbm1lbnQgcmVxdWlyZXMgaXQuCiAgKiBEb3dubG9hZGVkIGJpbmFyaWVzIChJbnR1bmVXaW5BcHBVdGlsLmV4ZSkgYXJlIHZlcmlmaWVkIGZvciBhIHZhbGlkIEF1dGhlbnRpY29kZQogICAgc2lnbmF0dXJlIGlzc3VlZCBieSBNaWNyb3NvZnQgQ29ycG9yYXRpb24gYmVmb3JlIGV4ZWN1dGlvbi4KIz4KCiNyZXF1aXJlcyAtVmVyc2lvbiA1LjEKW0NtZGxldEJpbmRpbmcoKV0KcGFyYW0oCiAgW3N0cmluZ10gJEluc3RhbGxlclBhdGggPSAnJywKICBbc3dpdGNoXSAkT2ZmbGluZSwKICAjIFdoZW4gc2V0LCB0aGlzIHNjcmlwdCBvbmx5IGRlZmluZXMgaXRzIGZ1bmN0aW9ucyBhbmQgcmV0dXJucyAtIHVzZWQgYnkKICAjIHdlYnZpZXctc2hlbGwvaG9zdC5wczEgdG8gZG90LXNvdXJjZSB0aGUgcmVhbCBidWlsZC9tYW5pZmVzdCBsb2dpYwogICMgd2l0aG91dCBhbHNvIGxhdW5jaGluZyB0aGUgbGVnYWN5IFdQRiBtYWluLW1lbnUgbG9vcCBhdCB0aGUgYm90dG9tIG9mCiAgIyB0aGlzIGZpbGUuIE5vdGhpbmcgYWJvdmUgdGhpcyBndWFyZCBpcyBza2lwcGVkOyBvbmx5IHRoZSBlbnRyeSBsb29wIGlzLgogIFtzd2l0Y2hdICRMb2FkRnVuY3Rpb25zT25seQopCgpTZXQtU3RyaWN0TW9kZSAtT2ZmCiRFcnJvckFjdGlvblByZWZlcmVuY2UgPSAnQ29udGludWUnCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMgQ29uc29sZSBoaWRlIOKAlCBVSSBpcyBXUEYgb25seS4gUmV0cnkgbG9vcCBiZWNhdXNlIHRoZSB3aW5kb3cgaGFuZGxlIGlzIG5vdAojIGFsd2F5cyBhdmFpbGFibGUgaW1tZWRpYXRlbHkgYWZ0ZXIgYSBVQUMgcmUtbGF1bmNoIHdpdGggLVdpbmRvd1N0eWxlIEhpZGRlbi4KIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpBZGQtVHlwZSAtTmFtZSBXaW4zMiAtTmFtZXNwYWNlIE5hdGl2ZSAtTWVtYmVyRGVmaW5pdGlvbiBgCiAgJ1tEbGxJbXBvcnQoInVzZXIzMi5kbGwiKV0gcHVibGljIHN0YXRpYyBleHRlcm4gYm9vbCBTaG93V2luZG93KEludFB0ciBoV25kLCBpbnQgbkNtZFNob3cpOycKJGNvbnNvbGVIYW5kbGUgPSBbU3lzdGVtLkludFB0cl06Olplcm8KZm9yICgkaSA9IDA7ICRpIC1sdCAxMCAtYW5kICRjb25zb2xlSGFuZGxlIC1lcSBbU3lzdGVtLkludFB0cl06Olplcm87ICRpKyspIHsKICAkY29uc29sZUhhbmRsZSA9IChbU3lzdGVtLkRpYWdub3N0aWNzLlByb2Nlc3NdOjpHZXRDdXJyZW50UHJvY2VzcygpKS5NYWluV2luZG93SGFuZGxlCiAgaWYgKCRjb25zb2xlSGFuZGxlIC1lcSBbU3lzdGVtLkludFB0cl06Olplcm8pIHsgU3RhcnQtU2xlZXAgLU1pbGxpc2Vjb25kcyA1MCB9Cn0KaWYgKCRjb25zb2xlSGFuZGxlIC1uZSBbU3lzdGVtLkludFB0cl06Olplcm8pIHsKICBbTmF0aXZlLldpbjMyXTo6U2hvd1dpbmRvdygkY29uc29sZUhhbmRsZSwgMCkgfCBPdXQtTnVsbAp9IGVsc2UgewogIEFkZC1UeXBlIC1OYW1lIFdpbjMyQ29uc29sZSAtTmFtZXNwYWNlIE5hdGl2ZSAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZSBgCiAgICAtTWVtYmVyRGVmaW5pdGlvbiAnW0RsbEltcG9ydCgia2VybmVsMzIuZGxsIildIHB1YmxpYyBzdGF0aWMgZXh0ZXJuIGJvb2wgRnJlZUNvbnNvbGUoKTsnCiAgW05hdGl2ZS5XaW4zMkNvbnNvbGVdOjpGcmVlQ29uc29sZSgpIHwgT3V0LU51bGwKfQoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojIFJlc29sdmUgc2NyaXB0IHBhdGggcm9idXN0bHkuICRNeUludm9jYXRpb24uTXlDb21tYW5kLlBhdGggaXMgZW1wdHkgd2hlbgojIGxhdW5jaGVkIHZpYSBTdGFydC1Qcm9jZXNzIHdpdGggLVdpbmRvd1N0eWxlIEhpZGRlbi4KIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQokU2NyaXB0UGF0aCA9IGlmICgkTXlJbnZvY2F0aW9uLk15Q29tbWFuZC5QYXRoKSB7ICRNeUludm9jYXRpb24uTXlDb21tYW5kLlBhdGggfQogICAgICAgICAgICAgIGVsc2VpZiAoJFBTQ29tbWFuZFBhdGgpICAgICAgICAgICB7ICRQU0NvbW1hbmRQYXRoIH0KICAgICAgICAgICAgICBlbHNlIHsgW1N5c3RlbS5JTy5QYXRoXTo6R2V0RnVsbFBhdGgoJE15SW52b2NhdGlvbi5JbnZvY2F0aW9uTmFtZSkgfQokU2NyaXB0UGF0aCA9IFtTeXN0ZW0uSU8uUGF0aF06OkdldEZ1bGxQYXRoKCRTY3JpcHRQYXRoKQojIFBlcnNpc3RlZCBhcHAgc3RhdGUgKGNvbmZpZywgbWFuaWZlc3QsIGxvZywgcHJvZmlsZXMsIGRvd25sb2FkZWQgdG9vbHMpIGlzCiMgcm9vdGVkIGhlcmUsIGluIFByb2dyYW1EYXRhIC0gbWF0Y2hpbmcgaG9zdC5wczEncyBvd24gJE1hbmlmZXN0UGF0aCAvCiMgJERlcGxveVN0YXR1c0ZpbGUgLSByYXRoZXIgdGhhbiBTcGxpdC1QYXRoICRTY3JpcHRQYXRoLCB3aGljaCBpcyB1bnJlbGlhYmxlCiMgaW4gdGhpcyBhcHA6IHRoaXMgY29yZSBub3JtYWxseSBydW5zIGFzIGEgZHluYW1pY2FsbHktY3JlYXRlZCBzY3JpcHRibG9jawojIChkb3Qtc291cmNlZCBmcm9tIGhvc3QucHMxJ3MgZW1iZWRkZWQgYmFzZTY0IGNvcHksIG5vdCBhIHJlYWwgZmlsZSBvbiBkaXNrKSwKIyBzbyAkTXlJbnZvY2F0aW9uLk15Q29tbWFuZC5QYXRoLyRQU0NvbW1hbmRQYXRoIGFib3ZlIGFyZSBib3RoIGVtcHR5IGFuZCB0aGUKIyBmaW5hbCBmYWxsYmFjayByZXNvbHZlcyBhZ2FpbnN0IHRoZSBwcm9jZXNzJ3MgY3VycmVudCB3b3JraW5nIGRpcmVjdG9yeSAtCiMgd2hpY2ggZm9yIHRoZSBlbGV2YXRlZCByZWxhdW5jaCAoU3RhcnQtUHJvY2VzcyAtVmVyYiBSdW5Bcywgbm8KIyAtV29ya2luZ0RpcmVjdG9yeSkgZGVmYXVsdHMgdG8gQzpcV2luZG93cywgbm90IHRoaXMgc2NyaXB0J3Mgb3duIGZvbGRlci4KIyBUaGF0IHNpbGVudGx5IHJlZGlyZWN0ZWQgY29uZmlnL2xvZy90b2tlbiBmaWxlcyB0aGVyZSBvbiBldmVyeSBsYXVuY2guCiRTY3JpcHREaXIgPSBKb2luLVBhdGggJGVudjpQcm9ncmFtRGF0YSAnQXBwVXBkYXRlcicKaWYgKC1ub3QgKFRlc3QtUGF0aCAtTGl0ZXJhbFBhdGggJFNjcmlwdERpcikpIHsgTmV3LUl0ZW0gLUl0ZW1UeXBlIERpcmVjdG9yeSAtUGF0aCAkU2NyaXB0RGlyIC1Gb3JjZSB8IE91dC1OdWxsIH0KCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBEcmFnLWFuZC1kcm9wIGhhbmQtb2ZmLiBUaGUgLmNtZCBsYXVuY2hlciB3cml0ZXMgdGhlIGRyYWdnZWQgcGF0aCBoZXJlIEJFRk9SRQojIGVsZXZhdGlvbjsgd2UgY29uc3VtZSBpdCBub3cgc28gaXQgc3Vydml2ZXMgdGhlIFVBQyByZS1sYXVuY2guCiMgUGF0aCBpcyB2YWxpZGF0ZWQgb24gY29uc3VtcHRpb24sIG5vdCBvbiByZWFkLCBzbyB0aGUgdGVtcCBmaWxlIGNhbiBuZXZlcgojIGNvZXJjZSBjb2RlIGV4ZWN1dGlvbiDigJQgb25seSBjYXJyeSBhIHN0cmluZy4KIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQokRHJvcFRlbXBGaWxlID0gSm9pbi1QYXRoICRlbnY6VEVNUCAnYXBwdXBkYXRlcl9kcm9wLnR4dCcKaWYgKC1ub3QgJEluc3RhbGxlclBhdGggLWFuZCAoVGVzdC1QYXRoIC1MaXRlcmFsUGF0aCAkRHJvcFRlbXBGaWxlIC1QYXRoVHlwZSBMZWFmKSkgewogIHRyeSB7CiAgICAkcmF3ID0gR2V0LUNvbnRlbnQgLUxpdGVyYWxQYXRoICREcm9wVGVtcEZpbGUgLVJhdyAtRXJyb3JBY3Rpb24gU3RvcAogICAgJEluc3RhbGxlclBhdGggPSAkcmF3LlRyaW0oKS5UcmltKCciJykuVHJpbSgiJyIpCiAgfSBjYXRjaCB7ICRJbnN0YWxsZXJQYXRoID0gJycgfQogIFJlbW92ZS1JdGVtIC1MaXRlcmFsUGF0aCAkRHJvcFRlbXBGaWxlIC1Gb3JjZSAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZQp9CgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMgU2VsZi1lbGV2YXRpb24uIFVBQyBpcyB0cmlnZ2VyZWQgb25jZSwgdGhlbiBJbnN0YWxsZXJQYXRoIC8gT2ZmbGluZSBhcmUKIyBmb3J3YXJkZWQuIEFyZ3VtZW50IHF1b3RpbmcgaXMgaGFyZGVuZWQgYWdhaW5zdCBlbWJlZGRlZCBxdW90ZXMuCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KJGN1cnJlbnRQcmluY2lwYWwgPSBbU2VjdXJpdHkuUHJpbmNpcGFsLldpbmRvd3NQcmluY2lwYWxdW1NlY3VyaXR5LlByaW5jaXBhbC5XaW5kb3dzSWRlbnRpdHldOjpHZXRDdXJyZW50KCkKaWYgKC1ub3QgJGN1cnJlbnRQcmluY2lwYWwuSXNJblJvbGUoW1NlY3VyaXR5LlByaW5jaXBhbC5XaW5kb3dzQnVpbHRJblJvbGVdOjpBZG1pbmlzdHJhdG9yKSAtYW5kICRlbnY6QVBQVVBEQVRFUl9OT19FTEVWQVRFIC1uZSAnMScpIHsKICAkYXJnTGlzdCA9IEAoCiAgICAnLVN0YScsJy1FeGVjdXRpb25Qb2xpY3knLCdCeXBhc3MnLCctV2luZG93U3R5bGUnLCdIaWRkZW4nLAogICAgJy1GaWxlJywgKCciezB9IicgLWYgJFNjcmlwdFBhdGgpCiAgKQogIGlmICgkSW5zdGFsbGVyUGF0aCkgewogICAgIyBTYW5pdGlzZToga2lsbCBlbWJlZGRlZCBkb3VibGUtcXVvdGVzIHRoYXQgd291bGQgY2xvc2Ugb3VyIHF1b3RlZCBhcmcuCiAgICAkc2FmZSA9ICRJbnN0YWxsZXJQYXRoIC1yZXBsYWNlICciJywnJwogICAgJGFyZ0xpc3QgKz0gQCgnLUluc3RhbGxlclBhdGgnLCAoJyJ7MH0iJyAtZiAkc2FmZSkpCiAgfQogIGlmICgkT2ZmbGluZSkgeyAkYXJnTGlzdCArPSAnLU9mZmxpbmUnIH0KICBTdGFydC1Qcm9jZXNzIChKb2luLVBhdGggJFBTSE9NRSAncG93ZXJzaGVsbC5leGUnKSAtVmVyYiBSdW5BcyAtQXJndW1lbnRMaXN0ICgkYXJnTGlzdCAtam9pbiAnICcpCiAgZXhpdCAwCn0KCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KIyBTSU5HTEUtSU5TVEFOQ0UgR1VBUkQg4oCUIHJlamVjdCBhIHNlY29uZCBsYXVuY2ggd2hpbGUgb25lIGlzIGFscmVhZHkgcnVubmluZy4KIyBUaGUgT1MgcmVsZWFzZXMgdGhlIG11dGV4IGF1dG9tYXRpY2FsbHkgd2hlbiB0aGUgcHJvY2VzcyBleGl0cy4KIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQokZ2xvYmFsOl9tdXRleCA9IFtTeXN0ZW0uVGhyZWFkaW5nLk11dGV4XTo6bmV3KCRmYWxzZSwgJ0dsb2JhbFxBcHBVcGRhdGVyX3Y1MF9TaW5nbGVJbnN0YW5jZScpCiRfbXV0ZXhBY3F1aXJlZCA9ICRmYWxzZQp0cnkgeyAkX211dGV4QWNxdWlyZWQgPSAkZ2xvYmFsOl9tdXRleC5XYWl0T25lKDApIH0gY2F0Y2ggW1N5c3RlbS5UaHJlYWRpbmcuQWJhbmRvbmVkTXV0ZXhFeGNlcHRpb25dIHsgJF9tdXRleEFjcXVpcmVkID0gJHRydWUgfQppZiAoLW5vdCAkX211dGV4QWNxdWlyZWQpIHsKICAgIEFkZC1UeXBlIC1Bc3NlbWJseU5hbWUgUHJlc2VudGF0aW9uRnJhbWV3b3JrCiAgICBbU3lzdGVtLldpbmRvd3MuTWVzc2FnZUJveF06OlNob3coCiAgICAgICAgJ0FwcFVwZGF0ZXIgaXMgYWxyZWFkeSBydW5uaW5nLicsCiAgICAgICAgJ0FwcFVwZGF0ZXInLCAnT0snLCAnSW5mb3JtYXRpb24nKSB8IE91dC1OdWxsCiAgICBleGl0IDAKfQoKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIEVOVklST05NRU5UIENIRUNLIOKAlCB3YXJuIGlmIE9TIGJ1aWxkIG9yIFBTIHZlcnNpb24gaXMgYmVsb3cgbWluaW11bS4KIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQokX2Vudldhcm5pbmdzID0gQCgpCmlmIChbU3lzdGVtLkVudmlyb25tZW50XTo6T1NWZXJzaW9uLlZlcnNpb24uQnVpbGQgLWx0IDE3NzYzKSB7CiAgJF9lbnZXYXJuaW5ncyArPSAiV2luZG93cyBidWlsZCAkKFtTeXN0ZW0uRW52aXJvbm1lbnRdOjpPU1ZlcnNpb24uVmVyc2lvbi5CdWlsZCkgaXMgYmVsb3cgdGhlIG1pbmltdW0gc3VwcG9ydGVkIGJ1aWxkIDE3NzYzIChXaW5kb3dzIDEwIDE4MDkpLiIKfQppZiAoJFBTVmVyc2lvblRhYmxlLlBTVmVyc2lvbiAtbHQgW3ZlcnNpb25dJzUuMScpIHsKICAkX2Vudldhcm5pbmdzICs9ICJQb3dlclNoZWxsICQoJFBTVmVyc2lvblRhYmxlLlBTVmVyc2lvbikgaXMgYmVsb3cgdGhlIG1pbmltdW0gcmVxdWlyZWQgdmVyc2lvbiA1LjEuIgp9CmlmICgkX2Vudldhcm5pbmdzKSB7CiAgQWRkLVR5cGUgLUFzc2VtYmx5TmFtZSBQcmVzZW50YXRpb25GcmFtZXdvcmsKICBbU3lzdGVtLldpbmRvd3MuTWVzc2FnZUJveF06OlNob3coCiAgICAiQXBwVXBkYXRlciBtYXkgbm90IHdvcmsgY29ycmVjdGx5IG9uIHRoaXMgc3lzdGVtOmBuYG4kKCRfZW52V2FybmluZ3MgLWpvaW4gImBuYG4iKWBuYG5Zb3UgY2FuIGNvbnRpbnVlLCBidXQgc29tZSBmZWF0dXJlcyBtYXkgbm90IHdvcmsgYXMgZXhwZWN0ZWQuIiwKICAgICdDb21wYXRpYmlsaXR5IFdhcm5pbmcnLCAnT0snLCAnV2FybmluZycpIHwgT3V0LU51bGwKfQoKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIENPTlNUQU5UUyDigJQgYWxsIHBhdGhzIGFyZSBhYnNvbHV0ZSBhbmQgcm9vdGVkIGF0ICRTY3JpcHREaXIuCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KJENvbmZpZ0ZpbGUgICAgICAgID0gSm9pbi1QYXRoICRTY3JpcHREaXIgJy5hcHB1cGRhdGVyLWNvbmZpZycKJE1hbmlmZXN0VG9rZW5GaWxlID0gSm9pbi1QYXRoICRTY3JpcHREaXIgJy5tYW5pZmVzdC10b2tlbicKJFhtbEZpbGUgICAgICAgICAgID0gSm9pbi1QYXRoICRTY3JpcHREaXIgJ2FwcFZlcnNpb25zLnhtbCcKJFByb2ZpbGVzRmlsZSAgICAgID0gSm9pbi1QYXRoICRTY3JpcHREaXIgJ3Byb2ZpbGVzLmpzb24nICAgIyBwYWNrYWdpbmcgcHJvZmlsZXMg4oCUIHNoYXJlYWJsZSwgbm8gc2VjcmV0cwokSW50dW5lV2luVXRpbFVSTCAgPSAnaHR0cHM6Ly9naXRodWIuY29tL21pY3Jvc29mdC9NaWNyb3NvZnQtV2luMzItQ29udGVudC1QcmVwLVRvb2wvcmF3L21hc3Rlci9JbnR1bmVXaW5BcHBVdGlsLmV4ZScKJEludHVuZVdpblV0aWxQYXRoID0gSm9pbi1QYXRoICRTY3JpcHREaXIgJ0ludHVuZVdpbkFwcFV0aWwuZXhlJwokRHJpdmVyTGlicmFyeUZpbGUgPSBKb2luLVBhdGggJFNjcmlwdERpciAnZHJpdmVyTGlicmFyeS5qc29uJyAgICMgcHJpbnRlciBkcml2ZXIgbGlicmFyeSBpbmRleCDigJQgc2hhcmVhYmxlLCBubyBzZWNyZXRzCiREcml2ZXJTdG9yZUJhc2UgICA9IEpvaW4tUGF0aCAkU2NyaXB0RGlyICdfZHJpdmVycycKCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KIyBDQU5PTklDQUwgQWRkL1JlbW92ZS1Qcm9ncmFtcyBtYXRjaGVyIOKAlCBzaW5nbGUgc291cmNlIG9mIHRydXRoLgojCiMgUHJldmlvdXNseSB0aGVyZSB3ZXJlIFRIUkVFIGRpZmZlcmVudCwgaW5jb25zaXN0ZW50IHN0cmF0ZWdpZXMgc2NhdHRlcmVkCiMgYWNyb3NzIHRoZSBzY3JpcHQgZm9yICJkb2VzIHRoaXMgcmVnaXN0cnkgRGlzcGxheU5hbWUgY29ycmVzcG9uZCB0byBvdXIKIyBhcHAiOiBleGFjdCAtZXEgKHVuaW5zdGFsbC5wczEsIHRoZSByZW1vdmFsLWZsYWcgYmxvY2spLCB3aWxkY2FyZCBwcmVmaXgKIyAtbGlrZSAnLi4uKicgKGRldGVjdC5wczEpLCBhbmQgbm9ybWFsaXplZC1jb250YWlucyAoSW52b2tlLUluc3RhbGxlckluc3BlY3RvcidzCiMgSW5zdGFsbExvY2F0aW9uIGxvb2t1cCkuIFRoYXQgaW5jb25zaXN0ZW5jeSBpcyBhIHJlYWwgYnVnOiBhbiBhcHAgd2hvc2UgQVJQCiMgRGlzcGxheU5hbWUgZHJpZnRzIGFmdGVyIGEgdmVuZG9yIHVwZGF0ZSAoZS5nLiAiNy1aaXAgMjQuMDgiIC0+ICI3LVppcAojIDI0LjA5IikgY291bGQgcGFzcyBkZXRlY3Rpb24gYnV0IGZhaWwgdW5pbnN0YWxsLCBvciB2aWNlIHZlcnNhLCBkZXBlbmRpbmcKIyBvbiB3aGljaCBvZiB0aGUgdGhyZWUgYWxnb3JpdGhtcyBoYXBwZW5lZCB0byBydW4uCiMKIyBGaW5kLUFSUEVudHJ5IHJlcGxhY2VzIGFsbCBvZiB0aGVtIHdpdGggb25lIHRpZXJlZCBtYXRjaCAoZXhhY3QsIHRoZW4KIyBub3JtYWxpemVkLWV4YWN0LCB0aGVuIG5vcm1hbGl6ZWQtcHJlZml4IOKAlCBlYWNoIHRpZXIgb25seSB0cmllZCBpZiB0aGUKIyBwcmV2aW91cyBmb3VuZCBub3RoaW5nKSBwbHVzIEhLVVw8U0lEPiBlbnVtZXJhdGlvbiBmb3IgcGVyLXVzZXIgaW5zdGFsbHMKIyB3aGVuIHJ1bm5pbmcgYXMgU1lTVEVNIChHZXQtSW5zdGFsbGVkVmVyc2lvbiBhbHJlYWR5IGRpZCB0aGlzIGNvcnJlY3RseTsKIyB0aGUgb3RoZXJzIGRpZG4ndCBjaGVjayBwZXItdXNlciBpbnN0YWxscyBhdCBhbGwpLgojCiMgU3RvcmVkIE9OQ0UgYXMgdGV4dCAoc2luZ2xlLXF1b3RlZCBoZXJlLXN0cmluZyDigJQgbm8gJCBpbnRlcnBvbGF0aW9uIHJpc2spCiMgc28gaXQgY2FuIGJlIChhKSBtYXRlcmlhbGl6ZWQgYXMgYSByZWFsIGZ1bmN0aW9uIGhlcmUgZm9yIGJ1aWxkLXRpbWUvCiMgaW50ZXJhY3RpdmUgdXNlIGJ5IEludm9rZS1JbnN0YWxsZXJJbnNwZWN0b3IsIGFuZCAoYikgZW1iZWRkZWQgdmVyYmF0aW0KIyBpbnRvIGV2ZXJ5IGdlbmVyYXRlZCBydW50aW1lIHNjcmlwdCAoZGV0ZWN0LnBzMSwgdW5pbnN0YWxsLnBzMSwgdGhlCiMgc2NoZWR1bGVkLXRhc2sgdXBkYXRlIHNjcmlwdCkgc28gdGhleSBhcmUgYnl0ZS1pZGVudGljYWwsIG5vdCBqdXN0IHNpbWlsYXIuCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KJGdsb2JhbDpBcnBNYXRjaEZuVGV4dCA9IEAnCmZ1bmN0aW9uIEZpbmQtQVJQRW50cnkgewogIHBhcmFtKFtzdHJpbmddJFRhcmdldCwgW3N3aXRjaF0kUmVxdWlyZVVuaW5zdGFsbFN0cmluZykKICAkYmFzZXMgPSBAKAogICAgJ0hLTE06XFNPRlRXQVJFXE1pY3Jvc29mdFxXaW5kb3dzXEN1cnJlbnRWZXJzaW9uXFVuaW5zdGFsbFwqJywKICAgICdIS0xNOlxTT0ZUV0FSRVxXT1c2NDMyTm9kZVxNaWNyb3NvZnRcV2luZG93c1xDdXJyZW50VmVyc2lvblxVbmluc3RhbGxcKicKICApCiAgIyBQZXItdXNlciBpbnN0YWxscyAobW9kZXJuIENocm9tZSwgVlMgQ29kZSwgRGlzY29yZCwgU2xhY2ssIGV0Yy4pIGxpdmUKICAjIHVuZGVyIEhLQ1UsIHdoaWNoIHVuZGVyIGEgU1lTVEVNLWNvbnRleHQgc2NoZWR1bGVkIHRhc2sgaXMgU1lTVEVNJ3Mgb3duCiAgIyBlbXB0eSBoaXZlIOKAlCB0aGUgc2lnbmVkLWluIHVzZXIncyBoaXZlIG11c3QgYmUgcmVhY2hlZCB2aWEgSEtVXDxTSUQ+CiAgIyBpbnN0ZWFkLiBNaXJyb3JzIHRoZSBwYXR0ZXJuIGFscmVhZHkgdXNlZCBieSBHZXQtSW5zdGFsbGVkVmVyc2lvbi4KICBpZiAoLW5vdCAoR2V0LVBTRHJpdmUgLU5hbWUgSEtVIC1FcnJvckFjdGlvbiBTaWxlbnRseUNvbnRpbnVlKSkgewogICAgdHJ5IHsgTmV3LVBTRHJpdmUgLU5hbWUgSEtVIC1QU1Byb3ZpZGVyIFJlZ2lzdHJ5IC1Sb290IEhLRVlfVVNFUlMgLUVycm9yQWN0aW9uIFNpbGVudGx5Q29udGludWUgfCBPdXQtTnVsbCB9IGNhdGNoIHt9CiAgfQogIGlmIChHZXQtUFNEcml2ZSAtTmFtZSBIS1UgLUVycm9yQWN0aW9uIFNpbGVudGx5Q29udGludWUpIHsKICAgIEdldC1DaGlsZEl0ZW0gJ0hLVTpcJyAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZSB8CiAgICAgIFdoZXJlLU9iamVjdCB7ICRfLlBTQ2hpbGROYW1lIC1tYXRjaCAnXlMtMS01LTIxLScgLWFuZCAkXy5QU0NoaWxkTmFtZSAtbm90bWF0Y2ggJ19DbGFzc2VzJCcgfSB8CiAgICAgIEZvckVhY2gtT2JqZWN0IHsKICAgICAgICAkYmFzZXMgKz0gIkhLVTpcJCgkXy5QU0NoaWxkTmFtZSlcU09GVFdBUkVcTWljcm9zb2Z0XFdpbmRvd3NcQ3VycmVudFZlcnNpb25cVW5pbnN0YWxsXCoiCiAgICAgICAgJGJhc2VzICs9ICJIS1U6XCQoJF8uUFNDaGlsZE5hbWUpXFNPRlRXQVJFXFdPVzY0MzJOb2RlXE1pY3Jvc29mdFxXaW5kb3dzXEN1cnJlbnRWZXJzaW9uXFVuaW5zdGFsbFwqIgogICAgICB9CiAgfQogICMgQWxzbyBjaGVjayB0aGUgQ1VSUkVOVCBzZXNzaW9uJ3Mgb3duIEhLQ1UgZGlyZWN0bHkg4oCUIGNvdmVycyBpbnRlcmFjdGl2ZS8KICAjIGJ1aWxkLXRpbWUgY2FsbHMgKGUuZy4gSW52b2tlLUluc3RhbGxlckluc3BlY3RvciBydW5uaW5nIGluIHRoZSBwYWNrYWdlcidzCiAgIyBvd24gc2Vzc2lvbikgd2hlcmUgdGhlIEhLVSBlbnVtZXJhdGlvbiBhYm92ZSBtYXkgbm90IGZpbmQgYW55dGhpbmcgdXNlZnVsLgogICRiYXNlcyArPSAnSEtDVTpcU09GVFdBUkVcTWljcm9zb2Z0XFdpbmRvd3NcQ3VycmVudFZlcnNpb25cVW5pbnN0YWxsXConCgogIGZ1bmN0aW9uIEFycE5vcm0oW3N0cmluZ10kcykgeyAoJHMgLXJlcGxhY2UgJ1teQS1aYS16MC05XScsJycpLlRvTG93ZXIoKSB9CiAgJHRhcmdldE5vcm0gPSBBcnBOb3JtICRUYXJnZXQKICAkYWxsID0gZm9yZWFjaCAoJGJhc2UgaW4gJGJhc2VzKSB7IEdldC1JdGVtUHJvcGVydHkgJGJhc2UgLUVycm9yQWN0aW9uIFNpbGVudGx5Q29udGludWUgfCBXaGVyZS1PYmplY3QgeyAkXy5EaXNwbGF5TmFtZSB9IH0KICBpZiAoJFJlcXVpcmVVbmluc3RhbGxTdHJpbmcpIHsgJGFsbCA9ICRhbGwgfCBXaGVyZS1PYmplY3QgeyAkXy5Vbmluc3RhbGxTdHJpbmcgfSB9CgogICMgVGllciAxOiBleGFjdCBtYXRjaCDigJQgZmFzdCBwYXRoLCBjb3JyZWN0IHRoZSB2YXN0IG1ham9yaXR5IG9mIHRoZSB0aW1lLgogICRoaXQgPSAkYWxsIHwgV2hlcmUtT2JqZWN0IHsgJF8uRGlzcGxheU5hbWUgLWVxICRUYXJnZXQgfSB8IFNlbGVjdC1PYmplY3QgLUZpcnN0IDEKICBpZiAoJGhpdCkgeyByZXR1cm4gJGhpdCB9CiAgIyBUaWVyIDI6IG5vcm1hbGl6ZWQgZXhhY3QgbWF0Y2gg4oCUIHRvbGVyYXRlcyBwdW5jdHVhdGlvbi9zcGFjaW5nL2Nhc2UgZHJpZnQuCiAgJGhpdCA9ICRhbGwgfCBXaGVyZS1PYmplY3QgeyAoQXJwTm9ybSAkXy5EaXNwbGF5TmFtZSkgLWVxICR0YXJnZXROb3JtIH0gfCBTZWxlY3QtT2JqZWN0IC1GaXJzdCAxCiAgaWYgKCRoaXQpIHsgcmV0dXJuICRoaXQgfQogICMgVGllciAzOiBub3JtYWxpemVkIHByZWZpeCBtYXRjaCBlaXRoZXIgZGlyZWN0aW9uIOKAlCBzdXJ2aXZlcyBhIHZlcnNpb24KICAjIG51bWJlciBhcHBlYXJpbmcgaW4gRGlzcGxheU5hbWUgYWZ0ZXIgYSB2ZW5kb3IgdXBkYXRlLgogICRoaXQgPSAkYWxsIHwgV2hlcmUtT2JqZWN0IHsKICAgICRuID0gQXJwTm9ybSAkXy5EaXNwbGF5TmFtZQogICAgJG4uU3RhcnRzV2l0aCgkdGFyZ2V0Tm9ybSkgLW9yICR0YXJnZXROb3JtLlN0YXJ0c1dpdGgoJG4pCiAgfSB8IFNvcnQtT2JqZWN0IHsgdHJ5IHsgW3ZlcnNpb25dJF8uRGlzcGxheVZlcnNpb24gfSBjYXRjaCB7IFt2ZXJzaW9uXScwLjAnIH0gfSAtRGVzY2VuZGluZyB8IFNlbGVjdC1PYmplY3QgLUZpcnN0IDEKICByZXR1cm4gJGhpdAp9CidACkludm9rZS1FeHByZXNzaW9uICRnbG9iYWw6QXJwTWF0Y2hGblRleHQgICAjIG1hdGVyaWFsaXplIEZpbmQtQVJQRW50cnkgZm9yIGluLXByb2Nlc3MgKGJ1aWxkLXRpbWUpIHVzZSBiZWxvdwojIFRvb2xraXQgY2FjaGUgbGl2ZXMgaW4gUHJvZ3JhbURhdGEgKHN0YWJsZSwgc3Vydml2ZXMgbW92aW5nIHRoZSBzY3JpcHQgYXJvdW5kOwojIHRoZSBvbGQgbG9jYXRpb24gd2FzIFNjcmlwdERpci1yZWxhdGl2ZSwgd2hpY2ggcHV0IGl0IGluIERvd25sb2FkcyBpZiB5b3UgcmFuCiMgQXBwVXBkYXRlciBmcm9tIHRoZXJlKS4gTGVnYWN5IGNhY2hlcyBhcmUgbWlncmF0ZWQgb24gZmlyc3QgcnVuLgokUFNBRFRDYWNoZURpciAgICAgPSAnQzpcUHJvZ3JhbURhdGFcQXBwVXBkYXRlclxQU0FEVENhY2hlJwokZ2xvYmFsOl9sZWdhY3lQU0FEVENhY2hlID0gSm9pbi1QYXRoICRTY3JpcHREaXIgJ1BTQXBwRGVwbG95VG9vbGtpdCcKdHJ5IHsKICBpZiAoLW5vdCAoVGVzdC1QYXRoIChKb2luLVBhdGggJFBTQURUQ2FjaGVEaXIgJ0FwcERlcGxveVRvb2xraXQnKSkgLWFuZAogICAgICAtbm90IChHZXQtQ2hpbGRJdGVtIC1QYXRoICRQU0FEVENhY2hlRGlyIC1GaWx0ZXIgJ1BTQXBwRGVwbG95VG9vbGtpdC5wc2QxJyAtUmVjdXJzZSAtRGVwdGggNCAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZSB8IFNlbGVjdC1PYmplY3QgLUZpcnN0IDEpKSB7CiAgICBpZiAoKFRlc3QtUGF0aCAkZ2xvYmFsOl9sZWdhY3lQU0FEVENhY2hlKSAtYW5kCiAgICAgICAgKEdldC1DaGlsZEl0ZW0gLVBhdGggJGdsb2JhbDpfbGVnYWN5UFNBRFRDYWNoZSAtUmVjdXJzZSAtRGVwdGggNiAtSW5jbHVkZSAnQXBwRGVwbG95VG9vbGtpdE1haW4ucHMxJywnUFNBcHBEZXBsb3lUb29sa2l0LnBzZDEnIC1FcnJvckFjdGlvbiBTaWxlbnRseUNvbnRpbnVlIHwgU2VsZWN0LU9iamVjdCAtRmlyc3QgMSkpIHsKICAgICAgTmV3LUl0ZW0gLVBhdGggJFBTQURUQ2FjaGVEaXIgLUl0ZW1UeXBlIERpcmVjdG9yeSAtRm9yY2UgLUVycm9yQWN0aW9uIFNpbGVudGx5Q29udGludWUgfCBPdXQtTnVsbAogICAgICBDb3B5LUl0ZW0gLVBhdGggKEpvaW4tUGF0aCAkZ2xvYmFsOl9sZWdhY3lQU0FEVENhY2hlICcqJykgLURlc3RpbmF0aW9uICRQU0FEVENhY2hlRGlyIC1SZWN1cnNlIC1Gb3JjZSAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZQogICAgfQogIH0KfSBjYXRjaCB7IH0KJFBTQURUdjNVUkwgICAgICAgID0gJ2h0dHBzOi8vZ2l0aHViLmNvbS9QU0FwcERlcGxveVRvb2xraXQvUFNBcHBEZXBsb3lUb29sa2l0L3JlbGVhc2VzL2xhdGVzdC9kb3dubG9hZC9QU0FwcERlcGxveVRvb2xraXRfVGVtcGxhdGVfdjMuemlwJwokUFNBRFRNb2RPbmx5VVJMICAgPSAnaHR0cHM6Ly9naXRodWIuY29tL1BTQXBwRGVwbG95VG9vbGtpdC9QU0FwcERlcGxveVRvb2xraXQvcmVsZWFzZXMvbGF0ZXN0L2Rvd25sb2FkL1BTQXBwRGVwbG95VG9vbGtpdF9Nb2R1bGVPbmx5LnppcCcKJFRlbXBCYXNlICAgICAgICAgID0gSm9pbi1QYXRoICRTY3JpcHREaXIgJ1RlbXAnCiRPdXRwdXRCYXNlICAgICAgICA9IEpvaW4tUGF0aCAkU2NyaXB0RGlyICdfb3V0cHV0JwokZ2xvYmFsOkxvZ0ZpbGUgICAgPSBKb2luLVBhdGggJFNjcmlwdERpciAnQXBwVXBkYXRlci5sb2cnCiRnbG9iYWw6SXNBZG1pbiAgICA9ICRjdXJyZW50UHJpbmNpcGFsLklzSW5Sb2xlKFtTZWN1cml0eS5QcmluY2lwYWwuV2luZG93c0J1aWx0SW5Sb2xlXTo6QWRtaW5pc3RyYXRvcikKJENGX0FQSSAgICAgICAgICAgID0gJ2h0dHBzOi8vYXBpLmNsb3VkZmxhcmUuY29tL2NsaWVudC92NCcKJFdvcmtlck5hbWUgICAgICAgID0gJ2FwcC11cGRhdGVyJwokS1ZOYW1lc3BhY2UgICAgICAgPSAnQVBQX01BTklGRVNUJwokZ2xvYmFsOlZlcnNpb24gICAgPSAnNTIuMC4wJwoKIyBSZWxlYXNlIGNoZWNrIChGMSk6IGZpcmUtYW5kLWZvcmdldCBhZ2FpbnN0IHRoZSBwdWJsaWMgR2l0SHViIHJlbGVhc2VzIEFQSS4KIyBOZXZlciBibG9ja3Mgc3RhcnR1cDsgb2ZmbGluZS9ibG9ja2VkIG5ldHdvcmtzIHNpbXBseSBsZWF2ZSB0aGUgZmllbGQgZW1wdHkuCiRnbG9iYWw6X3JlbENoZWNrID0gW2hhc2h0YWJsZV06OlN5bmNocm9uaXplZChAeyBMYXRlc3Q9Jyc7IE5ld2VyPSRmYWxzZSB9KQpmdW5jdGlvbiBTdGFydC1SZWxlYXNlQ2hlY2sgewogIHRyeSB7CiAgICAkcnMgPSBbcnVuc3BhY2VmYWN0b3J5XTo6Q3JlYXRlUnVuc3BhY2UoKTsgJHJzLk9wZW4oKQogICAgJHJzLlNlc3Npb25TdGF0ZVByb3h5LlNldFZhcmlhYmxlKCdzeW5jJywgJGdsb2JhbDpfcmVsQ2hlY2spCiAgICAkcnMuU2Vzc2lvblN0YXRlUHJveHkuU2V0VmFyaWFibGUoJ2N1cicsICAkZ2xvYmFsOlZlcnNpb24pCiAgICAkcHMgPSBbcG93ZXJzaGVsbF06OkNyZWF0ZSgpOyAkcHMuUnVuc3BhY2UgPSAkcnMKICAgIFt2b2lkXSRwcy5BZGRTY3JpcHQoewogICAgICB0cnkgewogICAgICAgIFtOZXQuU2VydmljZVBvaW50TWFuYWdlcl06OlNlY3VyaXR5UHJvdG9jb2wgPSBbTmV0LlNlY3VyaXR5UHJvdG9jb2xUeXBlXTo6VGxzMTIKICAgICAgICAkciA9IEludm9rZS1SZXN0TWV0aG9kIC1VcmkgJ2h0dHBzOi8vYXBpLmdpdGh1Yi5jb20vcmVwb3MvTHl2dnkteHl6L0FwcHVwZGF0ZXIvcmVsZWFzZXMvbGF0ZXN0JyBgCiAgICAgICAgICAgICAgIC1IZWFkZXJzIEB7ICdVc2VyLUFnZW50Jz0nQXBwVXBkYXRlcicgfSAtVGltZW91dFNlYyA1IC1FcnJvckFjdGlvbiBTdG9wCiAgICAgICAgJHRhZyA9IChbc3RyaW5nXSRyLnRhZ19uYW1lKS5UcmltU3RhcnQoJ3YnLCdWJykKICAgICAgICBpZiAoJHRhZykgewogICAgICAgICAgJHN5bmMuTGF0ZXN0ID0gJHRhZwogICAgICAgICAgdHJ5IHsgJHN5bmMuTmV3ZXIgPSAoW3ZlcnNpb25dJHRhZyAtZ3QgW3ZlcnNpb25dJGN1cikgfSBjYXRjaCB7ICRzeW5jLk5ld2VyID0gKCR0YWcgLW5lICRjdXIpIH0KICAgICAgICB9CiAgICAgIH0gY2F0Y2ggeyB9CiAgICB9KQogICAgW3ZvaWRdJHBzLkJlZ2luSW52b2tlKCkKICB9IGNhdGNoIHsgfQp9CiMgTk9URTogaW52b2tlZCBhZnRlciBjb25maWcgcmVzb2x1dGlvbiwgc28gdGhlIG9wdC1vdXQgYW5kIC1PZmZsaW5lIGFyZSBob25vdXJlZC4KCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KIyBFTUJFRERFRCBXT1JLRVIgU09VUkNFICAoc2VsZi1jb250YWluZWQg4oCUIG5vIHNlcGFyYXRlIHdvcmtlci5qcyBuZWVkZWQpCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KJFdvcmtlclNvdXJjZSA9IEAnCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci8vIEFVVEggTU9ERUwKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gVHdvIHBhcmFsbGVsIGF1dGggcGF0aHMgY29leGlzdCBvbiB0aGlzIHdvcmtlcjoKLy8gIDEuIEJlYXJlciB0b2tlbiAoWC1BdXRoLVRva2VuIGhlYWRlciA9PSBlbnYuQVVUSF9UT0tFTikKLy8gICAgIFVzZWQgYnkgQXBwVXBkYXRlci5wczEgbWFjaGluZSBwdXNoZXMgdG8gUE9TVCAvbWFuaWZlc3QsIERFTEVURSAvYXBwL3tpZH0sCi8vICAgICBQT1NUIC9kZXBsb3ktc3RvcmUve2lkfS4gVG9rZW4gbGl2ZXMgb25seSBpbiB0aGUgUFMxIHJ1bmJveDsgbmV2ZXIgaW4gS1YuCi8vICAyLiBQYXNzd29yZCArIEhNQUMgc2Vzc2lvbiBjb29raWUgKGJyb3dzZXIgVVggZm9yIC9zdGF0dXMpCi8vICAgICBQYXNzd29yZCBzdG9yZWQgaW4gS1YgJ2F1dGhfcGFzc3dvcmQnIGFzIFBCS0RGMi1TSEEyNTYoMTAwMDAwIGl0ZXJzLAovLyAgICAgMTZCIHNhbHQsIDMyQiBrZXkpIEpTT04uIFNlc3Npb24gc2VjcmV0IGluIEtWICdhdXRoX3Nlc3Npb25fc2VjcmV0JwovLyAgICAgKDMyQiByYW5kb20sIGJhc2U2NCkuIENvb2tpZSBpcyBITUFDLVNIQTI1Nih7ZXhwLGlhdCxub25jZX0pIHNpZ25lZAovLyAgICAgd2l0aCB0aGF0IHNlY3JldC4gQ29va2llIGlzIEh0dHBPbmx5LCBTZWN1cmUsIFNhbWVTaXRlPVN0cmljdCwKLy8gICAgIE1heC1BZ2U9ODY0MDAgKDI0aCkuIFJhdGUtbGltaXQgNSBmYWlscyAvIElQIC8gMTUgbWluIHZpYSBLViBUVEwuCi8vIEZpcnN0LXJ1bjogaWYgJ2F1dGhfcGFzc3dvcmQnIG1pc3NpbmcsIGFueSBHRVQgL3N0YXR1cyBzaG93cyBhIHNldC1wYXNzd29yZAovLyBwYWdlOyBwYXNzd29yZCBtdXN0IGJlID49MTIgY2hhcnMgd2l0aCA+PTEgbGV0dGVyICsgPj0xIGRpZ2l0LgovLyBBbGwgY3J5cHRvIHVzZXMgV2ViIENyeXB0byAoY3J5cHRvLnN1YnRsZSkuIENvbXBhcmUgd2l0aCBjb25zdGFudC10aW1lIFhPUi4KLy8gQmVhcmVyIHBhdGggaXMgdW50b3VjaGVkIGJ5IHNlc3Npb24gbWlkZGxld2FyZSDigJQgUFMxIGNsaWVudHMga2VlcCB3b3JraW5nLgovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQpjb25zdCBLVl9YTUw9J2FwcFZlcnNpb25zLnhtbCcsS1ZfSEVBTFRIPSdoZWFsdGhSZXN1bHRzJzsKY29uc3QgS1ZfUFdEPSdhdXRoX3Bhc3N3b3JkJyxLVl9TRUM9J2F1dGhfc2Vzc2lvbl9zZWNyZXQnLEtWX1JMPSdybDonLEtWX1RPVFA9J3RvdHBfc2VjcmV0JyxLVl9UT1RQX1BFTkQ9J3RvdHBfcGVuZGluZyc7Ci8vIFBlci1hcHAgZXZlbnQgdGVsZW1ldHJ5LiBLZXlzOgovLyAgIGV2dHNlYyAgICAgICAgICAgICAgIC0gbWFzdGVyIEhNQUMgc2VjcmV0ICgzMkIgYjY0KS4gUm90YXRlZCBvbiBldmVyeSBSZS1kZXBsb3kuCi8vICAgZXZ0bG9nOnthcHBJZH0gICAgICAgLSByb2xsaW5nIEpTT04gYXJyYXkgb2YgbGFzdCBFVlRfTE9HX01BWCBldmVudHMKLy8gICBldnRob3N0OnthcHBJZH06e2lkfSAtIGxhdGVzdCBzaW5nbGUgZXZlbnQgZnJvbSBhIChtYWNoaW5lR3VpZHxob3N0bmFtZSkKLy8gICBldnRybDphcHA6e2FwcElkfSAgICAtIHBlci1hcHAgcmF0ZS1saW1pdCBjb3VudGVyCmNvbnN0IEtWX0VWVF9TRUM9J2V2dHNlYycsS1ZfRVZUX0xPRz0nZXZ0bG9nOicsS1ZfRVZUX0hPU1Q9J2V2dGhvc3Q6JyxLVl9FVlRfUkw9J2V2dHJsOmFwcDonOwpjb25zdCBFVlRfVFNfU0tFVz0zMDAsRVZUX0xPR19NQVg9MjAwLEVWVF9STF9XSU5ET1c9MzAwLEVWVF9STF9NQVg9NjA7CmNvbnN0IEVWVF9TVEFUVVNFUz1bJ3J1bm5pbmcnLCdjdXJyZW50JywnaW5zdGFsbGVkJywnZXJyb3InXTsKY29uc3QgU0VTU0lPTl9UVEw9ODY0MDA7CmNvbnN0IFJMX1dJTkRPVz05MDAsUkxfTUFYPTE1OwpleHBvcnQgZGVmYXVsdHsKICBhc3luYyBmZXRjaChyLGUpewogIGNvbnN0IHU9bmV3IFVSTChyLnVybCk7CiAgaWYodS5wYXRobmFtZT09PScvaGVhbHRoJylyZXR1cm4gbmV3IFJlc3BvbnNlKEpTT04uc3RyaW5naWZ5KHtzdGF0dXM6J29rJyx0czpuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCl9KSx7aGVhZGVyczp7J0NvbnRlbnQtVHlwZSc6J2FwcGxpY2F0aW9uL2pzb24nfX0pOwogIGlmKHUucGF0aG5hbWU9PT0nL2FwcFZlcnNpb25zLnhtbCcpewogIGNvbnN0IHg9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KEtWX1hNTCk7CiAgaWYoIXgpcmV0dXJuIG5ldyBSZXNwb25zZSgnPD94bWwgdmVyc2lvbj0iMS4wIj8+PGVycm9yPk1hbmlmZXN0IG5vdCBsb2FkZWQ8L2Vycm9yPicse3N0YXR1czo0MDQsaGVhZGVyczp7J0NvbnRlbnQtVHlwZSc6J2FwcGxpY2F0aW9uL3htbCd9fSk7CiAgcmV0dXJuIG5ldyBSZXNwb25zZSh4LHtoZWFkZXJzOnsnQ29udGVudC1UeXBlJzonYXBwbGljYXRpb24veG1sJywnQ2FjaGUtQ29udHJvbCc6J25vLWNhY2hlJ319KTsKICB9CiAgaWYodS5wYXRobmFtZT09PScvbG9naW4nJiZyLm1ldGhvZD09PSdHRVQnKXtjb25zdCB0ZT0hIShhd2FpdCBlLkFQUF9NQU5JRkVTVC5nZXQoS1ZfVE9UUCkpO3JldHVybiBodG1sUmVzcG9uc2UobG9naW5QYWdlKCcnLHRlKSk7fQogIGlmKHUucGF0aG5hbWU9PT0nL2xvZ2luJyYmci5tZXRob2Q9PT0nUE9TVCcpcmV0dXJuIGhhbmRsZUxvZ2luKHIsZSk7CiAgaWYodS5wYXRobmFtZT09PScvbG9nb3V0JylyZXR1cm4gaGFuZGxlTG9nb3V0KCk7CiAgaWYodS5wYXRobmFtZT09PScvbG9nb3V0LWFsbCcmJnIubWV0aG9kPT09J1BPU1QnKXJldHVybiBoYW5kbGVMb2dvdXRBbGwocixlKTsKICBpZih1LnBhdGhuYW1lPT09Jy9zZXQtcGFzc3dvcmQnJiZyLm1ldGhvZD09PSdHRVQnKXJldHVybiBzZWN1cmVSZWRpcmVjdChuZXcgVVJMKCcvc3RhdHVzJyxyLnVybCkudG9TdHJpbmcoKSk7CiAgaWYodS5wYXRobmFtZT09PScvc2V0LXBhc3N3b3JkJyYmci5tZXRob2Q9PT0nUE9TVCcpcmV0dXJuIGhhbmRsZVNldFBhc3N3b3JkKHIsZSk7CiAgaWYodS5wYXRobmFtZT09PScvY2hhbmdlLXBhc3N3b3JkJyYmci5tZXRob2Q9PT0nR0VUJylyZXR1cm4gaGFuZGxlQ2hhbmdlUGFzc3dvcmRHZXQocixlKTsKICBpZih1LnBhdGhuYW1lPT09Jy9jaGFuZ2UtcGFzc3dvcmQnJiZyLm1ldGhvZD09PSdQT1NUJylyZXR1cm4gaGFuZGxlQ2hhbmdlUGFzc3dvcmRQb3N0KHIsZSk7CiAgaWYodS5wYXRobmFtZT09PScvdG90cC1zZXR1cCcmJnIubWV0aG9kPT09J0dFVCcpcmV0dXJuIGhhbmRsZVRPVFBTZXR1cEdldChyLGUpOwogIGlmKHUucGF0aG5hbWU9PT0nL3RvdHAtc2V0dXAnJiZyLm1ldGhvZD09PSdQT1NUJylyZXR1cm4gaGFuZGxlVE9UUFNldHVwUG9zdChyLGUpOwogIGlmKHUucGF0aG5hbWU9PT0nL3RvdHAtZGlzYWJsZScmJnIubWV0aG9kPT09J1BPU1QnKXJldHVybiBoYW5kbGVUT1RQRGlzYWJsZShyLGUpOwogIGlmKHUucGF0aG5hbWU9PT0nL3N0YXR1cycpcmV0dXJuIGhhbmRsZVN0YXR1cyhyLGUpOwogIGlmKHUucGF0aG5hbWU9PT0nL21hbmlmZXN0JyYmci5tZXRob2Q9PT0nUE9TVCcpcmV0dXJuIGhhbmRsZVVwZGF0ZShyLGUpOwogIC8vIEdFVCAvZXZ0c2VjLWV4cG9ydCDigJQgcmV0dXJucyB0aGUgZXZlbnQgSE1BQyBzZWNyZXQgZm9yIFBTMSBwYWNrYWdlIGJ1aWxkcyAoYmVhcmVyIGF1dGggb25seSkKICBpZih1LnBhdGhuYW1lPT09Jy9ldnRzZWMtZXhwb3J0JyYmci5tZXRob2Q9PT0nR0VUJyl7CiAgICBjb25zdCB0PXIuaGVhZGVycy5nZXQoJ1gtQXV0aC1Ub2tlbicpOwogICAgaWYoIXR8fCFjdEVxdWFsU3RyKHQsZS5BVVRIX1RPS0VOKSlyZXR1cm4gbmV3IFJlc3BvbnNlKCdVbmF1dGhvcml6ZWQnLHtzdGF0dXM6NDAxfSk7CiAgICByZXR1cm4gbmV3IFJlc3BvbnNlKGUuRVZUU0VDfHxhd2FpdCBlLkFQUF9NQU5JRkVTVC5nZXQoS1ZfRVZUX1NFQyl8fCcnLHtzdGF0dXM6MjAwLGhlYWRlcnM6eydDb250ZW50LVR5cGUnOid0ZXh0L3BsYWluJ319KTsKICB9CiAgLy8gREVMRVRFIC9hcHAve2lkfSDigJQgcmVtb3ZlIGFuIGFwcCBmcm9tIHRoZSBtYW5pZmVzdAogIGlmKHUucGF0aG5hbWUuc3RhcnRzV2l0aCgnL2FwcC8nKSYmci5tZXRob2Q9PT0nREVMRVRFJylyZXR1cm4gaGFuZGxlRGVsZXRlQXBwKHIsZSx1LnBhdGhuYW1lLnNsaWNlKDUpKTsKICAvLyBHRVQgL2RlcGxveS97aWR9IOKAlCBkb3dubG9hZCB0aGUgZGVwbG95IHNjcmlwdCBmb3IgYW4gYXBwCiAgaWYodS5wYXRobmFtZS5zdGFydHNXaXRoKCcvZGVwbG95LycpJiZyLm1ldGhvZD09PSdHRVQnKXJldHVybiBoYW5kbGVEb3dubG9hZERlcGxveShyLGUsdS5wYXRobmFtZS5zbGljZSg4KSk7CiAgLy8gUE9TVCAvZGVwbG95LXN0b3JlL3tpZH0g4oCUIHN0b3JlIGEgZGVwbG95IHNjcmlwdCAoYXV0aCByZXF1aXJlZCkKICBpZih1LnBhdGhuYW1lLnN0YXJ0c1dpdGgoJy9kZXBsb3ktc3RvcmUvJykmJnIubWV0aG9kPT09J1BPU1QnKXJldHVybiBoYW5kbGVTdG9yZURlcGxveShyLGUsdS5wYXRobmFtZS5zbGljZSgxNCkpOwogIC8vIFBlci1hcHAgZHJpbGwtZG93biArIGRldmljZS1ldmVudCB0ZWxlbWV0cnkKICBpZih1LnBhdGhuYW1lPT09Jy9ldmVudCcmJnIubWV0aG9kPT09J1BPU1QnKXJldHVybiBoYW5kbGVFdmVudChyLGUpOwogIGlmKHUucGF0aG5hbWUuc3RhcnRzV2l0aCgnL2FwcC8nKSYmci5tZXRob2Q9PT0nR0VUJylyZXR1cm4gaGFuZGxlQXBwRGV0YWlsKHIsZSx1LnBhdGhuYW1lLnNsaWNlKDUpKTsKICAvLyBSb290IGFuZCBhbnkgb3RoZXIgcGF0aCAtPiBsYW5kaW5nIHBhZ2UKICBjb25zdCBtYW5pZmVzdD1hd2FpdCBlLkFQUF9NQU5JRkVTVC5nZXQoS1ZfWE1MKTsKICBjb25zdCBoZWFsdGg9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KEtWX0hFQUxUSCk7CiAgY29uc3QgYXBwQ291bnQ9bWFuaWZlc3Q/Wy4uLm1hbmlmZXN0Lm1hdGNoQWxsKC88QXBwPi9nKV0ubGVuZ3RoOjA7CiAgcmV0dXJuIGh0bWxSZXNwb25zZShsYW5kaW5nUGFnZSh1Lmhvc3RuYW1lLCEhbWFuaWZlc3QsYXBwQ291bnQsISFoZWFsdGgpKTsKICB9LAogIGFzeW5jIHNjaGVkdWxlZChfLGUsY3R4KXtjdHgud2FpdFVudGlsKHJ1bkNoZWNrcyhlKSk7fQp9OwoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gYjY0IC8gYjY0dXJsIGhlbHBlcnMuIFdvcmtlcnMgaGF2ZSBhdG9iL2J0b2EgYnV0IG5vdCBCdWZmZXIuCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCmZ1bmN0aW9uIGI2NGUoYnVmKXtjb25zdCBiPW5ldyBVaW50OEFycmF5KGJ1Zik7bGV0IHM9Jyc7Zm9yKGxldCBpPTA7aTxiLmxlbmd0aDtpKyspcys9U3RyaW5nLmZyb21DaGFyQ29kZShiW2ldKTtyZXR1cm4gYnRvYShzKTt9CmZ1bmN0aW9uIGI2NGQocyl7Y29uc3QgYmluPWF0b2Iocyk7Y29uc3QgYj1uZXcgVWludDhBcnJheShiaW4ubGVuZ3RoKTtmb3IobGV0IGk9MDtpPGJpbi5sZW5ndGg7aSsrKWJbaV09YmluLmNoYXJDb2RlQXQoaSk7cmV0dXJuIGI7fQpmdW5jdGlvbiBiNjR1cmxFKGJ1Zil7cmV0dXJuIGI2NGUoYnVmKS5yZXBsYWNlKC9cKy9nLCctJykucmVwbGFjZSgvXC8vZywnXycpLnJlcGxhY2UoLz0rJC8sJycpO30KZnVuY3Rpb24gYjY0dXJsRChzKXtzPXMucmVwbGFjZSgvLS9nLCcrJykucmVwbGFjZSgvXy9nLCcvJyk7d2hpbGUocy5sZW5ndGglNClzKz0nPSc7cmV0dXJuIGI2NGQocyk7fQoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gY29uc3RhbnRUaW1lRXF1YWwg4oCUIFhPUi1hY2N1bXVsYXRlLCByZXR1cm5zIHRydWUgb25seSB3aGVuIGFsbCBieXRlcyBtYXRjaC4KLy8gQWNjZXB0cyBVaW50OEFycmF5LiBMZW5ndGggbWlzbWF0Y2ggc2hvcnQtY2lyY3VpdHMgYnV0IHN0aWxsIGRyYWlucy4KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KZnVuY3Rpb24gY29uc3RhbnRUaW1lRXF1YWwoYSxiKXsKICBpZihhLmxlbmd0aCE9PWIubGVuZ3RoKXJldHVybiBmYWxzZTsKICBsZXQgZD0wO2ZvcihsZXQgaT0wO2k8YS5sZW5ndGg7aSsrKWR8PWFbaV1eYltpXTsKICByZXR1cm4gZD09PTA7Cn0KLy8gU3RyaW5nIHdyYXBwZXIg4oCUIGNvbnN0YW50LXRpbWUgY29tcGFyZSBmb3IgYmVhcmVyIHRva2VuIGNoZWNrcy4KZnVuY3Rpb24gY3RFcXVhbFN0cihhLGIpe2NvbnN0IGU9bmV3IFRleHRFbmNvZGVyKCk7cmV0dXJuIGNvbnN0YW50VGltZUVxdWFsKGUuZW5jb2RlKFN0cmluZyhhfHwnJykpLGUuZW5jb2RlKFN0cmluZyhifHwnJykpKTt9CgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBwYmtkZjJWZXJpZnkg4oCUIHJlY29uc3RydWN0IGhhc2ggZnJvbSBwcm92aWRlZCBwYXNzd29yZCArIHN0b3JlZCBzYWx0L2l0ZXJzLAovLyBjb21wYXJlIGNvbnN0YW50LXRpbWUgdG8gc3RvcmVkIGhhc2guIFJldHVybnMgYm9vbGVhbi4KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KYXN5bmMgZnVuY3Rpb24gcGJrZGYyVmVyaWZ5KHBhc3N3b3JkLHN0b3JlZCl7CiAgdHJ5ewogIGNvbnN0IHJlYz1KU09OLnBhcnNlKHN0b3JlZCk7CiAgaWYocmVjLmFsZ28hPT0nUEJLREYyLVNIQTI1NicpcmV0dXJuIGZhbHNlOwogIGNvbnN0IHNhbHQ9YjY0ZChyZWMuc2FsdCksZXhwZWN0ZWQ9YjY0ZChyZWMuaGFzaCk7CiAgY29uc3Qga2V5PWF3YWl0IGNyeXB0by5zdWJ0bGUuaW1wb3J0S2V5KCdyYXcnLG5ldyBUZXh0RW5jb2RlcigpLmVuY29kZShwYXNzd29yZCksJ1BCS0RGMicsZmFsc2UsWydkZXJpdmVCaXRzJ10pOwogIGNvbnN0IGJpdHM9YXdhaXQgY3J5cHRvLnN1YnRsZS5kZXJpdmVCaXRzKHtuYW1lOidQQktERjInLHNhbHQs'
   'aXRlcmF0aW9uczpyZWMuaXRlcmF0aW9ucyxoYXNoOidTSEEtMjU2J30sa2V5LGV4cGVjdGVkLmxlbmd0aCo4KTsKICByZXR1cm4gY29uc3RhbnRUaW1lRXF1YWwobmV3IFVpbnQ4QXJyYXkoYml0cyksZXhwZWN0ZWQpOwogIH1jYXRjaChfKXtyZXR1cm4gZmFsc2U7fQp9CgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBobWFjU2lnbiAvIGhtYWNWZXJpZnkg4oCUIEhNQUMtU0hBMjU2IG92ZXIgdGhlIGJhc2U2NHVybChKU09OKHBheWxvYWQpKS4KLy8gQ29va2llIGZvcm1hdDogPGI2NHVybChwYXlsb2FkKT4uPGI2NHVybChzaWcpPi4KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KYXN5bmMgZnVuY3Rpb24gaG1hY0tleShzZWNyZXRCNjQpewogIGNvbnN0IHJhdz1iNjRkKHNlY3JldEI2NCk7CiAgcmV0dXJuIGNyeXB0by5zdWJ0bGUuaW1wb3J0S2V5KCdyYXcnLHJhdyx7bmFtZTonSE1BQycsaGFzaDonU0hBLTI1Nid9LGZhbHNlLFsnc2lnbicsJ3ZlcmlmeSddKTsKfQphc3luYyBmdW5jdGlvbiBobWFjU2lnbihwYXlsb2FkLHNlY3JldEI2NCl7CiAgY29uc3Qgaz1hd2FpdCBobWFjS2V5KHNlY3JldEI2NCk7CiAgY29uc3QgYm9keT1iNjR1cmxFKG5ldyBUZXh0RW5jb2RlcigpLmVuY29kZShKU09OLnN0cmluZ2lmeShwYXlsb2FkKSkpOwogIGNvbnN0IHNpZz1hd2FpdCBjcnlwdG8uc3VidGxlLnNpZ24oJ0hNQUMnLGssbmV3IFRleHRFbmNvZGVyKCkuZW5jb2RlKGJvZHkpKTsKICByZXR1cm4gYm9keSsnLicrYjY0dXJsRShzaWcpOwp9CmFzeW5jIGZ1bmN0aW9uIGhtYWNWZXJpZnkodG9rZW4sc2VjcmV0QjY0KXsKICB0cnl7CiAgY29uc3QgW2JvZHksc2lnXT10b2tlbi5zcGxpdCgnLicpOwogIGlmKCFib2R5fHwhc2lnKXJldHVybiBudWxsOwogIGNvbnN0IGs9YXdhaXQgaG1hY0tleShzZWNyZXRCNjQpOwogIGNvbnN0IG9rPWF3YWl0IGNyeXB0by5zdWJ0bGUudmVyaWZ5KCdITUFDJyxrLGI2NHVybEQoc2lnKSxuZXcgVGV4dEVuY29kZXIoKS5lbmNvZGUoYm9keSkpOwogIGlmKCFvaylyZXR1cm4gbnVsbDsKICBjb25zdCBwYXlsb2FkPUpTT04ucGFyc2UobmV3IFRleHREZWNvZGVyKCkuZGVjb2RlKGI2NHVybEQoYm9keSkpKTsKICBpZighcGF5bG9hZC5leHB8fHBheWxvYWQuZXhwPE1hdGguZmxvb3IoRGF0ZS5ub3coKS8xMDAwKSlyZXR1cm4gbnVsbDsKICByZXR1cm4gcGF5bG9hZDsKICB9Y2F0Y2goXyl7cmV0dXJuIG51bGw7fQp9CgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBwYXJzZUNvb2tpZSAvIHNldFNlc3Npb25Db29raWUg4oCUIG1pbmltYWwgY29va2llIHBsdW1iaW5nLgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpmdW5jdGlvbiBwYXJzZUNvb2tpZShoZWFkZXIsbmFtZSl7CiAgaWYoIWhlYWRlcilyZXR1cm4gbnVsbDsKICBjb25zdCBwYXJ0cz1oZWFkZXIuc3BsaXQoLztccyovKTsKICBmb3IoY29uc3QgcCBvZiBwYXJ0cyl7Y29uc3QgaT1wLmluZGV4T2YoJz0nKTtpZihpPjAmJnAuc2xpY2UoMCxpKT09PW5hbWUpcmV0dXJuIGRlY29kZVVSSUNvbXBvbmVudChwLnNsaWNlKGkrMSkpO30KICByZXR1cm4gbnVsbDsKfQpmdW5jdGlvbiBzZXRTZXNzaW9uQ29va2llKHZhbHVlLG1heEFnZSl7CiAgcmV0dXJuIGBfX0hvc3QtYXVfc2Vzc2lvbj0ke2VuY29kZVVSSUNvbXBvbmVudCh2YWx1ZSl9OyBIdHRwT25seTsgU2VjdXJlOyBTYW1lU2l0ZT1TdHJpY3Q7IFBhdGg9LzsgTWF4LUFnZT0ke21heEFnZX1gOwp9CmZ1bmN0aW9uIGNsZWFyU2Vzc2lvbkNvb2tpZSgpewogIHJldHVybiAnX19Ib3N0LWF1X3Nlc3Npb249OyBIdHRwT25seTsgU2VjdXJlOyBTYW1lU2l0ZT1TdHJpY3Q7IFBhdGg9LzsgTWF4LUFnZT0wJzsKfQoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gU2VjdXJpdHkgaGVhZGVycyDigJQgYXBwbGllZCB0byBldmVyeSBIVE1ML3JlZGlyZWN0IHJlc3BvbnNlLgovLyBDU1AgYmxvY2tzIGZyYW1pbmcgKGZyYW1lLWFuY2VzdG9ycyAnbm9uZScgYWxzbyBiZWF0cyBYLUZyYW1lLU9wdGlvbnMgaW4KLy8gbW9kZXJuIGJyb3dzZXJzKSwgbGltaXRzIGZldGNoIHRhcmdldHMgdG8gc2FtZS1vcmlnaW4sIGFuZCBhbGxvd3Mgb25seQovLyBpbmxpbmUgc3R5bGVzL3NjcmlwdHMgKG5vIGV4dGVybmFsIHJlc291cmNlcyBsb2FkZWQgYnkgdGhlc2UgcGFnZXMpLgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpjb25zdCBTRUM9ewogICdYLUNvbnRlbnQtVHlwZS1PcHRpb25zJzonbm9zbmlmZicsCiAgJ1gtRnJhbWUtT3B0aW9ucyc6J0RFTlknLAogICdSZWZlcnJlci1Qb2xpY3knOidzdHJpY3Qtb3JpZ2luLXdoZW4tY3Jvc3Mtb3JpZ2luJywKICAnQ29udGVudC1TZWN1cml0eS1Qb2xpY3knOiJkZWZhdWx0LXNyYyAnc2VsZic7IHN0eWxlLXNyYyAndW5zYWZlLWlubGluZSc7IHNjcmlwdC1zcmMgJ3Vuc2FmZS1pbmxpbmUnOyBmb3JtLWFjdGlvbiAnc2VsZic7IGZyYW1lLWFuY2VzdG9ycyAnbm9uZSc7IGJhc2UtdXJpICdzZWxmJyIsCiAgJ1Blcm1pc3Npb25zLVBvbGljeSc6J2NhbWVyYT0oKSwgbWljcm9waG9uZT0oKSwgZ2VvbG9jYXRpb249KCknCn07Ci8vIFdyYXAgYW4gSFRNTCBib2R5IHdpdGggc2VjdXJpdHkgaGVhZGVycy4KZnVuY3Rpb24gaHRtbFJlc3BvbnNlKGJvZHksc3RhdHVzPTIwMCl7CiAgcmV0dXJuIG5ldyBSZXNwb25zZShib2R5LHtzdGF0dXMsaGVhZGVyczp7Li4uU0VDLCdDb250ZW50LVR5cGUnOid0ZXh0L2h0bWw7Y2hhcnNldD11dGYtOCd9fSk7Cn0KLy8gUmVkaXJlY3Qgd2l0aCBzZWN1cml0eSBoZWFkZXJzLiBQYXNzIGEgU2V0LUNvb2tpZSBzdHJpbmcgYXMgdGhlIHRoaXJkIGFyZyB3aGVuIG5lZWRlZC4KZnVuY3Rpb24gc2VjdXJlUmVkaXJlY3QodXJsLHN0YXR1cz0zMDIsY29va2llPW51bGwpewogIGNvbnN0IGg9ey4uLlNFQywnTG9jYXRpb24nOnVybH07CiAgaWYoY29va2llKWhbJ1NldC1Db29raWUnXT1jb29raWU7CiAgcmV0dXJuIG5ldyBSZXNwb25zZShudWxsLHtzdGF0dXMsaGVhZGVyczpofSk7Cn0KCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIHJhdGVMaW1pdCDigJQgS1YgVFRMIGNvdW50ZXIgcGVyIElQLiBSZXR1cm5zIHRydWUgd2hlbiBleGNlZWRlZC4KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KYXN5bmMgZnVuY3Rpb24gcmF0ZUxpbWl0KGUsaXApewogIGNvbnN0IGtleT1LVl9STCtpcDsKICBjb25zdCBjdXI9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KGtleSk7CiAgY29uc3Qgbj1jdXI/cGFyc2VJbnQoY3VyLDEwKSsxOjE7CiAgYXdhaXQgZS5BUFBfTUFOSUZFU1QucHV0KGtleSxTdHJpbmcobikse2V4cGlyYXRpb25UdGw6UkxfV0lORE9XfSk7CiAgcmV0dXJuIG4+UkxfTUFYOwp9CgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBnZXRPckNyZWF0ZVNlc3Npb25TZWNyZXQg4oCUIGVuc3VyZXMgYSAzMi1ieXRlIHNlY3JldCBleGlzdHMgaW4gS1YuCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCmFzeW5jIGZ1bmN0aW9uIGdldE9yQ3JlYXRlU2Vzc2lvblNlY3JldChlKXsKICBsZXQgcz1hd2FpdCBlLkFQUF9NQU5JRkVTVC5nZXQoS1ZfU0VDKTsKICBpZihzKXJldHVybiBzOwogIGNvbnN0IGJ1Zj1jcnlwdG8uZ2V0UmFuZG9tVmFsdWVzKG5ldyBVaW50OEFycmF5KDMyKSk7CiAgcz1iNjRlKGJ1Zik7CiAgYXdhaXQgZS5BUFBfTUFOSUZFU1QucHV0KEtWX1NFQyxzKTsKICByZXR1cm4gczsKfQoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gdmVyaWZ5U2Vzc2lvbiDigJQgcmV0dXJucyBwYXlsb2FkIHdoZW4gdGhlIHJlcXVlc3QgY2FycmllcyBhIHZhbGlkIGNvb2tpZS4KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KYXN5bmMgZnVuY3Rpb24gdmVyaWZ5U2Vzc2lvbihyLGUpewogIGNvbnN0IHRvaz1wYXJzZUNvb2tpZShyLmhlYWRlcnMuZ2V0KCdDb29raWUnKSwnX19Ib3N0LWF1X3Nlc3Npb24nKTsKICBpZighdG9rKXJldHVybiBudWxsOwogIGNvbnN0IHNlYz1hd2FpdCBlLkFQUF9NQU5JRkVTVC5nZXQoS1ZfU0VDKTsKICBpZighc2VjKXJldHVybiBudWxsOwogIHJldHVybiBobWFjVmVyaWZ5KHRvayxzZWMpOwp9CgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBoYW5kbGVMb2dpbiDigJQgUE9TVCBmb3JtLCBjaGVjayByYXRlIGxpbWl0LCB2ZXJpZnkgcGFzc3dvcmQsIGlzc3VlIGNvb2tpZS4KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KYXN5bmMgZnVuY3Rpb24gaGFuZGxlTG9naW4ocixlKXsKICBjb25zdCBzdG9yZWQ9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KEtWX1BXRCk7CiAgaWYoIXN0b3JlZClyZXR1cm4gc2VjdXJlUmVkaXJlY3QobmV3IFVSTCgnL3N0YXR1cycsci51cmwpLnRvU3RyaW5nKCkpOwogIGNvbnN0IGlwPXIuaGVhZGVycy5nZXQoJ0NGLUNvbm5lY3RpbmctSVAnKTsKICBpZighaXApcmV0dXJuIG5ldyBSZXNwb25zZSgnJyx7c3RhdHVzOjQwM30pOyAvLyBtdXN0IHJvdXRlIHRocm91Z2ggQ2xvdWRmbGFyZQogIGlmKGF3YWl0IHJhdGVMaW1pdChlLGlwKSlyZXR1cm4gaHRtbFJlc3BvbnNlKGxvZ2luUGFnZSgnVG9vIG1hbnkgbG9naW4gYXR0ZW1wdHMg4oCUIHBsZWFzZSB3YWl0IDE1IG1pbnV0ZXMgYmVmb3JlIHRyeWluZyBhZ2Fpbi4nKSw0MjkpOwogIGNvbnN0IGZvcm09YXdhaXQgci5mb3JtRGF0YSgpOwogIGNvbnN0IHB3ZD1mb3JtLmdldCgncGFzc3dvcmQnKXx8Jyc7CiAgaWYoIWF3YWl0IHBia2RmMlZlcmlmeShwd2Qsc3RvcmVkKSlyZXR1cm4gaHRtbFJlc3BvbnNlKGxvZ2luUGFnZSgnSW5jb3JyZWN0IHBhc3N3b3JkIOKAlCBwbGVhc2UgdHJ5IGFnYWluLicpLDQwMSk7CiAgLy8gVE9UUCBjaGVjayAob25seSBpZiBhIHNlY3JldCBpcyBjb25maWd1cmVkKQogIGNvbnN0IHRvdHBTZWM9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KEtWX1RPVFApOwogIGlmKHRvdHBTZWMpewogICAgY29uc3Qgb3RwPVN0cmluZyhmb3JtLmdldCgnb3RwJyl8fCcnKS5yZXBsYWNlKC9bXHNcLV0vZywnJyk7CiAgICBpZighb3RwfHwhYXdhaXQgdmVyaWZ5VE9UUCh0b3RwU2VjLG90cCxlKSlyZXR1cm4gaHRtbFJlc3BvbnNlKGxvZ2luUGFnZSgnSW52YWxpZCBhdXRoZW50aWNhdG9yIGNvZGUg4oCUIHBsZWFzZSB0cnkgYWdhaW4uJyx0cnVlKSw0MDEpOwogIH0KICBjb25zdCBzZWM9YXdhaXQgZ2V0T3JDcmVhdGVTZXNzaW9uU2VjcmV0KGUpOwogIGNvbnN0IG5vdz1NYXRoLmZsb29yKERhdGUubm93KCkvMTAwMCk7CiAgY29uc3Qgbm9uY2VCdWY9Y3J5cHRvLmdldFJhbmRvbVZhbHVlcyhuZXcgVWludDhBcnJheSgxMikpOwogIGNvbnN0IHRva2VuPWF3YWl0IGhtYWNTaWduKHtpYXQ6bm93LGV4cDpub3crU0VTU0lPTl9UVEwsbm9uY2U6YjY0dXJsRShub25jZUJ1Zil9LHNlYyk7CiAgcmV0dXJuIHNlY3VyZVJlZGlyZWN0KCcvc3RhdHVzJywzMDIsc2V0U2Vzc2lvbkNvb2tpZSh0b2tlbixTRVNTSU9OX1RUTCkpOwp9CgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBoYW5kbGVMb2dvdXQg4oCUIGNsZWFyIHRoZSBjb29raWUgYW5kIHJlZGlyZWN0IHRvIC9sb2dpbi4KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KZnVuY3Rpb24gaGFuZGxlTG9nb3V0KCl7CiAgcmV0dXJuIHNlY3VyZVJlZGlyZWN0KCcvbG9naW4nLDMwMixjbGVhclNlc3Npb25Db29raWUoKSk7Cn0KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gaGFuZGxlTG9nb3V0QWxsIOKAlCByb3RhdGUgc2Vzc2lvbiBzZWNyZXQgc28gQUxMIGV4aXN0aW5nIHRva2VucyBhcmUgaW52YWxpZC4KLy8gUmVxdWlyZXMgYW4gYWN0aXZlIHNlc3Npb24gKHByZXZlbnRzIENTUkYgZnJvbSB1bmF1dGhlbnRpY2F0ZWQgcGFnZXMpLgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQphc3luYyBmdW5jdGlvbiBoYW5kbGVMb2dvdXRBbGwocixlKXsKICBjb25zdCBzZXNzPWF3YWl0IHZlcmlmeVNlc3Npb24ocixlKTsKICBpZighc2VzcylyZXR1cm4gc2VjdXJlUmVkaXJlY3QoJy9sb2dpbicsMzAyLGNsZWFyU2Vzc2lvbkNvb2tpZSgpKTsKICBjb25zdCBidWY9Y3J5cHRvLmdldFJhbmRvbVZhbHVlcyhuZXcgVWludDhBcnJheSgzMikpOwogIGF3YWl0IGUuQVBQX01BTklGRVNULnB1dChLVl9TRUMsYjY0ZShidWYpKTsKICByZXR1cm4gc2VjdXJlUmVkaXJlY3QoJy9sb2dpbicsMzAyLGNsZWFyU2Vzc2lvbkNvb2tpZSgpKTsKfQoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gaGFuZGxlU2V0UGFzc3dvcmQg4oCUIG9ubHkgYWNjZXB0ZWQgd2hlbiBubyBwYXNzd29yZCBpcyBzZXQgeWV0IChmaXJzdCBydW4pLgovLyBWYWxpZGF0ZXMgcG9saWN5LCB3cml0ZXMgUEJLREYyIHJlY29yZCwgaXNzdWVzIHNlc3Npb24gY29va2llLgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQphc3luYyBmdW5jdGlvbiBoYW5kbGVTZXRQYXNzd29yZChyLGUpewogIGNvbnN0IGV4aXN0aW5nPWF3YWl0IGUuQVBQX01BTklGRVNULmdldChLVl9QV0QpOwogIGlmKGV4aXN0aW5nKXJldHVybiBodG1sUmVzcG9uc2UoJzxwIHN0eWxlPSJmb250LWZhbWlseTpzYW5zLXNlcmlmO2NvbG9yOiNjMDA7cGFkZGluZzoycmVtIj5QYXNzd29yZCBhbHJlYWR5IHNldC4gVXNlIEFwcFVwZGF0ZXIgdG8gcmVzZXQgaXQgZnJvbSB0aGUgPGVtPldvcmtlciBPcHRpb25zPC9lbT4gbWVudS48L3A+Jyw0MDMpOwogIGNvbnN0IGZvcm09YXdhaXQgci5mb3JtRGF0YSgpOwogIGNvbnN0IHB3ZD1TdHJpbmcoZm9ybS5nZXQoJ3Bhc3N3b3JkJyl8fCcnKTsKICBjb25zdCBjb25mPVN0cmluZyhmb3JtLmdldCgnY29uZmlybScpfHwnJyk7CiAgaWYocHdkIT09Y29uZilyZXR1cm4gaHRtbFJlc3BvbnNlKHNldFBhc3N3b3JkUGFnZSgnUGFzc3dvcmRzIGRvIG5vdCBtYXRjaC4nKSw0MDApOwogIGlmKHB3ZC5sZW5ndGg8MTJ8fCEvW0EtWmEtel0vLnRlc3QocHdkKXx8IS9bMC05XS8udGVzdChwd2QpKXJldHVybiBodG1sUmVzcG9uc2Uoc2V0UGFzc3dvcmRQYWdlKCdQYXNzd29yZCBtdXN0IGJlIGF0IGxlYXN0IDEyIGNoYXJhY3RlcnMgYW5kIGluY2x1ZGUgYSBsZXR0ZXIgYW5kIGEgZGlnaXQuJyksNDAwKTsKICBjb25zdCBzYWx0PWNyeXB0by5nZXRSYW5kb21WYWx1ZXMobmV3IFVpbnQ4QXJyYXkoMTYpKTsKICBjb25zdCBpdGVycz0xMDAwMDA7CiAgY29uc3Qga2V5PWF3YWl0IGNyeXB0by5zdWJ0bGUuaW1wb3J0S2V5KCdyYXcnLG5ldyBUZXh0RW5jb2RlcigpLmVuY29kZShwd2QpLCdQQktERjInLGZhbHNlLFsnZGVyaXZlQml0cyddKTsKICBjb25zdCBiaXRzPWF3YWl0IGNyeXB0by5zdWJ0bGUuZGVyaXZlQml0cyh7bmFtZTonUEJLREYyJyxzYWx0LGl0ZXJhdGlvbnM6aXRlcnMsaGFzaDonU0hBLTI1Nid9LGtleSwyNTYpOwogIGNvbnN0IHJlYz17YWxnbzonUEJLREYyLVNIQTI1NicsaXRlcmF0aW9uczppdGVycyxzYWx0OmI2NGUoc2FsdCksaGFzaDpiNjRlKGJpdHMpfTsKICBhd2FpdCBlLkFQUF9NQU5JRkVTVC5wdXQoS1ZfUFdELEpTT04uc3RyaW5naWZ5KHJlYykpOwogIGNvbnN0IHNlYz1hd2FpdCBnZXRPckNyZWF0ZVNlc3Npb25TZWNyZXQoZSk7CiAgY29uc3Qgbm93PU1hdGguZmxvb3IoRGF0ZS5ub3coKS8xMDAwKTsKICBjb25zdCBub25jZUJ1Zj1jcnlwdG8uZ2V0UmFuZG9tVmFsdWVzKG5ldyBVaW50OEFycmF5KDEyKSk7CiAgY29uc3QgdG9rZW49YXdhaXQgaG1hY1NpZ24oe2lhdDpub3csZXhwOm5vdytTRVNTSU9OX1RUTCxub25jZTpiNjR1cmxFKG5vbmNlQnVmKX0sc2VjKTsKICByZXR1cm4gc2VjdXJlUmVkaXJlY3QoJy9zdGF0dXMnLDMwMixzZXRTZXNzaW9uQ29va2llKHRva2VuLFNFU1NJT05fVFRMKSk7Cn0KCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIGhhbmRsZUNoYW5nZVBhc3N3b3JkR2V0IC8gaGFuZGxlQ2hhbmdlUGFzc3dvcmRQb3N0Ci8vIEF1dGhlbnRpY2F0ZWQgKHNlc3Npb24gcmVxdWlyZWQpLiBBbGxvd3MgYSBsb2dnZWQtaW4gYWRtaW4gdG8gY2hhbmdlIHRoZWlyCi8vIGRhc2hib2FyZCBwYXNzd29yZCB3aXRob3V0IGdvaW5nIHRocm91Z2ggdGhlIGZ1bGwgcmVzZXQtdmlhLVBTMSBmbG93LgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQphc3luYyBmdW5jdGlvbiBoYW5kbGVDaGFuZ2VQYXNzd29yZEdldChyLGUpewogIGNvbnN0IHNlc3M9YXdhaXQgdmVyaWZ5U2Vzc2lvbihyLGUpOwogIGlmKCFzZXNzKXJldHVybiBzZWN1cmVSZWRpcmVjdCgnL2xvZ2luJywzMDIsY2xlYXJTZXNzaW9uQ29va2llKCkpOwogIHJldHVybiBodG1sUmVzcG9uc2UoY2hhbmdlUGFzc3dvcmRQYWdlKCcnKSk7Cn0KYXN5bmMgZnVuY3Rpb24gaGFuZGxlQ2hhbmdlUGFzc3dvcmRQb3N0KHIsZSl7CiAgY29uc3Qgc2Vzcz1hd2FpdCB2ZXJpZnlTZXNzaW9uKHIsZSk7CiAgaWYoIXNlc3MpcmV0dXJuIHNlY3VyZVJlZGlyZWN0KCcvbG9naW4nLDMwMixjbGVhclNlc3Npb25Db29raWUoKSk7CiAgY29uc3Qgc3RvcmVkPWF3YWl0IGUuQVBQX01BTklGRVNULmdldChLVl9QV0QpOwogIGlmKCFzdG9yZWQpcmV0dXJuIGh0bWxSZXNwb25zZShjaGFuZ2VQYXNzd29yZFBhZ2UoJ05vIHBhc3N3b3JkIGlzIHNldC4gVXNlIHRoZSBzZXQtcGFzc3dvcmQgcGFnZS4nKSw0MDApOwogIGNvbnN0IGZvcm09YXdhaXQgci5mb3JtRGF0YSgpOwogIGNvbnN0IGN1cnJlbnQ9U3RyaW5nKGZvcm0uZ2V0KCdjdXJyZW50Jyl8fCcnKTsKICBjb25zdCBuZXdQd2Q9U3RyaW5nKGZvcm0uZ2V0KCdwYXNzd29yZCcpfHwnJyk7CiAgY29uc3QgY29uZj1TdHJpbmcoZm9ybS5nZXQoJ2NvbmZpcm0nKXx8JycpOwogIGlmKCFhd2FpdCBwYmtkZjJWZXJpZnkoY3VycmVudCxzdG9yZWQpKXJldHVybiBodG1sUmVzcG9uc2UoY2hhbmdlUGFzc3dvcmRQYWdlKCdDdXJyZW50IHBhc3N3b3JkIGlzIGluY29ycmVjdC4nKSw0MDEpOwogIGlmKG5ld1B3ZCE9PWNvbmYpcmV0dXJuIGh0bWxSZXNwb25zZShjaGFuZ2VQYXNzd29yZFBhZ2UoJ05ldyBwYXNzd29yZHMgZG8gbm90IG1hdGNoLicpLDQwMCk7CiAgaWYobmV3UHdkLmxlbmd0aDwxMnx8IS9bQS1aYS16XS8udGVzdChuZXdQd2QpfHwhL1swLTldLy50ZXN0KG5ld1B3ZCkpcmV0dXJuIGh0bWxSZXNwb25zZShjaGFuZ2VQYXNzd29yZFBhZ2UoJ05ldyBwYXNzd29yZCBtdXN0IGJlIGF0IGxlYXN0IDEyIGNoYXJhY3RlcnMgYW5kIGluY2x1ZGUgYSBsZXR0ZXIgYW5kIGEgZGlnaXQuJyksNDAwKTsKICBjb25zdCBzYWx0PWNyeXB0by5nZXRSYW5kb21WYWx1ZXMobmV3IFVpbnQ4QXJyYXkoMTYpKTsKICBjb25zdCBpdGVycz0xMDAwMDA7CiAgY29uc3Qga2V5PWF3YWl0IGNyeXB0by5zdWJ0bGUuaW1wb3J0S2V5KCdyYXcnLG5ldyBUZXh0RW5jb2RlcigpLmVuY29kZShuZXdQd2QpLCdQQktERjInLGZhbHNlLFsnZGVyaXZlQml0cyddKTsKICBjb25zdCBiaXRzPWF3YWl0IGNyeXB0by5zdWJ0bGUuZGVyaXZlQml0cyh7bmFtZTonUEJLREYyJyxzYWx0LGl0ZXJhdGlvbnM6aXRlcnMsaGFzaDonU0hBLTI1Nid9LGtleSwyNTYpOwogIGNvbnN0IHJlYz17YWxnbzonUEJLREYyLVNIQTI1NicsaXRlcmF0aW9uczppdGVycyxzYWx0OmI2NGUoc2FsdCksaGFzaDpiNjRlKGJpdHMpfTsKICBhd2FpdCBlLkFQUF9NQU5JRkVTVC5wdXQoS1ZfUFdELEpTT04uc3RyaW5naWZ5KHJlYykpOwogIHJldHVybiBzZWN1cmVSZWRpcmVjdCgnL3N0YXR1cycsMzAyKTsKfQpmdW5jdGlvbiBjaGFuZ2VQYXNzd29yZFBhZ2UoZXJyKXsKICByZXR1cm4gQ1NTK2AKPHRpdGxlPkFwcFVwZGF0ZXIgJm1kYXNoOyBDaGFuZ2UgcGFzc3dvcmQ8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxkaXYgY2xhc3M9ImJhciIgc3R5bGU9ImJhY2tncm91bmQ6IzBhMGEwYTtib3JkZXItYm90dG9tLWNvbG9yOnZhcigtLWMpIj4KICA8ZGl2IGNsYXNzPSJkb3QiIHN0eWxlPSJiYWNrZ3JvdW5kOnZhcigtLWMpO2JveC1zaGFkb3c6MCAwIDhweCB2YXIoLS1jKSI+PC9kaXY+CiAgPGgxIHN0eWxlPSJjb2xvcjp2YXIoLS1jKSI+QXBwVXBkYXRlcjwvaDE+CiAgPGRpdiBjbGFzcz0ibWV0YSI+Q2hhbmdlIGRhc2hib2FyZCBwYXNzd29yZDwvZGl2Pgo8L2Rpdj4KPGRpdiBjbGFzcz0iaGVybyI+PGRpdiBjbGFzcz0ibG9nbyI+U2VjdXJpdHk8L2Rpdj48aDE+Q2hhbmdlIHBhc3N3b3JkPC9oMT48L2Rpdj4KPGRpdiBjbGFzcz0id3JhcCIgc3R5bGU9Im1heC13aWR0aDo0NjBweCI+CiAgPGZvcm0gbWV0aG9kPSJQT1NUIiBhY3Rpb249Ii9jaGFuZ2UtcGFzc3dvcmQiIHN0eWxlPSJiYWNrZ3JvdW5kOnZhcigtLXMpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tYik7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoyMnB4Ij4KICAke2Vycj9gPGRpdiBzdHlsZT0iYmFja2dyb3VuZDojNGExYTI0O2JvcmRlcjoxcHggc29saWQgIzdmMWQxZDtjb2xvcjojZmNhNWE1O3BhZGRpbmc6OHB4IDEycHg7Ym9yZGVyLXJhZGl1czo0cHg7bWFyZ2luLWJvdHRvbToxNHB4O2ZvbnQtc2l6ZToxMnB4Ij4ke2Vycn08L2Rpdj5gOicnfQogIDxkaXYgY2xhc3M9Im1mIj48bGFiZWw+Q3VycmVudCBwYXNzd29yZDwvbGFiZWw+PGlucHV0IHR5cGU9InBhc3N3b3JkIiBuYW1lPSJjdXJyZW50IiBhdXRvZm9jdXMgcmVxdWlyZWQvPjwvZGl2PgogIDxkaXYgY2xhc3M9Im1mIj48bGFiZWw+TmV3IHBhc3N3b3JkIDxzcGFuIHN0eWxlPSJjb2xvcjojNTU1O2ZvbnQtc2l6ZToxMHB4O3RleHQtdHJhbnNmb3JtOm5vbmUiPihtaW4gMTIgY2hhcnMsIGxldHRlcnMgKyBkaWdpdHMpPC9zcGFuPjwvbGFiZWw+PGlucHV0IHR5cGU9InBhc3N3b3JkIiBuYW1lPSJwYXNzd29yZCIgcmVxdWlyZWQgbWlubGVuZ3RoPSIxMiIvPjwvZGl2PgogIDxkaXYgY2xhc3M9Im1mIj48bGFiZWw+Q29uZmlybSBuZXcgcGFzc3dvcmQ8L2xhYmVsPjxpbnB1dCB0eXBlPSJwYXNzd29yZCIgbmFtZT0iY29uZmlybSIgcmVxdWlyZWQgbWlubGVuZ3RoPSIxMiIvPjwvZGl2PgogIDxkaXYgY2xhc3M9Im1vZGFsLWJ0bnMiIHN0eWxlPSJtYXJnaW4tdG9wOjhweCI+CiAgICA8YSBocmVmPSIvc3RhdHVzIiBzdHlsZT0iY29sb3I6dmFyKC0tZGltKTtmb250LXNpemU6MTJweDt0ZXh0LWRlY29yYXRpb246bm9uZTttYXJnaW4tcmlnaHQ6MTZweCI+JiM4NTkyOyBDYW5jZWw8L2E+CiAgICA8YnV0dG9uIGNsYXNzPSJidG4tc2F2ZSIgdHlwZT0ic3VibWl0IiBzdHlsZT0icGFkZGluZzoxMHB4IDI0cHgiPkNoYW5nZSBwYXNzd29yZDwvYnV0dG9uPgogIDwvZGl2PgogIDwvZm9ybT4KPC9kaXY+PC9ib2R5PjwvaHRtbD5gO30KCmFzeW5jIGZ1bmN0aW9uIGhhbmRsZVVwZGF0ZShyLGUpewogIGNvbnN0IGlwPXIuaGVhZGVycy5nZXQoJ0NGLUNvbm5lY3RpbmctSVAnKTsKICBpZighaXApcmV0dXJuIG5ldyBSZXNwb25zZSgnJyx7c3RhdHVzOjQwM30pOyAvLyBtdXN0IHJvdXRlIHRocm91Z2ggQ2xvdWRmbGFyZQogIGlmKGF3YWl0IHJhdGVMaW1pdChlLGlwKSlyZXR1cm4gbmV3IFJlc3BvbnNlKCdUb28gbWFueSByZXF1ZXN0cycse3N0YXR1czo0Mjl9KTsKICAvLyBCZWFyZXIgdG9rZW4gcGF0aCBwcmVzZXJ2ZWQgZm9yIFBTMSBwdXNoZXMuCiAgY29uc3QgdD1yLmhlYWRlcnMuZ2V0KCdYLUF1dGgtVG9rZW4nKTsKICBpZih0JiZjdEVxdWFsU3RyKHQsZS5BVVRIX1RPS0VOKSl7Lyogb2sgKi99CiAgZWxzZXsKICBjb25zdCBzZXNzPWF3YWl0IHZlcmlmeVNlc3Npb24ocixlKTsKICBpZighc2VzcylyZXR1cm4gbmV3IFJlc3BvbnNlKCdVbmF1dGhvcml6ZWQnLHtzdGF0dXM6NDAxfSk7CiAgfQogIGNvbnN0IGI9YXdhaXQgci50ZXh0KCk7CiAgaWYoIWJ8fCFiLmluY2x1ZGVzKCc8QXBwTWFuaWZlc3Q+Jyl8fCFiLmluY2x1ZGVzKCc8L0FwcE1hbmlmZXN0PicpKXJldHVybiBuZXcgUmVzcG9uc2UoJ0ludmFsaWQgWE1MJyx7c3RhdHVzOjQwMH0pOwogIGNvbnN0IG9wZW49Yi5pbmRleE9mKCc8QXBwTWFuaWZlc3Q+JyksY2xvc2U9Yi5sYXN0SW5kZXhPZignPC9BcHBNYW5pZmVzdD4nKTsKICBpZihvcGVuPDB8fGNsb3NlPDB8fG9wZW4+Y2xvc2UpcmV0dXJuIG5ldyBSZXNwb25zZSgnSW52YWxpZCBYTUw6IG1hbGZvcm1lZCBzdHJ1Y3R1cmUnLHtzdGF0dXM6NDAwfSk7CiAgY29uc3QgYkxvdz1iLnRvTG93ZXJDYXNlKCk7CiAgY29uc3QgQkFOTkVEPVsnPHNjcmlwdCcsJ2phdmFzY3JpcHQ6JywndmJzY3JpcHQ6Jywnb25sb2FkPScsJ29uZXJyb3I9Jywnb25jbGljaz0nLCc8IWVudGl0eScsJzwhZG9jdHlwZScsJzwhW2NkYXRhJywnPD94bWwtc3R5bGVzaGVldCddOwogIGZvcihjb25zdCB0ZXJtIG9mIEJBTk5FRCl7aWYoYkxvdy5pbmNsdWRlcyh0ZXJtKSlyZXR1cm4gbmV3IFJlc3BvbnNlKCdJbnZhbGlkIFhNTDogZGlzYWxsb3dlZCBjb250ZW50Jyx7c3RhdHVzOjQwMH0pO30KICBpZihiLmxlbmd0aD41MjQyODgpcmV0dXJuIG5ldyBSZXNwb25zZSgnTWFuaWZlc3QgdG9vIGxhcmdlJyx7c3RhdHVzOjQxM30pOwogIGF3YWl0IGUuQVBQX01BTklGRVNULnB1dChLVl9YTUwsYik7CiAgcmV0dXJuIG5ldyBSZXNwb25zZSgnTWFuaWZlc3QgdXBkYXRlZCBzdWNjZXNzZnVsbHknLHtzdGF0dXM6MjAwfSk7Cn0KYXN5bmMgZnVuY3Rpb24gaGFuZGxlRGVsZXRlQXBwKHIsZSxhcHBJZCl7CiAgY29uc3QgdD1yLmhlYWRlcnMuZ2V0KCdYLUF1dGgtVG9rZW4nKTsKICBpZih0JiZjdEVxdWFsU3RyKHQsZS5BVVRIX1RPS0VOKSl7Lyogb2sgKi99CiAgZWxzZXsKICBjb25zdCBzZXNzPWF3YWl0IHZlcmlmeVNlc3Npb24ocixlKTsKICBpZighc2VzcylyZXR1cm4gbmV3IFJlc3BvbnNlKCdVbmF1dGhvcml6ZWQnLHtzdGF0dXM6NDAxfSk7CiAgfQogIGlmKCFhcHBJZClyZXR1cm4gbmV3IFJlc3BvbnNlKCdBcHAgSUQgcmVxdWlyZWQnLHtzdGF0dXM6NDAwfSk7CiAgY29uc3QgdW5pbnN0YWxsPW5ldyBVUkwoci51cmwpLnNlYXJjaFBhcmFtcy5nZXQoJ3VuaW5zdGFsbCcpPT09J3RydWUnOwogIGxldCB4bWw9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KEtWX1hNTCk7CiAgaWYoIXhtbClyZXR1cm4gbmV3IFJlc3BvbnNlKCdObyBtYW5pZmVzdCcse3N0YXR1czo0MDR9KTsKICBjb25zdCBzaWQ9YXBwSWQucmVwbGFjZSgvWy4qKz9eJHt9KCl8W1xdXFxdL2csJ1xcJCYnKTsKICBjb25zdCBjbGVhbmVkPXhtbC5yZXBsYWNlKG5ldyBSZWdFeHAoJ1xccyo8QXBwPltcXHNcXFNdKj88SUQ+JytzaWQrJzxcL0lEPltcXHNcXFNdKj88XC9BcHA+JywnZycpLCcnKTsKICBpZihjbGVhbmVkPT09eG1sKXJldHVybiBuZXcgUmVzcG9uc2UoJ0FwcCBub3QgZm91bmQnLHtzdGF0dXM6NDA0fSk7CiAgbGV0IGZpbmFsPWNsZWFuZWQ7CiAgaWYodW5pbnN0YWxsKXsKICBjb25zdCB0cz1uZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCk7CiAgY29uc3QgZW50cnk9JyAgPEFwcCBpZD0iJythcHBJZCsnIiByZW1vdmVkQXQ9IicrdHMrJyIvPic7CiAgaWYoZmluYWwuaW5jbHVkZXMoJzxSZW1vdmVkQXBwcz4nKSl7CiAgaWYoIWZpbmFsLmluY2x1ZGVzKCdpZD0iJythcHBJZCsnIicpKWZpbmFsPWZpbmFsLnJlcGxhY2UoJzwvUmVtb3ZlZEFwcHM+JyxlbnRyeSsnXG48L1JlbW92ZWRBcHBzPicpOwogIH0gZWxzZSB7CiAgZmluYWw9ZmluYWwucmVwbGFjZSgnPC9BcHBNYW5pZmVzdD4nLCdcbiAgPFJlbW92ZWRBcHBzPlxuJytlbnRyeSsnXG4gIDwvUmVtb3ZlZEFwcHM+XG48L0FwcE1hbmlmZXN0PicpOwogIH0KICB9CiAgYXdhaXQgZS5BUFBfTUFOSUZFU1QucHV0KEtWX1hNTCxmaW5hbCk7CiAgcmV0dXJuIG5ldyBSZXNwb25zZSh1bmluc3RhbGw/J1JlbW92ZWQgYW5kIGZsYWdnZWQgZm9yIHVuaW5zdGFsbCc6J1JlbW92ZWQnLHtzdGF0dXM6MjAwfSk7Cn0KYXN5bmMgZnVuY3Rpb24gaGFuZGxlU3RvcmVEZXBsb3kocixlLGFwcElkKXsKICBjb25zdCB0PXIuaGVhZGVycy5nZXQoJ1gtQXV0aC1Ub2tlbicpOwogIGlmKHQmJmN0RXF1YWxTdHIodCxlLkFVVEhfVE9LRU4pKXsvKiBvayAqL30KICBlbHNlewogIGNvbnN0IHNlc3M9YXdhaXQgdmVyaWZ5U2Vzc2lvbihyLGUpOwogIGlmKCFzZXNzKXJldHVybiBuZXcgUmVzcG9uc2UoJ1VuYXV0aG9yaXplZCcse3N0YXR1czo0MDF9KTsKICB9CiAgaWYoIWFwcElkKXJldHVybiBuZXcgUmVzcG9uc2UoJ0FwcCBJRCByZXF1aXJlZCcse3N0YXR1czo0MDB9KTsKICBjb25zdCBib2R5PWF3YWl0IHIudGV4dCgpOwogIGF3YWl0IGUuQVBQX01BTklGRVNULnB1dCgnZGVwbG95OicrYXBwSWQsYm9keSk7CiAgcmV0dXJuIG5ldyBSZXNwb25zZSgnU3RvcmVkJyx7c3RhdHVzOjIwMH0pOwp9CmFzeW5jIGZ1bmN0aW9uIGhhbmRsZURvd25sb2FkRGVwbG95KHIsZSxhcHBJZCl7CiAgLy8gUmVxdWlyZXMgYmVhcmVyIHRva2VuIChQUzEgbWFjaGluZSBwdXNoZXMpIG9yIGFuIGFjdGl2ZSBzZXNzaW9uIChicm93c2VyIGRhc2hib2FyZCkuCiAgY29uc3QgdD1yLmhlYWRlcnMuZ2V0KCdYLUF1dGgtVG9rZW4nKTsKICBpZighKHQmJmN0RXF1YWxTdHIodCxlLkFVVEhfVE9LRU4pKSl7CiAgICBjb25zdCBzZXNzPWF3YWl0IHZlcmlmeVNlc3Npb24ocixlKTsKICAgIGlmKCFzZXNzKXJldHVybiBuZXcgUmVzcG9uc2UoJ1VuYXV0aG9yaXplZCcse3N0YXR1czo0MDEsaGVhZGVyczp7J0NvbnRlbnQtVHlwZSc6J3RleHQvcGxhaW4nfX0pOwogIH0KICBjb25zdCBzY3JpcHQ9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KCdkZXBsb3k6JythcHBJZCk7CiAgaWYoIXNjcmlwdClyZXR1cm4gbmV3IFJlc3BvbnNlKCdEZXBsb3kgc2NyaXB0IG5vdCBmb3VuZC4gQnVpbGQgdGhpcyBhcHAgd2l0aCBBcHBVcGRhdGVyLnBzMSBmaXJzdC4nLHtzdGF0dXM6NDA0LGhlYWRlcnM6eydDb250ZW50LVR5cGUnOid0ZXh0L3BsYWluJ319KTsKICByZXR1cm4gbmV3IFJlc3BvbnNlKHNjcmlwdCx7aGVhZGVyczp7J0NvbnRlbnQtVHlwZSc6J3RleHQvcGxhaW47Y2hhcnNldD11dGYtOCcsJ0NvbnRlbnQtRGlzcG9zaXRpb24nOmBhdHRhY2htZW50OyBmaWxlbmFtZT0iRGVwbG95LSR7YXBwSWR9LnBzMSJgfX0pOwp9CmFzeW5jIGZ1bmN0aW9uIHJ1bkNoZWNrcyhlKXsKICBjb25zdCB4PWF3YWl0IGUuQVBQX01BTklGRVNULmdldChLVl9YTUwpO2lmKCF4KXJldHVybjsKICBjb25zdCB1cmxzPVsuLi5uZXcgU2V0KFsuLi54Lm1hdGNoQWxsKC88KD86RG93bmxvYWRVUkx8RmFsbGJhY2tVUkwpPihbXjxdKyk8L2cpXS5tYXAobT0+bVsxXS50cmltKCkpLmZpbHRlcihCb29sZWFuKSldOwogIGNvbnN0IHJlcz17fTsKICBhd2FpdCBQcm9taXNlLmFsbCh1cmxzLm1hcChhc3luYyB1PT57CiAgdHJ5e2NvbnN0IHI9YXdhaXQgZmV0Y2godSx7bWV0aG9kOidIRUFEJyxzaWduYWw6QWJvcnRTaWduYWwudGltZW91dCgxMjAwMCl9KTtyZXNbdV09e29rOnIub2ssY29kZTpyLnN0YXR1cyx0czpuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCl9O30KICBjYXRjaChlcnIpe3Jlc1t1XT17b2s6ZmFsc2UsY29kZTowLGVycjplcnIubWVzc2FnZSx0czpuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCl9O30KICB9KSk7CiAgYXdhaXQgZS5BUFBfTUFOSUZFU1QucHV0KEtWX0hFQUxUSCxKU09OLnN0cmluZ2lmeShyZXMpKTsKfQphc3luYyBmdW5jdGlvbiBoYW5kbGVTdGF0dXMocixlKXsKICAvLyBGaXJzdCBydW46IG5vIHBhc3N3b3JkIHNldCAtPiBmb3JjZSBzZXQtcGFzc3dvcmQgcGFnZS4KICBjb25zdCBzdG9yZWQ9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KEtWX1BXRCk7CiAgaWYoIXN0b3JlZClyZXR1cm4gaHRtbFJlc3BvbnNlKHNldFBhc3N3b3JkUGFnZSgnJykpOwogIC8vIE90aGVyd2lzZSByZXF1aXJlIGEgdmFsaWQgc2Vzc2lvbiBjb29raWUuCiAgY29uc3Qgc2Vzcz1hd2FpdCB2ZXJpZnlTZXNzaW9uKHIsZSk7CiAgaWYoIXNlc3MpcmV0dXJuIHNlY3VyZVJlZGlyZWN0KG5ldyBVUkwoJy9sb2dpbicsci51cmwpLnRvU3RyaW5nKCkpOwogIGNvbnN0IHg9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KEtWX1hNTCk7CiAgY29uc3QgaHI9YXdhaXQgZS5BUFBfTUFOSUZFU1QuZ2V0KEtWX0hFQUxUSCk7CiAgY29uc3QgaD1ocj9KU09OLnBhcnNlKGhyKTp7fTsKICBpZigheClyZXR1cm4gaHRtbFJlc3BvbnNlKHNldHVwUGFnZSh0cnVlKSk7CiAgY29uc3QgYXBwcz1bLi4ueC5tYXRjaEFsbCgvPEFwcD4oW1xzXFNdKj8pPFwvQXBwPi9nKV0ubWFwKG09PnsKICBjb25zdCBiPW1bMV0sZz10PT57Y29uc3Qgcj1iLm1hdGNoKG5ldyBSZWdFeHAoJzwnK3QrJz4oW148XSopPC8nK3QrJz4nKSk7cmV0dXJuIHI/clsxXS50cmltKCk6Jyc7fTsKICByZXR1cm57aWQ6ZygnSUQnKSxuYW1lOmcoJ0Rpc3BsYXlOYW1lJyksdmVyOmcoJ1ZlcnNpb24nKSxkbDpnKCdEb3dubG9hZFVSTCcpLGZiOmcoJ0ZhbGxiYWNrVVJMJyl9OwogIH0pOwogIGNvbnN0IGRlYWQ9T2JqZWN0LnZhbHVlcyhoKS5maWx0ZXIodj0+IXYub2spLmxlbmd0aDsKICBjb25zdCBsaXZlPU9iamVjdC52YWx1ZXMoaCkuZmlsdGVyKHY9PnYub2spLmxlbmd0aDsKICBjb25zdCBwZW5kPWFwcHMucmVkdWNlKChuLGEpPT57aWYoYS5kbCYmIWhbYS5kbF0pbisrO2lmKGEuZmImJiFoW2EuZmJdKW4rKztyZXR1cm4gbjt9LDApOwogIGNvbnN0IGxhc3RUcz1PYmplY3QudmFsdWVzKGgpLnNvcnQoKGEsYik9PmIudHM+YS50cz8xOi0xKVswXT8udHM7CiAgY29uc3QgbGFzdFN0cj1sYXN0VHM/bmV3IERhdGUobGFzdFRzKS50b0xvY2FsZVN0cmluZygnZW4tR0InLHtkYXk6JzItZGlnaXQnLG1vbnRoOidzaG9ydCcseWVhcjonbnVtZXJpYycsaG91cjonMi1kaWdpdCcsbWludXRlOicyLWRpZ2l0J30pOidOZXZlciDigJQgY3JvbiBydW5zIGhvdXJseSc7CiAgY29uc3QgYWxsT0s9ZGVhZD09PTAmJk9iamVjdC5rZXlzKGgpLmxlbmd0aD4wOwogIGNvbnN0IGFsbFBlbmQ9ZGVhZD09PTAmJk9iamVjdC5rZXlzKGgpLmxlbmd0aD09PTAmJmFwcHMubGVuZ3RoPjA7CiAgY29uc3QgYmFkZ2U9dT0+ewogIGlmKCF1KXJldHVybic8c3BhbiBjbGFzcz0iYiBuYSI+Ti9BPC9zcGFuPic7CiAgY29uc3QgaGg9aFt1XTsKICBpZighaGgpcmV0dXJuJzxzcGFuIGNsYXNzPSJiIHBlbmQiPlBlbmRpbmc8L3NwYW4+JzsKICByZXR1cm4gaGgub2s/JzxzcGFuIGNsYXNzPSJiIGxpdmUiPiYjMTAwMDM7IExpdmU8L3NwYW4+JzpgPHNwYW4gY2xhc3M9ImIgZGVhZCI+JiMxMDAwNzsgRGVhZCR7aGguY29kZT8nICgnK2hoLmNvZGUrJyknOicnfTwvc3Bhbj5gOwogIH07CiAgY29uc3Qgcm93cz1hcHBzLm1hcChhPT5gPHRyPgogIDx0ZD48YSBocmVmPSIvYXBwLyR7ZW5jb2RlVVJJQ29tcG9uZW50KGEuaWQpfSIgc3R5bGU9ImNvbG9yOiNlNWU3ZWI7dGV4dC1kZWNvcmF0aW9uOm5vbmUiIHRpdGxlPSJWaWV3IHBlci1kZXZpY2Ugc3RhdHVzIj48Yj4ke2h0bWxFc2NhcGUoYS5uYW1lfHxhLmlkKX08L2I+PGJyPjxzbWFsbCBzdHlsZT0iY29sb3I6dmFyKC0tZGltKSI+JHtodG1sRXNjYXBlKGEuaWQpfSAmbmJzcDsmbWlkZG90OyZuYnNwOyA8c3BhbiBzdHlsZT0iY29sb3I6dmFyKC0tYykiPnZpZXcgZGV2aWNlcyAmcnNhcXVvOzwvc3Bhbj48L3NtYWxsPjwvYT48L3RkPgogIDx0ZD48c21hbGw+JHtodG1sRXNjYXBlKGEudmVyKXx8JzxzcGFuIGNsYXNzPSJkaW0iPmF1dG88L3NwYW4+J308L3NtYWxsPjwvdGQ+CiAgPHRkIGNsYXNzPSJ1YyI+JHthLmRsP2A8YSBocmVmPSIke2h0bWxFc2NhcGUoYS5kbCl9IiB0YXJnZXQ9Il9ibGFuayIgdGl0bGU9IiR7aHRtbEVzY2FwZShhLmRsKX0iPiR7aHRtbEVzY2FwZShhLmRsKX08L2E+YDonPHNwYW4gY2xhc3M9ImRpbSI+Jm1kYXNoOzwvc3Bhbj4nfTwvdGQ+CiAgPHRkPiR7YmFkZ2UoYS5kbCl9PC90ZD4KICA8dGQgY2xhc3M9InVjIj4ke2EuZmI/YDxhIGhyZWY9IiR7aHRtbEVzY2FwZShhLmZiKX0iIHRhcmdldD0iX2JsYW5rIiB0aXRsZT0iJHtodG1sRXNjYXBlKGEuZmIpfSI+JHtodG1sRXNjYXBlKGEuZmIpfTwvYT5gOic8c3BhbiBjbGFzcz0iZGltIj4mbWRhc2g7PC9zcGFuPid9PC90ZD4KICA8dGQ+JHtiYWRnZShhLmZiKX08L3RkPgogIDx0ZCBjbGFzcz0iYWN0aW9ucyI+PGRpdiBjbGFzcz0iYWN0aW9ucy1pbm5lciI+CiAgPGEgaHJlZj0iL2RlcGxveS8ke2VuY29kZVVSSUNvbXBvbmVudChhLmlkKX0iIGNsYXNzPSJidG4tZGwiIHRpdGxlPSJEb3dubG9hZCBEZXBsb3ktJHtodG1sRXNjYXBlKGEuaWQpfS5wczEiPiYjODU5NTsgRGVwbG95PC9hPgogIDxidXR0b24gY2xhc3M9ImVkaXQtYnRuIiBvbmNsaWNrPSJlZGl0QXBwKCcke2EuaWR9JywnJHtqc0VzYyhhLm5hbWV8fGEuaWQpfScsJyR7anNFc2MoYS52ZXJ8fCcnKX0nKSI+JiM5OTk4OzwvYnV0dG9uPjxidXR0b24gY2xhc3M9ImJ0bi1kZWwiIG9uY2xpY2s9ImRlbEFwcCgnJHthLmlkfScsJyR7anNFc2MoYS5uYW1lfHxhLmlkKX0nKSIgdGl0bGU9IlJlbW92ZSI+JiMxMDAwNTs8L2J1dHRvbj4KICA8L2Rpdj48L3RkPgogIDwvdHI+YCkuam9pbignJyk7CiAgcmV0dXJuIGh0bWxSZXNwb25zZShDU1MrYAo8dGl0bGU+QXBwVXBkYXRlciAke2FwcHMubGVuZ3RoPT09MD8nJiM5NzExOyBObyBhcHBzIHlldCc6YWxsUGVuZD8nJiM5NzExOyBQZW5kaW5nJzpkZWFkPjA/JyYjOTg4ODsgJytkZWFkKycgSXNzdWUnKyhkZWFkPjE/J3MnOicnKTonJiMxMDAwMzsgQWxsIE9LJ308L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxkaXYgY2xhc3M9ImJhciIgc3R5bGU9ImJhY2tncm91bmQ6JHthcHBzLmxlbmd0aD09PTB8fGFsbFBlbmQ/JyMxYTEyMDAnOmFsbE9LPycjMDUyZTE2JzonIzRhMWEyNCd9O2JvcmRlci1ib3R0b20tY29sb3I6JHthcHBzLmxlbmd0aD09PTB8fGFsbFBlbmQ/J3ZhcigtLXkpJzphbGxPSz8ndmFyKC0tZyknOid2YXIoLS1yKSd9Ij4KICA8ZGl2IGNsYXNzPSJiYXItaW4iPgogIDxkaXYgY2xhc3M9ImRvdCIgc3R5bGU9ImJhY2tncm91bmQ6JHthcHBzLmxlbmd0aD09PTB8fGFsbFBlbmQ/J3ZhcigtLXkpJzphbGxPSz8ndmFyKC0tZyknOid2YXIoLS1yKSd9O2JveC1zaGFkb3c6MCAwIDhweCAke2FwcHMubGVuZ3RoPT09MHx8YWxsUGVuZD8ndmFyKC0teSknOmFsbE9LPyd2YXIoLS1nKSc6J3ZhcigtLXIpJ30iPjwvZGl2PgogIDxoMSBzdHlsZT0iY29sb3I6JHthcHBzLmxlbmd0aD09PTB8fGFsbFBlbmQ/J3ZhcigtLXkpJzphbGxPSz8ndmFyKC0tZyknOid2YXIoLS1yKSd9Ij4ke2FwcHMubGVuZ3RoPT09MD8nTk8gQVBQUyBZRVQg4oCUIFNFVCBPTkUgVVAgSU4gQVBQVVBEQVRFUic6YWxsUGVuZD8nUEVORElORyDigJQgQVdBSVRJTkcgRklSU1QgSEVBTFRIIENIRUNLIChSVU5TIEhPVVJMWSknOmFsbE9LPydBTEwgU1lTVEVNUyBPSyc6ZGVhZCsnIFVSTCcrKGRlYWQ+MT8ncyc6JycpKycgVU5SRUFDSEFCTEUnfTwvaDE+CiAgPGRpdiBjbGFzcz0ibWV0YSI+TGFzdCBjaGVjazogJHtsYXN0U3RyfTxicj5BdXRvLXJlZnJlc2hlcyBldmVyeSA2MHMgJm1pZGRvdDsgSGVhbHRoIGNoZWNrcyBydW4gaG91cmx5PGJyPjxzcGFuIHN0eWxlPSJkaXNwbGF5OmlubGluZS1mbGV4O2dhcDo2cHg7bWFyZ2luLXRvcDo0cHgiPjxidXR0b24gb25jbGljaz0ibG9jYXRpb24ucmVsb2FkKCkiIHN0eWxlPSJiYWNrZ3JvdW5kOiMxMTEzMjc7Ym9yZGVyOjFweCBzb2xpZCAjMmEyZDRhO2NvbG9yOiM1ZWEyZmY7cGFkZGluZzozcHggMTBweDtib3JkZXItcmFkaXVzOjNweDtmb250LWZhbWlseTppbmhlcml0O2ZvbnQtc2l6ZToxMXB4O2N1cnNvcjpwb2ludGVyIj4mIzg2MzU7IFJlZnJlc2g8L2J1dHRvbj48YSBocmVmPSIvY2hhbmdlLXBhc3N3b3JkIiBzdHlsZT0iYmFja2dyb3VuZDojMTExMzI3O2JvcmRlcjoxcHggc29saWQgIzJhMmQ0YTtjb2xvcjojOWZhM2M0O3BhZGRpbmc6M3B4IDEwcHg7Ym9yZGVyLXJhZGl1czozcHg7Zm9udC1zaXplOjExcHg7Y3Vyc29yOnBvaW50ZXI7dGV4dC1kZWNvcmF0aW9uOm5vbmUiPiYjMTI4Mjc0OyBDaGFuZ2UgcGFzc3dvcmQ8L2E+PGEgaHJlZj0iL2xvZ291dCIgc3R5bGU9ImJhY2tncm91bmQ6IzExMTMyNztib3JkZXI6MXB4IHNvbGlkICMyYTJkNGE7Y29sb3I6IzlmYTNjNDtwYWRkaW5nOjNweCAxMHB4O2JvcmRlci1yYWRpdXM6M3B4O2ZvbnQtc2l6ZToxMXB4O2N1cnNvcjpwb2ludGVyO3RleHQtZGVjb3JhdGlvbjpub25lIj5TaWduIG91dDwvYT48YnV0dG9uIG9uY2xpY2s9ImlmKGNvbmZpcm0oJ1NpZ24gb3V0IG9mIEFMTCBkZXZpY2VzIGFuZCBzZXNzaW9ucz8nKSl7ZmV0Y2goJy9sb2dvdXQtYWxsJyx7bWV0aG9kOidQT1NUJ30pLnRoZW4oKCk9PmxvY2F0aW9uLmhyZWY9Jy9sb2dpbicpfSIgc3R5bGU9ImJhY2tncm91bmQ6IzFmMGUxNDtib3JkZXI6MXB4IHNvbGlkICM0YTFhMjQ7Y29sb3I6I2VmNDQ0NDtwYWRkaW5nOjNweCAxMHB4O2JvcmRlci1yYWRpdXM6M3B4O2ZvbnQtZmFtaWx5OmluaGVyaXQ7Zm9udC1zaXplOjExcHg7Y3Vyc29yOnBvaW50ZXIiPlNpZ24gb3V0IGFsbDwvYnV0dG9uPjwvc3Bhbj48L2Rpdj4KICA8L2Rpdj4KPC9kaXY+CjxkaXYgY2xhc3M9IndyYXAiPgogIDxkaXYgY2xhc3M9ImNhcmRzIj4KICA8ZGl2IGNsYXNzPSJjYXJkIGFwcHMiPjxkaXYgY2xhc3M9Im4iPiR7YXBwcy5sZW5ndGh9PC9kaXY+PGRpdiBjbGFzcz0ibCI+QXBwczwvZGl2PjwvZGl2PgogIDxkaXYgY2xhc3M9ImNhcmQgbHYiPjxkaXYgY2xhc3M9Im4iPiR7bGl2ZX08L2Rpdj48ZGl2IGNsYXNzPSJsIj5MaXZlIFVSTHM8L2Rpdj48L2Rpdj4KICA8ZGl2IGNsYXNzPSJjYXJkIGRkIiBzdHlsZT0iJHtkZWFkPjA/J2JvcmRlci1jb2xvcjojN2YxZDFkJzonJ30iPjxkaXYgY2xhc3M9Im4iIHN0eWxlPSJjb2xvcjoke2RlYWQ+MD8ndmFyKC0tciknOid2YXIoLS1kaW0pJ30iPiR7ZGVhZH08L2Rpdj48ZGl2IGNsYXNzPSJsIj5EZWFkIFVSTHM8L2Rpdj48L2Rpdj4KICA8ZGl2IGNsYXNzPSJjYXJkIHBkIj48ZGl2IGNsYXNzPSJuIiBzdHlsZT0iY29sb3I6JHtwZW5kPjA/J3ZhcigtLXkpJzondmFyKC0tZGltKSd9Ij4ke3BlbmR9PC9kaXY+PGRpdiBjbGFzcz0ibCI+UGVuZGluZzwvZGl2PjwvZGl2PgogIDwvZGl2PgogIDxkaXYgY2xhc3M9InNoIj48c3Bhbj5BcHAgTWFuaWZlc3Q8L3NwYW4+PHNtYWxsPiR7T2JqZWN0LmtleXMoaCkubGVuZ3RoPT09MD8nTm8gaGVhbHRoIGRhdGEgeWV0IOKAlCBjcm9uIHJ1bnMgaG91cmx5JzonQ2hlY2tzIHJ1biBob3VybHkgJm1pZGRvdDsgRGVhZCBVUkxzIHB1bHNlIHJlZCd9PC9zbWFsbD48L2Rpdj4KICA8dGFibGU+CiAgPHRoZWFkPjx0cj48dGggc3R5bGU9IndpZHRoOjIwJSI+QXBwPC90aD48dGggc3R5bGU9IndpZHRoOjU4cHgiPlZlcnNpb248L3RoPjx0aD5QcmltYXJ5IFVSTDwvdGg+PHRoIHN0eWxlPSJ3aWR0aDo4MnB4Ij5TdGF0dXM8L3RoPjx0aCBzdHlsZT0id2lkdGg6MTclIj5GYWxsYmFjayBVUkw8L3RoPjx0aCBzdHlsZT0id2lkdGg6ODJweCI+U3RhdHVzPC90aD48dGggc3R5bGU9IndpZHRoOjE1NHB4Ij5BY3Rpb25zPC90aD48L3RyPjwvdGhlYWQ+CiAgPHRib2R5PiR7cm93c3x8Jzx0cj48dGQgY29sc3Bhbj0iNyIgc3R5bGU9InRleHQtYWxpZ246Y2VudGVyO2NvbG9yOnZhcigtLWRpbSk7cGFkZGluZzoyNHB4Ij5ObyBhcHBzIGluIG1hbmlmZXN0IHlldDwvdGQ+PC90cj4nfTwvdGJvZHk+CiAgPC90YWJsZT4KICA8cCBzdHlsZT0ibWFyZ2luOjZweCAwIDA7Zm9udC1zaXplOjExcHg7Y29sb3I6dmFyKC0tZGltKSI+JiM5NDMyOyBQU0FEVCBleHBvcnQgaXMgZG9uZSBmcm9tIHdpdGhpbiB0aGUgQXBwVXBkYXRlciBhcHAgJm1kYXNoOyB1c2UgdGhlIFBTQURUIGJ1dHRvbiBpbiB0aGUgYXBwIGxpc3QgYWZ0ZXIgYnVpbGRpbmcuPC9wPgogIDxkaXYgaWQ9InRvYXN0IiBzdHlsZT0iZGlzcGxheTpub25lO3Bvc2l0aW9uOmZpeGVkO2JvdHRvbToyNHB4O2xlZnQ6NTAlO3RyYW5zZm9ybTp0cmFuc2xhdGVYKC01MCUpO2JhY2tncm91bmQ6IzFlMWUxZTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWIpO3BhZGRpbmc6MTBweCAyMHB4O2JvcmRlci1yYWRpdXM6NnB4O2ZvbnQtc2l6ZToxM3B4O2NvbG9yOnZhcigtLXQpO3otaW5kZXg6OTk5Ij48L2Rpdj4KPC9kaXY+CjxzY3JpcHQ+CmxldCBfZGVsSWQ9bnVsbCxfZGVsTmFtZT1udWxsOwoKLyog4pSA4pSAIFRvYXN0IOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgCAqLwpmdW5jdGlvbiB0b2FzdChtc2csb2spewogIGNvbnN0IGVsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0b2FzdCcpOwogIGVsLnRleHRDb250ZW50PW1zZztlbC5zdHlsZS5kaXNwbGF5PSdibG9jayc7CiAgZWwuc3R5bGUuYm9yZGVyQ29sb3I9b2s/J3ZhcigtLWcpJzondmFyKC0tciknO2VsLnN0eWxlLmNvbG9yPW9rPyd2YXIoLS1nKSc6J3ZhcigtLXIpJzsKICBzZXRUaW1lb3V0KCgpPT57ZWwuc3R5bGUuZGlzcGxheT0nbm9uZSc7fSwzNTAwKTsKfQoKZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcigna2V5ZG93bicsZT0+ewogIGlmKGUua2V5PT09J0VzY2FwZScpewogICAgaWYoZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2VkaXRNb2RhbCcpLnN0eWxlLmRpc3BsYXk9PT0nZmxleCcpY2xvc2VFZGl0KCk7CiAgICBpZihkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZGVsTW9kYWwnKS5zdHlsZS5kaXNwbGF5PT09J2ZsZXgnKWNsb3NlRGVsTW9kYWwoKTsKICB9Cn0pOwoKLyog4pSA4pSAIERlbGV0ZSBtb2RhbCAocmVwbGFjZXMgY29uZmlybSgpKSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAgKi8KZnVuY3Rpb24gZGVsQXBwKGlkLG5hbWUpewogIF9kZWxJZD1pZDtfZGVsTmFtZT1uYW1lOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdkZWxfYXBwX25hbWUnKS50ZXh0Q29udGVudD0nIicrbmFtZSsnIic7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2RlbE1vZGFsJykuc3R5bGUuZGlzcGxheT0nZmxleCc7Cn0KZnVuY3Rpb24gY2xvc2VEZWxNb2RhbCgpe2RvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdkZWxNb2RhbCcpLnN0eWxlLmRpc3BsYXk9J25vbmUnO30KYXN5bmMgZnVuY3Rpb24gY29uZmlybURlbCh1bmluc3RhbGwpewogIGNsb3NlRGVsTW9kYWwoKTsKICBjb25zdCBpZD1fZGVsSWQsbmFtZT1fZGVsTmFtZTsKICBjb25zdCB1cmw9Jy9hcHAvJytpZCsodW5pbnN0YWxsPyc/dW5pbnN0YWxsPXRydWUnOicnKTsKICB0cnl7CiAgICBjb25zdCByPWF3YWl0IGZldGNoKHVybCx7bWV0aG9kOidERUxFVEUnfSk7CiAgICBpZihyLm9rKXt0b2FzdCh1bmluc3RhbGw/bmFtZSsnIGZsYWdnZWQgZm9yIHVuaW5zdGFsbCBvbiBhbGwgZGV2aWNlcy4nOm5hbWUrJyByZW1vdmVkIGZy'
@@ -2569,9 +2508,7 @@ try {
 }
 try { Add-Content -LiteralPath (Join-Path $PSScriptRoot 'AppUpdater.log') -Value "$(Get-Date -Format s) [DIAG] CoreSrc length after decode: $($__CoreSrc.Length); ChunkCount=$($__CoreB64Chunks.Count)" -ErrorAction Stop } catch {}
 
-# Written to a real file (not an in-memory ScriptBlock) so the core script's
-# own $MyInvocation.MyCommand.Path / $PSCommandPath resolve to a real path
-# instead of silently falling through to a garbage CWD-relative guess.
+# Written to a real file so the core script's $PSCommandPath resolves.
 $__CoreTempFile = Join-Path ([System.IO.Path]::GetTempPath()) ("AppUpdaterCore_{0}.generated.ps1" -f [guid]::NewGuid().ToString('N'))
 try {
   [System.IO.File]::WriteAllText($__CoreTempFile, $__CoreSrc, [System.Text.Encoding]::UTF8)
@@ -2580,8 +2517,6 @@ try {
   throw 'AppUpdater could not prepare its engine in the temporary folder.'
 }
 
-# Downloads the WebView2 SDK assemblies from nuget.org if not already
-# present. Returns $true if the assemblies are available, $false otherwise.
 function Ensure-WebView2Assemblies {
   param([string]$Dir, [string]$LoaderDestDir)
 
@@ -2601,7 +2536,6 @@ function Ensure-WebView2Assemblies {
     $tmpZip = Join-Path ([System.IO.Path]::GetTempPath()) "webview2_$([guid]::NewGuid()).zip"
     $tmpExtract = Join-Path ([System.IO.Path]::GetTempPath()) "webview2_$([guid]::NewGuid())"
 
-    # Pinned WebView2 SDK version.
     $version = '1.0.2792.45'
     $url = "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/$version"
 
@@ -2632,9 +2566,6 @@ function Ensure-WebView2Assemblies {
 
 $__wv2Ready = Ensure-WebView2Assemblies -Dir $Wv2AssemblyDir -LoaderDestDir $PSScriptRoot
 
-# ---------------------------------------------------------------------------
-# Checks for the WebView2 Runtime and installs it if missing.
-# ---------------------------------------------------------------------------
 function Test-WebView2RuntimeInstalled {
   $keys = @(
     'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
@@ -2654,7 +2585,6 @@ function Install-WebView2Runtime {
   try {
     $setupExe = Join-Path ([System.IO.Path]::GetTempPath()) "MicrosoftEdgeWebview2Setup_$([guid]::NewGuid()).exe"
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    # Microsoft Edge WebView2 Runtime Evergreen Bootstrapper.
     Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $setupExe -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
     $signature = Get-AuthenticodeSignature -LiteralPath $setupExe -ErrorAction Stop
     if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation(?:,|$)') { throw 'The WebView2 installer signature could not be verified.' }
@@ -2696,8 +2626,7 @@ Add-Type -Path $__wv2Wpf
 # Adds the script folder to PATH so WebView2Loader.dll can be located.
 $env:PATH = "$PSScriptRoot;$env:PATH"
 
-# Loads the core script's functions into scope. Dot-sourced from the real
-# temp file written above (not an in-memory ScriptBlock).
+# Dot-sourced from the temp file above, not a ScriptBlock.
 try {
   . $__CoreTempFile -LoadFunctionsOnly
 } catch {
@@ -2708,13 +2637,8 @@ try {
   Remove-Item -LiteralPath $__CoreTempFile -ErrorAction SilentlyContinue
 }
 
-# Path to the app manifest used by the status dashboard.
 $ManifestPath = Join-Path $env:ProgramData 'AppUpdater\appVersions.xml'
 
-# ---------------------------------------------------------------------------
-# Runs a script block on a background runspace and streams its output to
-# the page via Write-Host/Write-OK/Write-Warn/Write-Fail/Write-Step.
-# ---------------------------------------------------------------------------
 function Start-BackgroundJob {
   param($Wv, [scriptblock]$Body, [hashtable]$Vars = @{}, [string[]]$CaptureFunctions = @(), [scriptblock]$OnDone)
 
@@ -2771,12 +2695,8 @@ function Start-BackgroundJob {
   $timer.Start()
 }
 
-# ---------------------------------------------------------------------------
-# Tracks per-app deploy status (built vs deployed) in a local JSON file.
-# ---------------------------------------------------------------------------
 $DeployStatusFile = Join-Path $env:ProgramData 'AppUpdater\deploy-status.json'
 
-# Converts a PSCustomObject to a hashtable.
 function ConvertTo-HashtableShallow($Obj) {
   $ht = @{}
   if ($Obj) { foreach ($p in $Obj.PSObject.Properties) { $ht[$p.Name] = $p.Value } }
@@ -2795,9 +2715,6 @@ function Save-DeployStatusStore {
   Write-AtomicText -Path $DeployStatusFile -Text ($Store | ConvertTo-Json -Depth 6)
 }
 
-# ---------------------------------------------------------------------------
-# Append-only log of build/deploy/remove events, for the History screen.
-# ---------------------------------------------------------------------------
 $DeployHistoryFile = Join-Path $env:ProgramData 'AppUpdater\deploy-history.json'
 $DeployHistoryMaxEvents = 500
 
@@ -2820,15 +2737,7 @@ function Add-DeployHistoryEvent {
   Write-AtomicText -Path $DeployHistoryFile -Text (ConvertTo-Json -InputObject @($history) -Depth 6)
 }
 
-# =============================================================================
-# BUILT-IN PRINTER DRIVER FAMILIES
-# Curated metadata only (no vendor .zip files bundled - same rule the driver
-# library already follows for user-imported drivers) for common vendor driver
-# families, one INF/driver package shared across many printer models. This is
-# baked directly into host.ps1 - single-file distribution stays intact, no
-# side-car data file host.ps1 depends on - so seeding the library never
-# requires anything beyond host.ps1 itself.
-# =============================================================================
+# Built-in printer driver families: metadata only, no vendor files bundled.
 $script:BuiltInPrinterDriverFamilies = @(
   @{ DriverID = 'BROTHER_HL_SERIES'; DisplayName = 'Brother HL Series'; Manufacturer = 'Brother'; InfRelativePath = 'BROHL17A.INF'
      Models = @('Brother HL-2290','Brother HL-2295D','Brother HL-L2590DN','Brother HL-L2595DW','Brother HL-B2000D','Brother HL-B2050DN','Brother HL-B2080DW','Brother HL-L2310D','Brother HL-L2325DW','Brother HL-L2330D','Brother HL-L2335D','Brother HL-L2350DW','Brother HL-L2357DW','Brother HL-L2370DN','Brother HL-L2370DW','Brother HL-L2375DW','Brother HL-L2379DW','Brother HL-L2385DW') }
@@ -2854,18 +2763,10 @@ $script:BuiltInPrinterDriverFamilies = @(
      Models = @('RICOH SP 3710DN PCL 6') }
 )
 
-# Upserts $BuiltInPrinterDriverFamilies into driverLibrary.json. Idempotent by
-# DriverID: an already-imported entry keeps its DateAdded and (crucially) its
-# SourceURL/extracted files untouched if a real driver package was supplied
-# for it since, rather than clobbering it back to metadata-only.
+# Idempotent by DriverID; existing entries keep their DateAdded and supplied package files.
 function Import-BuiltInDriverFamilies {
   $data = Get-DriverLibrary
-  # Builds the merged list by walking the EXISTING array in its own on-disk
-  # order first (so unrelated entries never reshuffle), then appends brand-new
-  # built-in families in their fixed definition order. Deliberately avoids
-  # rebuilding from a @{} hashtable's .Values, whose enumeration order is not
-  # guaranteed stable across calls and would make re-running produce a
-  # spurious diff despite identical data.
+  # Walk the existing array in order, then append new families, so reruns produce no diff.
   $builtInById = @{}
   foreach ($f in $script:BuiltInPrinterDriverFamilies) { $builtInById[$f.DriverID] = $f }
 
@@ -2909,7 +2810,6 @@ function Import-BuiltInDriverFamilies {
   return @{ Added = $added; Updated = $updated; Total = $merged.Count }
 }
 
-# Converts a local image file to a data: URI for display in the page.
 function Get-ImageDataUrl {
   param([string]$Path)
   if (-not $Path -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
@@ -2953,10 +2853,7 @@ function Get-FleetPayload {
   param([hashtable]$Config)
   $manifestResult = Get-LocalManifest -XmlFile $ManifestPath
   $deployStore = Get-DeployStatusStore
-  # Wrapped in @(...) around the WHOLE if/else (not just inside each branch):
-  # PowerShell's pipeline output capture collapses "zero objects emitted" to
-  # AutomationNull, not a real empty array - ConvertTo-Json then renders that
-  # as {} instead of [], and JS's `apps || []` guard doesn't catch a truthy {}.
+  # @(...) around the whole if/else so an empty result serializes as [] rather than {}.
   $fleet = @(if ($manifestResult.Ok) {
     @($manifestResult.Apps | ForEach-Object {
       $id = $_.ID
@@ -2995,7 +2892,6 @@ function Get-FleetPayload {
 
 $window = New-Object System.Windows.Window
 $window.Title           = 'AppUpdater'
-# Sizes the window to the visible work area, not the raw screen size.
 $workArea = [System.Windows.SystemParameters]::WorkArea
 $window.Width           = [Math]::Min(1280, $workArea.Width - 40)
 $window.Height          = [Math]::Min(800, $workArea.Height - 40)
@@ -3015,7 +2911,6 @@ $chrome.GlassFrameThickness = New-Object System.Windows.Thickness(0)
 $chrome.ResizeBorderThickness = New-Object System.Windows.Thickness(5)
 [System.Windows.Shell.WindowChrome]::SetWindowChrome($window, $chrome)
 
-# Native window-move support for the custom title bar.
 Add-Type -Name Win32Drag -Namespace AppUpdater -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool ReleaseCapture();
 [DllImport("user32.dll")] public static extern int SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
@@ -3023,13 +2918,10 @@ Add-Type -Name Win32Drag -Namespace AppUpdater -MemberDefinition @'
 
 $wv = New-Object Microsoft.Web.WebView2.Wpf.WebView2
 $window.Content = $wv
-# Allows normal mouse input to pass through to the WebView2 control.
 [System.Windows.Shell.WindowChrome]::SetIsHitTestVisibleInChrome($wv, $true)
 
 $window.Add_Loaded({
-  # Initializes WebView2 once the window has loaded.
 try {
-  # Synchronously waits for a Task to complete without blocking the UI thread.
   function Wait-UiTask($Task) {
     $frame = New-Object System.Windows.Threading.DispatcherFrame
     $clock = [Diagnostics.Stopwatch]::StartNew()
@@ -3060,9 +2952,6 @@ try {
   $wv.CoreWebView2.Settings.AreDevToolsEnabled = $false
   $wv.CoreWebView2.Settings.AreDefaultContextMenusEnabled = $false
 
-  # -----------------------------------------------------------------
-  # Handles messages posted from the page via window.chrome.webview.postMessage.
-  # -----------------------------------------------------------------
   $wv.CoreWebView2.Add_WebMessageReceived({
     param($s, $e)
     try {
@@ -3076,7 +2965,6 @@ try {
               $ofd.Filter = 'Installers (*.exe;*.msi)|*.exe;*.msi|All files (*.*)|*.*'
               $ok = $ofd.ShowDialog($window)
               if ($ok) {
-                # Inspects the installer and shapes the result for the Build screen.
                 $d = Invoke-InstallerInspector -InstallerPath $ofd.FileName
                 $chips = @()
                 if ($d.InstallerType) { $chips += @{ label = $d.InstallerType; tone = 'g' } }
@@ -3095,7 +2983,6 @@ try {
               }
             }
             'get-fleet' {
-              # Sends the local fleet data, or an empty result on failure.
               try {
                 Send-ToPage $wv 'fleet-data' (Get-FleetPayload -Config $config)
               } catch {
@@ -3109,13 +2996,10 @@ try {
               Send-ToPage $wv 'history-data' @{ events = $hist }
             }
             'build-package' {
-              # Starts the package build on a background job.
               Start-PackageBuildJob -Wv $wv -Config $config -FormData (ConvertTo-HashtableShallow $msg.payload)
             }
             'get-driver-library' {
-              # HasFiles mirrors the exact directory-existence gate Invoke-PackageBuilder
-              # itself checks before a Printer build - not SourceURL, which is blank for
-              # perfectly valid local-zip/folder imports too, only URL-based ones set it.
+              # Same directory check Invoke-PackageBuilder uses; SourceURL is blank for local imports.
               $__drivers = @((Get-DriverLibrary).Drivers | ForEach-Object {
                 $_.HasFiles = Test-Path -LiteralPath (Join-Path $DriverStoreBase $_.DriverID) -PathType Container
                 $_
@@ -3132,9 +3016,6 @@ try {
               }
             }
             'add-driver-to-library' {
-              # Synchronous (may briefly block the UI thread on a network import) -
-              # mirrors the other synchronous handlers in this switch; only the
-              # multi-minute package build itself is backgrounded.
               $p = $msg.payload
               try {
                 $entry = Add-LibraryDriver -DriverID $p.driverId -DisplayName $p.displayName -SourcePath $p.sourcePath `
@@ -3159,14 +3040,9 @@ try {
             'open-status-dashboard' {
               if ($config.WorkerURL) { Start-Process "$($config.WorkerURL)/status" }
             }
-            'setup-custom-domain' {
-              # Unused - superseded by 'open-worker-options'.
-            }
             'open-worker-options' {
-              # Opens the legacy Worker options menu.
               try {
                 $rdResult = Invoke-RedeployWorker -Config $config
-                # Reloads the config in case the dialog changed it.
                 $reloaded = Read-PersistedConfig -Path $ConfigFile
                 if ($reloaded) { $config = $reloaded }
                 Send-ToPage $wv 'config-data' @{ orgName = $config.OrgName }
@@ -3216,7 +3092,6 @@ try {
               Send-ToPage $wv 'image-preview-result' @{ field = $msg.payload.field; dataUrl = (Get-ImageDataUrl -Path $msg.payload.path) }
             }
             'get-psadt-stock-assets' {
-              # Sends the cached PSADT stock banner/icon for the branding preview.
               try {
                 $bannerPath = Join-Path $PSADTCacheDir 'PSAppDeployToolkit\Assets\Banner.Classic.png'
                 $iconPath   = Join-Path $PSADTCacheDir 'PSAppDeployToolkit\Assets\AppIcon.png'
@@ -3239,7 +3114,6 @@ try {
               if (Test-OperationActive) {
                 throw 'Wait for the active build or test to finish before removing packages.'
               }
-              # Prompts for removal scope, then removes the app.
               $rmId = $msg.payload.id
               $rmManifest = Get-LocalManifest -XmlFile $ManifestPath
               $rmApp = if ($rmManifest.Ok) { $rmManifest.Apps | Where-Object { $_.ID -eq $rmId } | Select-Object -First 1 } else { $null }
@@ -3270,7 +3144,6 @@ try {
               Send-ToPage $wv 'fleet-data' (Get-FleetPayload -Config $config)
             }
             'test-locally' {
-              # Runs the generated install/detect/uninstall scripts on this machine.
               $store = Get-DeployStatusStore
               $entry = $store[$msg.payload.id]
               if (-not $entry -or -not $entry.outputDir -or -not (Test-Path $entry.outputDir)) {
@@ -3352,8 +3225,7 @@ try {
               }
             }
             'client-error' {
-              # Surfaces otherwise-invisible JS exceptions (DevTools are off in
-              # production) into the same log file everything else uses.
+              # DevTools are off, so JS exceptions are only visible through this log.
               Write-AppLog "Client-side JS error: $($msg.payload.message) at $($msg.payload.source)`n$($msg.payload.stack)" ERROR
             }
             'open-folder' {
@@ -3380,7 +3252,6 @@ try {
               $window.Close()
             }
             'export-recovery-bundle' {
-              # Prompts for a passphrase, then exports an encrypted recovery bundle.
               $pw = Show-WpfPassphrase -Title 'Protect recovery bundle' -Confirm
               if ($pw) {
                 $sfd = New-Object Microsoft.Win32.SaveFileDialog
@@ -3481,9 +3352,6 @@ function Start-LocalTestJob {
       return RunAndLog 'powershell.exe' "-NoProfile -ExecutionPolicy Bypass -File `"$path`" $argStr" $label
     }
 
-    # ---------------------------------------------------------------------
-    # Runs a command as SYSTEM via a temporary scheduled task.
-    # ---------------------------------------------------------------------
     function Invoke-AsSystemViaTask($exe, $argsList, $label) {
       $taskName = "AppUpdaterLocalTest_$([guid]::NewGuid().ToString('N').Substring(0,8))"
       $outFile = Join-Path ([System.IO.Path]::GetTempPath()) "$taskName.out.txt"
@@ -3514,9 +3382,6 @@ function Start-LocalTestJob {
       }
     }
 
-    # ---------------------------------------------------------------------
-    # Decrypts and extracts an .intunewin package's contents.
-    # ---------------------------------------------------------------------
     function Expand-IntuneWinForTest($IntuneWinPath, $DestDir) {
       Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
       $outerDir = Join-Path ([System.IO.Path]::GetTempPath()) "iwt_outer_$([guid]::NewGuid())"
@@ -3581,7 +3446,6 @@ function Start-LocalTestJob {
       }
       if (-not $detect) { throw 'No detection script found; the installation test cannot be verified.' }
       if ($_target -eq 'psadt' -or $_target -eq 'psadt-v3' -or $_target -eq 'psadt-v4' -or $_target -eq 'both') {
-        # Runs the PSADT deployment script directly.
         $deployApp = Join-Path $testDir 'Deploy-Application.ps1'
         $deployMode = if ($_simulateSystem) { 'Silent' } else { 'Interactive' }
         $installExit = RunScriptAndLog $deployApp "-DeploymentType Install -DeployMode $deployMode" "Install (PSADT, $deployMode)"
@@ -3595,7 +3459,6 @@ function Start-LocalTestJob {
           if ($detected -ne 1) { throw "Expected not-installed detection exit code 1 after uninstall, got $detected." }
         }
       } else {
-        # Locates and runs the detect/install/uninstall scripts.
         $install = Get-ChildItem $testDir -Filter 'install.ps1' -ErrorAction SilentlyContinue | Select-Object -First 1
         if (-not $install) { $install = Get-ChildItem $testDir -Filter "Deploy-$_appId.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1 }
         $uninstall = Get-ChildItem $testDir -Filter 'uninstall.ps1' -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -3696,9 +3559,6 @@ function Get-BuildFunctionSource {
   return $definitions -join "`n"
 }
 
-# ---------------------------------------------------------------------------
-# Runs the package build on a background job and streams progress to the page.
-# ---------------------------------------------------------------------------
 function Start-PackageBuildJob {
   param($Wv, [hashtable]$Config, [hashtable]$FormData)
 
@@ -3708,9 +3568,7 @@ function Start-PackageBuildJob {
   $bq = [System.Collections.Queue]::Synchronized((New-Object System.Collections.Queue))
   $bd = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList))
 
-  # Resolved here (main scope) rather than inside the runspace below, since
-  # Get-PackagingProfiles is only loaded in THIS scope (via the top-level
-  # -LoadFunctionsOnly dot-source), not automatically in a fresh runspace.
+  # Resolved here: Get-PackagingProfiles is not loaded in the child runspace.
   $_profile = @{ OrgName = ''; LogoImagePath = ''; BannerImagePath = '' }
   if ($FormData.ProfileName) {
     $_pp = (Get-PackagingProfiles).Profiles | Where-Object { $_.Name -eq $FormData.ProfileName } | Select-Object -First 1
@@ -3720,23 +3578,13 @@ function Start-PackageBuildJob {
       $_profile.BannerImagePath = $_pp.BannerImagePath
     }
   }
-  # Ephemeral per-build overrides from the Build screen - apply on top of the
-  # saved profile without touching profiles.json (saving back, if the user
-  # opts in, is a separate explicit 'save-profile' message from the UI).
+  # Per-build overrides from the Build screen; profiles.json is left untouched.
   if ($FormData.OverrideOrgName)         { $_profile.OrgName = $FormData.OverrideOrgName }
   if ($FormData.OverrideLogoImagePath)   { $_profile.LogoImagePath = $FormData.OverrideLogoImagePath }
   if ($FormData.OverrideBannerImagePath) { $_profile.BannerImagePath = $FormData.OverrideBannerImagePath }
 
-  # Only the specific build-time functions are reflected into the child
-  # runspace below (mirrors Start-BackgroundJob above) - never Invoke-Expression
-  # the raw $__CoreSrc here. That string is the ENTIRE original standalone app:
-  # self-elevation, a single-instance mutex guard, and its own infinite legacy
-  # WPF main-menu loop with several `exit` calls. Running it wholesale meant
-  # that legacy mutex guard - already held by this same process's own startup
-  # load (the `-LoadFunctionsOnly` dot-source near the top of the file) - always
-  # failed from this second thread and called `exit`, which kills the entire
-  # process before Invoke-PackageBuilder below was ever reached. That was the
-  # "Build Package closes the app, regardless of selection" bug.
+  # Only the build functions are reflected into the runspace. Never run $__CoreSrc whole:
+  # its single-instance mutex is already held by this process, so it would call exit.
   $_buildFnSrc = Get-BuildFunctionSource
 
   $rs = [runspacefactory]::CreateRunspace()
@@ -3764,7 +3612,6 @@ function Start-PackageBuildJob {
     # shared across runspaces (unlike Add-Type'd types, which are process-wide).
     $global:_DpapiPrefix = 'DPAPI:'
     $global:_CredMgrSentinel = 'CREDMGR'
-    # Redirects the builder's logging functions to the progress queue.
     $ErrorActionPreference = 'Stop'
     function Write-AppLog { param([string]$Message,[string]$Level='INFO') if ($_bq.Count -lt 2000) { $_bq.Enqueue("log|[$Level] $Message") } }
     function Write-Host   { param([object]$O,[string]$ForegroundColor='Gray',[switch]$NoNewline) if ($_bq.Count -lt 2000) { $_bq.Enqueue("line|$O") } }
@@ -3773,8 +3620,7 @@ function Start-PackageBuildJob {
     function Write-Fail   { param([string]$M) throw $M }
     function Write-Info   { param([string]$M) Write-Host "  [--]  $M" }
     function Write-Step   { param([string]$N,[string]$M) $_bq.Enqueue("step|$N|$M") }
-    # No-op replacements for the builder's legacy WPF dialogs - none of these
-    # should ever pop a window from a background runspace.
+    # Background runspaces must never open a window.
     function Show-WpfMsg  { param([string]$Title='',[string]$Message='',[string]$Type='info',[switch]$Confirm,[string]$Detail,[string]$YesLabel,[string]$NoLabel)
       if ($Type -eq 'error') { throw "$Title`: $Message $Detail" }
       Write-Host "[$Title] $Message"

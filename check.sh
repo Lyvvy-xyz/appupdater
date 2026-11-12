@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Static self-check for host.ps1's embedded UI <-> PowerShell bridge.
-# Can't run the WebView2 GUI on Linux, but this catches the exact bug class
-# that has broken the app before: a JS syntax error silently killing the
-# whole script, or a JS action / PS Send-ToPage event with no matching
-# handler on the other side.
+# Static check of host.ps1's UI <-> PowerShell bridge: JS syntax errors, and
+# JS actions or PS Send-ToPage events with no handler on the other side.
 set -euo pipefail
 cd "$(dirname "$0")"
 

@@ -17,7 +17,6 @@
 
 .USAGE
   .\click-test.ps1                    # launch host.ps1 next to this script, smoke test
-  .\click-test.ps1 -Reset             # compatibility option; every run uses isolated state
   .\click-test.ps1 -HostPath C:\...\host.ps1 -Port 9333
 
 .REQUIRES
@@ -60,7 +59,6 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
   $env:APPUPDATER_NO_ELEVATE = '1'
 }
 
-# Every run gets isolated state; -Reset remains accepted for existing callers.
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('appupdater-click-' + [guid]::NewGuid().ToString('N'))
 $env:ProgramData = Join-Path $testRoot 'ProgramData'
 $env:LOCALAPPDATA = Join-Path $testRoot 'LocalAppData'
@@ -142,9 +140,7 @@ $proc = Start-Process -FilePath 'powershell.exe' `
 
   Assert ([bool](Eval-Js "typeof window.chrome.webview !== 'undefined'")) "WebView2 bridge object exists"
 
-  # Wrap send() so every JS->PS message this run gets recorded, and so a
-  # dead bridge (send() never resolving into a case, like the historical
-  # bug) is visible without needing a debugger attached by hand.
+  # Record every JS->PS message so a dead bridge shows up in the results.
   Eval-Js @"
 window.__log = [];
 (function () {
@@ -171,9 +167,7 @@ window.__log = [];
   Wait-Js "window._defaultOrgName !== undefined"
   Assert ([bool](Eval-Js "window._defaultOrgName !== undefined")) 'Bridge survives malformed input'
 
-  # These don't verify the actual OS window action (no native window to
-  # inspect over CDP), only that the bridge round-trips without an
-  # exception - the same signal that would have caught the AsHashtable bug.
+  # Checks only that the bridge round-trips; the OS window action isn't visible over CDP.
   Eval-Js "send('minimize-window', {})" | Out-Null
   Start-Sleep -Milliseconds 500
   $clientErrors = Eval-Js "window.__log.filter(a => a === 'client-error').length"
