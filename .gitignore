@@ -9,3 +9,4 @@ Deploy-NetDocuments_v5.ps1
 PSAppDeployToolkit/
 .vscode/
 Temp/
+__pycache__/
