@@ -177,7 +177,8 @@ try {
         $summary.Detail += 'The printer was not created. '
         Write-Host '--- Install-Printer.ps1 run directly'
         $agentDir = 'C:\ProgramData\AppUpdater\CIPrinter'
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$agentDir\Install-Printer.ps1" -ConfigPath "$agentDir\printer-config.json" -DriverPackageDir "$agentDir\driver" *>&1 |
+        $ErrorActionPreference = 'Continue'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$agentDir\Install-Printer.ps1" -ConfigPath "$agentDir\printer-config.json" -DriverPackageDir "$agentDir\driver" 2>&1 |
           Select-Object -Last 30 | ForEach-Object { Write-Host "    $_" }
         Write-Host "    exit code $LASTEXITCODE"
       }

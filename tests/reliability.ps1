@@ -176,6 +176,7 @@ try {
   Assert ($agent.Contains("ResponseUri.Scheme -ne 'https'") -and $agent.Contains('$bytesRead -ne $totalLen')) 'Downloads reject downgrades and truncation'
   Assert ($agent.Contains('$usRest = $matches[2].Trim()') -and $agent.Contains('"$usRest $usSilent".Trim()')) 'Agent removal keeps the uninstall string arguments'
   Assert ($agent.Contains('the agent stays to retry the removal')) 'Agent removal only removes itself once the app is gone'
+  Assert (@($script:InstallPrinterScriptSrc, $script:DetectPrinterScriptSrc, $script:UninstallPrinterScriptSrc) -notmatch 'PSScriptRoot').Count -eq 3 'Printer scripts find their folder without $PSScriptRoot, which is empty in Windows PowerShell parameter defaults'
   $rootInfo = Get-InstallerFolderInfo -InstallerPath ([IO.Path]::Combine([IO.Path]::GetPathRoot($root), 'setup.exe'))
   Assert ($rootInfo.IsRoot -and $rootInfo.Files -eq 0) 'A drive-root installer is refused without walking the drive'
   [xml]$awkwardManifest = [IO.File]::ReadAllText($XmlFile)
