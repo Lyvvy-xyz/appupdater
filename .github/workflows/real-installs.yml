@@ -1,0 +1,55 @@
+name: real-installs
+
+# Packages real vendor installers and installs, detects and uninstalls each one as SYSTEM on a throwaway runner.
+on:
+  push:
+    paths:
+      - host.ps1
+      - tests/real-installs.ps1
+      - .github/workflows/real-installs.yml
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { app: 7zip, url: 'https://www.7-zip.org/a/7z2408-x64.exe' }
+          - { app: 7zip-msi, url: 'https://www.7-zip.org/a/7z2408-x64.msi' }
+          - { app: notepadpp, url: 'https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.6.9/npp.8.6.9.Installer.x64.exe' }
+          - { app: vscode, url: 'https://update.code.visualstudio.com/1.95.3/win32-x64/stable' }
+          - { app: git, url: 'https://github.com/git-for-windows/git/releases/download/v2.46.0.windows.1/Git-2.46.0-64-bit.exe' }
+          - { app: vlc, url: 'https://download.videolan.org/pub/videolan/vlc/3.0.21/win64/vlc-3.0.21-win64.exe' }
+          - { app: firefox, url: 'https://download-installer.cdn.mozilla.net/pub/firefox/releases/132.0/win64/en-US/Firefox%20Setup%20132.0.exe' }
+          - { app: firefox-msi, url: 'https://download-installer.cdn.mozilla.net/pub/firefox/releases/132.0/win64/en-US/Firefox%20Setup%20132.0.msi' }
+          - { app: powertoys, url: 'https://github.com/microsoft/PowerToys/releases/download/v0.83.0/PowerToysSetup-0.83.0-x64.exe' }
+          - { app: python, url: 'https://www.python.org/ftp/python/3.12.6/python-3.12.6-amd64.exe' }
+          - { app: audacity, url: 'https://github.com/audacity/audacity/releases/download/Audacity-3.6.4/audacity-win-3.6.4-64bit.exe' }
+          - { app: gimp, url: 'https://download.gimp.org/gimp/v2.10/windows/gimp-2.10.38-setup.exe' }
+          - { app: obs, url: 'https://github.com/obsproject/obs-studio/releases/download/30.2.3/OBS-Studio-30.2.3-Windows-Installer.exe' }
+          - { app: vcredist, url: 'https://aka.ms/vs/17/release/vc_redist.x64.exe' }
+          - { app: putty-msi, url: 'https://the.earth.li/~sgtatham/putty/0.81/w64/putty-64bit-0.81-installer.msi' }
+          - { app: nodejs-msi, url: 'https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi' }
+          - { app: zoom-msi, url: 'https://zoom.us/client/latest/ZoomInstallerFull.msi?archType=x64' }
+          - { app: chrome-msi, url: 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi' }
+          - { app: slack, url: 'https://downloads.slack-edge.com/desktop-releases/windows/x64/4.40.128/SlackSetup.exe' }
+          - { app: discord, url: 'https://discord.com/api/downloads/distributions/app/installers/latest?channel=stable&platform=win&arch=x64' }
+          - { app: wireshark, url: 'https://2.na.dl.wireshark.org/win64/all-versions/Wireshark-4.4.1-x64.exe' }
+          - { app: teamviewer, url: 'https://download.teamviewer.com/download/TeamViewer_Setup_x64.exe' }
+    name: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package, install, detect and uninstall as SYSTEM
+        shell: powershell
+        env:
+          APP_NAME: ${{ matrix.app }}
+          APP_URL: ${{ matrix.url }}
+        run: ./tests/real-installs.ps1

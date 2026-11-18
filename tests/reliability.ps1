@@ -4,7 +4,7 @@ $hostSource = [IO.File]::ReadAllText((Resolve-Path $HostPath))
 $block = [regex]::Match($hostSource, '(?ms)^\$__CoreB64Chunks = @\(\r?\n(.*?)^\)').Groups[1].Value
 $encoded = ([regex]::Matches($block, "'([A-Za-z0-9+/=]+)'") | ForEach-Object { $_.Groups[1].Value }) -join ''
 $coreSource = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encoded))
-foreach ($testScript in @('../click-test.ps1','package-roundtrip.ps1')) {
+foreach ($testScript in @('../click-test.ps1','package-roundtrip.ps1','real-installs.ps1')) {
   $tokens = $null; $parseErrors = $null
   [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $testScript), [ref]$tokens, [ref]$parseErrors) | Out-Null
   if ($parseErrors) { throw ($parseErrors.Message -join '; ') }
@@ -261,6 +261,63 @@ try {
   Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $bundle -Profile @{} } 'Runtime packages refuse {pkg} in the silent switch'
   $folderInfo = Get-InstallerFolderInfo -InstallerPath $vendorSetup
   Assert ($folderInfo.Files -eq 3 -and -not $folderInfo.IsRoot -and -not $folderInfo.TooMany) 'Folder info counts every bundled file'
+
+  $global:WingetSqliteSource = [regex]::Match($coreSource, "(?ms)^\`$global:WingetSqliteSource = @'\r?\n(.*?)^'@").Groups[1].Value
+  if ($env:OS -ne 'Windows_NT') { $global:WingetSqliteSource = $global:WingetSqliteSource.Replace('"winsqlite3.dll"', '"libsqlite3.so.0"') }
+  $wingetIndex = Join-Path $PSScriptRoot 'fixtures/winget-index.db'
+  $wingetFile = Join-Path $root 'VendorAppSetup.exe'
+  [IO.File]::WriteAllText($wingetFile, 'MZ vendor app fixture')
+  $wingetSha = (Get-FileHash -LiteralPath $wingetFile -Algorithm SHA256).Hash
+  $wingetManifests = @{
+    'manifests/v/Vendor/App/1.0.0/aaaa' = @"
+PackageIdentifier: Vendor.App
+Description: A long description that
+  folds onto a second line.
+Copyright: "\xA9 Vendor ®"
+InstallerType: inno
+Scope: machine
+InstallerSwitches:
+  Custom: /MERGETASKS=!runcode
+Installers:
+- Architecture: x86
+  InstallerSha256: 0000
+- Architecture: x64
+  InstallerSha256: $wingetSha
+  AppsAndFeaturesEntries:
+  - DisplayName: 'Vendor App ''One'''
+Tags:
+- one
+- two
+"@
+    'manifests/v/Vendor/App/2.0.0/bbbb' = @"
+InstallerType: exe
+Installers:
+- Architecture: x64
+  Scope: user
+  InstallerSwitches:
+    Silent: --silent
+  InstallerSha256: FFFF
+"@
+    'manifests/v/Vendor/App/Beta/3.0.0-beta/cccc' = "InstallerType: nullsoft`nInstallers:`n- Architecture: x64`n  InstallerSha256: EEEE"
+    'manifests/o/Other/App/2.0.0/dddd' = "InstallerType: msi`nInstallers:`n- Architecture: x64`n  ProductCode: '{11111111-2222-3333-4444-555555555555}'`n  InstallerSha256: DDDD"
+  }
+  $fetch = { param($Path) $wingetManifests[$Path] }.GetNewClosure()
+  $yaml = ConvertFrom-SimpleYaml $wingetManifests['manifests/v/Vendor/App/1.0.0/aaaa']
+  Assert ($yaml.Description -eq 'A long description that folds onto a second line.' -and $yaml.Copyright -eq "$([char]0xA9) Vendor $([char]0xAE)") 'YAML reader folds scalars and decodes escapes'
+  Assert ($yaml.Installers.Count -eq 2 -and $yaml.Installers[1].AppsAndFeaturesEntries[0].DisplayName -eq "Vendor App 'One'" -and ($yaml.Tags -join ',') -eq 'one,two') 'YAML reader handles lists of maps and scalars'
+  $exact = Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -Publisher 'Vendor Inc.' -Version '1.0.0' -IndexPath $wingetIndex -GetManifest $fetch
+  Assert ($exact.Id -eq 'Vendor.App' -and $exact.Version -eq '1.0.0' -and $exact.Match -eq 'hash' -and $exact.InstallerType -eq 'inno' -and $exact.Scope -eq 'machine') 'winget matches an older version by file hash'
+  Assert ($exact.SilentArgs -eq '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /MERGETASKS=!runcode' -and $exact.ArpName -eq "Vendor App 'One'") 'winget switches add Custom to the family default and carry the ARP name'
+  $newer = Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -Publisher 'Vendor' -Version '9.9' -IndexPath $wingetIndex -GetManifest $fetch
+  Assert ($newer.Id -eq 'Vendor.App' -and $newer.Version -eq '2.0.0' -and $newer.Match -eq 'name' -and $newer.SilentArgs -eq '--silent' -and $newer.Scope -eq 'user') 'Channel variants fall back to the main package newest manifest'
+  $wingetMsi = Join-Path $root 'other.msi'
+  [IO.File]::WriteAllText($wingetMsi, 'msi fixture')
+  $byCode = Find-WingetInstaller -InstallerPath $wingetMsi -ProductCode '{11111111-2222-3333-4444-555555555555}' -IndexPath $wingetIndex -GetManifest $fetch
+  Assert ($byCode.Id -eq 'Other.App' -and $byCode.Match -eq 'productcode' -and $byCode.SilentArgs -eq '/qn /norestart') 'MSIs match by product code'
+  Assert ($null -eq (Find-WingetInstaller -InstallerPath $wingetFile -Name 'Shared Name' -IndexPath $wingetIndex -GetManifest $fetch)) 'Unrelated packages sharing a name are not guessed between'
+  Assert ($null -eq (Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -IndexPath (Join-Path $root 'absent.db') -GetManifest $fetch)) 'A missing catalogue means no winget data'
+  Assert ((ConvertTo-WingetNormalName 'Python 3.12.6 (64-bit)') -eq 'python' -and (ConvertTo-WingetNormalName 'PowerToysSetup-0.83.0-x64') -eq 'powertoys' -and
+          (ConvertTo-WingetNormalName 'Slack Technologies, LLC' -Publisher) -eq 'slacktechnologies') 'Names normalise like the winget index'
 
   $captured = Get-BuildFunctionSource
   $done = [Collections.ArrayList]::Synchronized([Collections.ArrayList]::new())
