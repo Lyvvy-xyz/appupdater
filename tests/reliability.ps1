@@ -152,6 +152,7 @@ try {
       $syntax = Test-PSSyntaxErrors -Code $text
       if ($syntax) { $script:packagedErrors += "$($packaged.Name): $syntax" }
       if ($packaged.Name -eq 'uninstall.ps1') { $script:packagedUninstall = $text }
+      if ($packaged.Name -eq 'install.ps1') { $script:packagedInstall = $text }
     }
     [IO.File]::WriteAllText((Join-Path $destination ([IO.Path]::GetFileNameWithoutExtension($setup) + '.intunewin')), 'fixture artifact')
     return New-FakeProcess 0
@@ -170,13 +171,13 @@ try {
   Assert ($agent.Contains("`$ExpectedPublisher = 'O''Brien Ltd'") -and $agent.Contains('O''Brien `$(x) `"q`"\app.exe')) 'Form values are escaped in the endpoint script'
   Assert ($agent -match 'ToUnixTimeSeconds' -and $agent -notmatch '\[double\]::Parse') 'Endpoint telemetry timestamps are UTC'
   $versionRead = $agent.IndexOf('$xmlVersion = ([string]$appEntry.Version)')
-  Assert ($versionRead -ge 0 -and $versionRead -lt $agent.IndexOf('$xmlVersion -notmatch')) 'Manifest version is read before it is validated'
+  Assert ($versionRead -ge 0 -and $versionRead -lt $agent.IndexOf('-not (ConvertTo-LooseVersion $xmlVersion)')) 'Manifest version is read before it is validated'
   Assert ($agent.Contains("-eq 'NotSigned' -and -not `$ExpectedPublisher")) 'Unsigned installers never satisfy a pinned publisher'
   Assert ($agent.Contains('D0-CF-11-E0-A1-B1-1A-E1') -and $agent.Contains("'msiexec.exe'")) 'MSI downloads run through msiexec'
   Assert ($agent.Contains("ResponseUri.Scheme -ne 'https'") -and $agent.Contains('$bytesRead -ne $totalLen')) 'Downloads reject downgrades and truncation'
   Assert ($agent.Contains('$usRest = $matches[2].Trim()') -and $agent.Contains('"$usRest $usSilent".Trim()')) 'Agent removal keeps the uninstall string arguments'
   Assert ($agent.Contains('the agent stays to retry the removal')) 'Agent removal only removes itself once the app is gone'
-  Assert (@($script:InstallPrinterScriptSrc, $script:DetectPrinterScriptSrc, $script:UninstallPrinterScriptSrc) -notmatch 'PSScriptRoot').Count -eq 3 'Printer scripts find their folder without $PSScriptRoot, which is empty in Windows PowerShell parameter defaults'
+  Assert (@(@($script:InstallPrinterScriptSrc, $script:DetectPrinterScriptSrc, $script:UninstallPrinterScriptSrc) -notmatch 'PSScriptRoot').Count -eq 3) 'Printer scripts find their folder without $PSScriptRoot, which is empty in Windows PowerShell parameter defaults'
   $rootInfo = Get-InstallerFolderInfo -InstallerPath ([IO.Path]::Combine([IO.Path]::GetPathRoot($root), 'setup.exe'))
   Assert ($rootInfo.IsRoot -and $rootInfo.Files -eq 0) 'A drive-root installer is refused without walking the drive'
   [xml]$awkwardManifest = [IO.File]::ReadAllText($XmlFile)
@@ -189,8 +190,13 @@ try {
   Assert ($script:packagedUninstall.Contains('QuietUninstallString')) 'Simple uninstall prefers the vendor silent command'
   Assert ($script:packagedUninstall.Contains('while ((Find-ARPEntry -Target') -and $script:packagedUninstall.Contains('-lt $deadline')) 'Uninstall waits for uninstallers that finish in the background'
   Assert ($script:packagedUninstall.Contains("-match 'Nullsoft') { `$silent = '/S' }")) 'Simple uninstall checks the uninstaller engine, not only the installer type'
+  Assert ($script:packagedInstall.Contains('while (-not (Find-ARPEntry -Target') -and $script:packagedInstall.Contains('function Find-ARPEntry')) 'Simple install waits for launcher-style setups to register the app'
   Invoke-Expression $global:ArpMatchFnText
   Assert ($null -eq (Find-ARPEntry -Target '---')) 'An empty registry name matches nothing'
+  function Get-ItemProperty { @([pscustomobject]@{ DisplayName = '+++'; UninstallString = 'x' }, [pscustomobject]@{ DisplayName = "$([char]0x5FAE)$([char]0x4FE1)"; UninstallString = 'y' }) }
+  Assert ((Find-ARPEntry -Target "$([char]0x5FAE)$([char]0x4FE1)").UninstallString -eq 'y') 'Registry names in non-Latin scripts match'
+  Assert ($null -eq (Find-ARPEntry -Target 'Other App')) 'An entry whose name has no letters or digits matches nothing'
+  Remove-Item Function:\Get-ItemProperty
   $configPath = Join-Path $root 'config.json'
   Write-AtomicText -Path $configPath -Text '{"OrgName":"First"}'
   Write-AtomicText -Path $configPath -Text '{"OrgName":"Second"}'
@@ -300,6 +306,9 @@ try {
   $msixDetect = Get-Content (Join-Path $msixBuild.OutputDir 'detect.ps1') -Raw
   Assert ($script:packagedErrors.Count -eq 0 -and (Get-Content (Join-Path $msixBuild.OutputDir 'install.ps1') -Raw).Contains('Add-AppxProvisionedPackage') -and
           $msixDetect.Contains("-eq 'Vendor.OApp'") -and $msixDetect.Contains("'1.2.3.0'")) "MSIX packages provision for all users and detect by package name: $($script:packagedErrors -join '; ')"
+  $msixBundle = Join-Path $root 'bundle.msixbundle'
+  New-ZipFixture $msixBundle @{ 'AppxMetadata/AppxBundleManifest.xml' = "<Bundle xmlns='http://schemas.microsoft.com/appx/2013/bundle'><Identity Name=""Vendor.B"" Version=""2024.1015.1200.0"" Publisher=""CN=Vendor""/><Packages><Package Type=""resource"" Version=""9.9.9.9""/><Package Type=""application"" Version=""3.4.0.0""/></Packages></Bundle>" }
+  Assert ((Read-AppxIdentity -Path $msixBundle).Version -eq '3.4.0.0') 'Bundles report the version of the application package inside them'
   $msixForm.SimplePkgTarget = 'psadt'
   Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $msixForm -Profile @{} } 'MSIX packages are .intunewin only'
 
