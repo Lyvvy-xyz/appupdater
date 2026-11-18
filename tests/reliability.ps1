@@ -140,6 +140,56 @@ try {
   Assert (Test-Path (Join-Path $runtime.OutputDir 'Deploy-Example.ps1')) 'Runtime build creates a deploy script'
   Assert (Test-Path $XmlFile) 'Runtime manifest is published after packaging'
   Assert (@(Get-ChildItem $OutputBase -Directory -Filter '.building-*' -Force).Count -eq 0) 'Successful builds remove their staging copies'
+  $script:packagedErrors = @(); $script:packagedUninstall = ''
+  function Start-Process {
+    param($FilePath, $ArgumentList, [switch]$Wait, [switch]$PassThru, $WindowStyle)
+    $destination = [regex]::Match($ArgumentList, '-o "([^"]+)"').Groups[1].Value
+    $setup = [regex]::Match($ArgumentList, '-s "([^"]+)"').Groups[1].Value
+    $content = [regex]::Match($ArgumentList, '-c "([^"]+)"').Groups[1].Value
+    foreach ($packaged in @(Get-ChildItem -LiteralPath $content -Filter '*.ps1' -File)) {
+      $text = [IO.File]::ReadAllText($packaged.FullName)
+      $syntax = Test-PSSyntaxErrors -Code $text
+      if ($syntax) { $script:packagedErrors += "$($packaged.Name): $syntax" }
+      if ($packaged.Name -eq 'uninstall.ps1') { $script:packagedUninstall = $text }
+    }
+    [IO.File]::WriteAllText((Join-Path $destination ([IO.Path]::GetFileNameWithoutExtension($setup) + '.intunewin')), 'fixture artifact')
+    return New-FakeProcess 0
+  }
+  $awkward = $form.Clone()
+  $awkward.DisplayName = 'Cash $1 "Pro" O''Brien'
+  $awkward.RegistryName = 'Cash $1 "Pro" O''Brien'
+  $awkward.ExpectedPublisher = "O'Brien Ltd"
+  $awkward.LaunchExe = 'C:\Program Files\O''Brien $(x) "q"\app.exe'
+  $awkward.InstallerSHA256 = 'ab' * 32
+  $online = @{ OfflineMode = $false; WorkerURL = 'https://worker.invalid'; ManifestToken = ''; OrgName = 'Test' }
+  $onlineBuild = Invoke-HeadlessPackageBuild -Config $online -FormData $awkward -Profile @{}
+  $deployText = Get-Content (Join-Path $onlineBuild.OutputDir 'Deploy-Example.ps1') -Raw
+  $agent = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([regex]::Match($deployText, "FromBase64String\('([^']+)'\)").Groups[1].Value))
+  Assert ($script:packagedErrors.Count -eq 0) "Packaged scripts parse with quotes and dollar signs in form values: $($script:packagedErrors -join '; ')"
+  Assert ($agent.Contains("`$ExpectedPublisher = 'O''Brien Ltd'") -and $agent.Contains('O''Brien `$(x) `"q`"\app.exe')) 'Form values are escaped in the endpoint script'
+  Assert ($agent -match 'ToUnixTimeSeconds' -and $agent -notmatch '\[double\]::Parse') 'Endpoint telemetry timestamps are UTC'
+  $versionRead = $agent.IndexOf('$xmlVersion = ([string]$appEntry.Version)')
+  Assert ($versionRead -ge 0 -and $versionRead -lt $agent.IndexOf('$xmlVersion -notmatch')) 'Manifest version is read before it is validated'
+  Assert ($agent.Contains("-eq 'NotSigned' -and -not `$ExpectedPublisher")) 'Unsigned installers never satisfy a pinned publisher'
+  Assert ($agent.Contains('D0-CF-11-E0-A1-B1-1A-E1') -and $agent.Contains("'msiexec.exe'")) 'MSI downloads run through msiexec'
+  Assert ($agent.Contains("ResponseUri.Scheme -ne 'https'") -and $agent.Contains('$bytesRead -ne $totalLen')) 'Downloads reject downgrades and truncation'
+  [xml]$awkwardManifest = [IO.File]::ReadAllText($XmlFile)
+  $awkwardEntry = @($awkwardManifest.AppManifest.App | Where-Object ID -eq Example)
+  Assert ($awkwardEntry.Count -eq 1 -and $awkwardEntry[0].DisplayName -ceq $awkward.DisplayName) 'Manifest replacement keeps dollar signs literal'
+  Assert ($awkwardEntry[0].SHA256 -eq $awkward.InstallerSHA256) 'Manifest carries the pinned installer hash'
+  $awkward.Mode = 'simple'
+  Invoke-HeadlessPackageBuild -Config $config -FormData $awkward -Profile @{} | Out-Null
+  Assert ($script:packagedErrors.Count -eq 0 -and $script:packagedUninstall.Contains("`$silent = '/S'")) "Simple uninstall uses the installer's own silent switch: $($script:packagedErrors -join '; ')"
+  Assert ($script:packagedUninstall.Contains('QuietUninstallString')) 'Simple uninstall prefers the vendor silent command'
+  Invoke-Expression $global:ArpMatchFnText
+  Assert ($null -eq (Find-ARPEntry -Target '---')) 'An empty registry name matches nothing'
+  $configPath = Join-Path $root 'config.json'
+  Write-AtomicText -Path $configPath -Text '{"OrgName":"First"}'
+  Write-AtomicText -Path $configPath -Text '{"OrgName":"Second"}'
+  [IO.File]::WriteAllText($configPath, '{broken')
+  Assert ((Read-PersistedConfig -Path $configPath).OrgName -eq 'First') 'Damaged config falls back to its backup'
+  Assert ($null -eq (Read-PersistedConfig -Path (Join-Path $root 'absent.json'))) 'Missing config stays a first run'
+  [IO.File]::Delete("$XmlFile.bak")
   $form.Mode = 'simple'
   $manifestBefore = [IO.File]::ReadAllText($XmlFile)
   $result = Invoke-HeadlessPackageBuild -Config $config -FormData $form -Profile @{}

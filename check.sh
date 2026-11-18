@@ -24,7 +24,7 @@ fi
 echo
 echo "== JS send() actions vs PS switch (\$msg.action) cases =="
 grep -oP "send\('[a-z0-9-]+'" "$tmp/ui.js" | sed -E "s/send\('//;s/'$//" | sort -u > "$tmp/js_sends.txt" || true
-awk '/switch \(\$msg\.action\)/,/^  \}\)$/' host.ps1 | grep -oP "^\s*'[a-z0-9-]+'\s*\{" | sed "s/[' {]//g" | sort > "$tmp/ps_cases.txt" || true
+awk '/switch \(\$msg\.action\)/,/^  \}\)$/' host.ps1 | grep -oP "^ {12}'[a-z0-9-]+'\s*\{" | sed "s/[' {]//g" | sort > "$tmp/ps_cases.txt" || true
 dead_sends=$(comm -23 "$tmp/js_sends.txt" "$tmp/ps_cases.txt")
 if [ -n "$dead_sends" ]; then
   echo "FAIL: JS sends these actions but PS has no matching case (button/action does nothing):"
