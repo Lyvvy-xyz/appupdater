@@ -215,6 +215,23 @@ try {
   $form.Mode = 'simple'
   $form.SimplePkgTarget = 'intunewin'
 
+  $closing = $form.Clone()
+  $closing.SimplePkgTarget = 'psadt'; $closing.PSADTVersion = 'both'; $closing.AllowDefer = $false
+  $closing.ProcessesToKill = "notepad.exe, o'app;explorer,NOTEPAD,svchost.exe"
+  foreach ($mode in @('simple', 'runtime')) {
+    $closing.Mode = $mode
+    $script:packagedErrors = @()
+    $closingBuild = Invoke-HeadlessPackageBuild -Config $config -FormData $closing -Profile @{}
+    $v3 = Get-Content (@($closingBuild.OutputDirs) -match 'v3$' | ForEach-Object { Join-Path $_ 'Deploy-Application.ps1' }) -Raw
+    $v4 = Get-Content (@($closingBuild.OutputDirs) -match 'v4$' | ForEach-Object { Join-Path $_ 'Deploy-Application.ps1' }) -Raw
+    Assert ($v4.Contains("-CloseProcesses @('notepad', 'o''app')") -and $v3.Contains("-CloseApps 'notepad,o''app'")) "PSADT $mode packages pass each process to close separately"
+    Assert ($v3 -notmatch 'explorer|svchost' -and $v4 -notmatch 'explorer|svchost') "PSADT $mode packages never close shell or system processes"
+    Assert ($v3 -notmatch '-AllowDefer' -and $v4 -notmatch '-AllowDefer' -and $script:packagedErrors.Count -eq 0) "PSADT $mode packages honour Allow deferral being off"
+  }
+  $closing.AllowDefer = $true; $closing.Mode = 'simple'; $closing.PSADTVersion = 'v4'
+  $deferred = Invoke-HeadlessPackageBuild -Config $config -FormData $closing -Profile @{}
+  Assert ((Get-Content (Join-Path $deferred.OutputDir 'Deploy-Application.ps1') -Raw).Contains('-AllowDefer -DeferTimes 3')) 'PSADT packages allow deferral by default'
+
   Assert ((ConvertTo-LooseVersion '1.2.3-beta') -eq [version]'1.2.3' -and (ConvertTo-LooseVersion '2024.10 build 5') -eq [version]'2024.10' -and
           (ConvertTo-LooseVersion '1, 0, 0, 3') -eq [version]'1.0.0.3' -and (ConvertTo-LooseVersion '7') -eq [version]'7.0') 'Loose versions read the leading dotted number'
   Assert ($null -eq (ConvertTo-LooseVersion 'latest') -and $null -eq (ConvertTo-LooseVersion '99999999999.1')) 'Unparseable versions compare as unknown'
