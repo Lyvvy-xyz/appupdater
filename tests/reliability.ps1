@@ -181,6 +181,7 @@ try {
   Invoke-HeadlessPackageBuild -Config $config -FormData $awkward -Profile @{} | Out-Null
   Assert ($script:packagedErrors.Count -eq 0 -and $script:packagedUninstall.Contains("`$silent = '/S'")) "Simple uninstall uses the installer's own silent switch: $($script:packagedErrors -join '; ')"
   Assert ($script:packagedUninstall.Contains('QuietUninstallString')) 'Simple uninstall prefers the vendor silent command'
+  Assert ($script:packagedUninstall.Contains("-match 'Nullsoft') { `$silent = '/S' }")) 'Simple uninstall checks the uninstaller engine, not only the installer type'
   Invoke-Expression $global:ArpMatchFnText
   Assert ($null -eq (Find-ARPEntry -Target '---')) 'An empty registry name matches nothing'
   $configPath = Join-Path $root 'config.json'
@@ -349,7 +350,7 @@ Installers:
   Assert ($byCode.Id -eq 'Other.App' -and $byCode.Match -eq 'productcode' -and $byCode.SilentArgs -eq '/qn /norestart') 'MSIs match by product code'
   Assert ($null -eq (Find-WingetInstaller -InstallerPath $wingetFile -Name 'Shared Name' -IndexPath $wingetIndex -GetManifest $fetch)) 'Unrelated packages sharing a name are not guessed between'
   Assert ($null -eq (Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -IndexPath (Join-Path $root 'absent.db') -GetManifest $fetch)) 'A missing catalogue means no winget data'
-  Assert ((ConvertTo-WingetNormalName 'Python 3.12.6 (64-bit)') -eq 'python' -and (ConvertTo-WingetNormalName 'PowerToysSetup-0.83.0-x64') -eq 'powertoys' -and
+  Assert ((ConvertTo-WingetNormalName 'Python 3.12.6 (64-bit)') -eq 'python' -and (ConvertTo-WingetNormalName 'PowerToysSetup-0.83.0-x64') -eq 'powertoys' -and (ConvertTo-WingetNormalName 'Discord - https://discord.com/') -eq 'discord' -and
           (ConvertTo-WingetNormalName 'Slack Technologies, LLC' -Publisher) -eq 'slacktechnologies') 'Names normalise like the winget index'
 
   $captured = Get-BuildFunctionSource

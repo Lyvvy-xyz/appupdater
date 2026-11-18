@@ -65,32 +65,44 @@ try {
   Write-Host "Building with switch '$silent' and registry name '$registry'"
 
   $appId = ($Name -replace '[^A-Za-z0-9._-]', '')
-  $form = @{ AppID = $appId; DisplayName = $inspection.DisplayName; PackageKind = 'App'; Mode = 'simple'; SimplePkgTarget = 'intunewin'
-             PSADTVersion = 'v3'; InstallerPath = $installer; RegistryName = $registry; SilentArgs = $silent
-             EntryExe = $inspection.EntryExe; Version = $inspection.Version }
-  $build = Invoke-HeadlessPackageBuild -Config @{ OfflineMode = $true; WorkerURL = ''; ManifestToken = ''; OrgName = 'CI' } -FormData $form -Profile @{}
-
   $worker = (Get-Item Function:\Start-LocalTestJob).ScriptBlock.Ast.Find({ param($node)
     $node -is [Management.Automation.Language.InvokeMemberExpressionAst] -and $node.Member.Value -eq 'AddScript' }, $true).Arguments[0].ScriptBlock.Extent.Text
-  $log = [Collections.Queue]::Synchronized([Collections.Queue]::new())
-  $done = [Collections.ArrayList]::Synchronized([Collections.ArrayList]::new())
-  $runspace = [runspacefactory]::CreateRunspace()
-  $powershell = [powershell]::Create()
-  try {
-    $runspace.Open()
-    $variables = @{ _tq = $log; _td = $done; _out = $build.OutputDir; _appId = $appId; _target = 'intunewin'; _alsoUninstall = $true; _simulateSystem = $true }
-    foreach ($key in $variables.Keys) { $runspace.SessionStateProxy.SetVariable($key, $variables[$key]) }
-    $powershell.Runspace = $runspace
-    [void]$powershell.AddScript($worker.Substring(1, $worker.Length - 2))
-    $handle = $powershell.BeginInvoke()
-    while (-not $handle.IsCompleted) {
-      while ($log.Count) { Write-Host $log.Dequeue() }
-      Start-Sleep -Milliseconds 500
-    }
-    $powershell.EndInvoke($handle) | Out-Null
-    while ($log.Count) { $line = $log.Dequeue(); Write-Host $line; if ($line -match 'Add/Remove Programs|WARNING|ERROR') { $summary.Detail += "$($line.Trim()) " } }
-  } finally { $powershell.Dispose(); $runspace.Dispose() }
-  if ($done.Count -eq 1 -and $done[0].ok) { $summary.Result = 'PASS'; $exitCode = 0 }
+  function Invoke-PackageTest([string]$RegistryName) {
+    $form = @{ AppID = $appId; DisplayName = $inspection.DisplayName; PackageKind = 'App'; Mode = 'simple'; SimplePkgTarget = 'intunewin'
+               PSADTVersion = 'v3'; InstallerPath = $installer; RegistryName = $RegistryName; SilentArgs = $silent
+               EntryExe = $inspection.EntryExe; Version = $inspection.Version }
+    $build = Invoke-HeadlessPackageBuild -Config @{ OfflineMode = $true; WorkerURL = ''; ManifestToken = ''; OrgName = 'CI' } -FormData $form -Profile @{}
+    $log = [Collections.Queue]::Synchronized([Collections.Queue]::new())
+    $done = [Collections.ArrayList]::Synchronized([Collections.ArrayList]::new())
+    $runspace = [runspacefactory]::CreateRunspace()
+    $powershell = [powershell]::Create()
+    try {
+      $runspace.Open()
+      # Per-user installers are deployed with Intune's User install behaviour, so they are tested as the signed-in user.
+      $variables = @{ _tq = $log; _td = $done; _out = $build.OutputDir; _appId = $appId; _target = 'intunewin'; _alsoUninstall = $true; _simulateSystem = -not $perUser }
+      foreach ($key in $variables.Keys) { $runspace.SessionStateProxy.SetVariable($key, $variables[$key]) }
+      $powershell.Runspace = $runspace
+      [void]$powershell.AddScript($worker.Substring(1, $worker.Length - 2))
+      $handle = $powershell.BeginInvoke()
+      do {
+        Start-Sleep -Milliseconds 500
+        while ($log.Count) { $line = [string]$log.Dequeue(); Write-Host $line; if ($line -match 'Add/Remove Programs|WARNING|ERROR|Suggested') { $summary.Detail += "$($line.Trim()) " } }
+      } while (-not $handle.IsCompleted -or $log.Count)
+      $powershell.EndInvoke($handle) | Out-Null
+    } finally { $powershell.Dispose(); $runspace.Dispose() }
+    if ($done.Count -ne 1) { return @{ Ok = $false; Suggestion = '' } }
+    return @{ Ok = [bool]$done[0].ok; Suggestion = [string]$done[0].suggestedRegistryName }
+  }
+  $perUser = ($inspection.InstallerType -eq 'Squirrel') -or ($winget -and $winget.Scope -eq 'user')
+  if ($perUser) { $summary.Type += ' (per-user)' }
+  $outcome = Invoke-PackageTest $registry
+  if (-not $outcome.Ok -and $outcome.Suggestion) {
+    # The same loop an admin follows in the app: take the suggested name, rebuild, test again.
+    Write-Host "Rebuilding with the suggested registry name '$($outcome.Suggestion)'"
+    $summary.Registry = "$registry -> $($outcome.Suggestion)"
+    $outcome = Invoke-PackageTest $outcome.Suggestion
+    if ($outcome.Ok) { $summary.Result = 'PASS (learned name)'; $exitCode = 0 }
+  } elseif ($outcome.Ok) { $summary.Result = 'PASS'; $exitCode = 0 }
 } catch {
   $summary.Detail += $_.Exception.Message
   Write-Host "ERROR: $($_.Exception.Message)"
