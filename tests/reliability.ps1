@@ -127,6 +127,7 @@ try {
   Assert ((Get-Content (Join-Path $result.OutputDir 'detect.ps1') -Raw) -match 'function Find-ARPEntry') 'Generated detection includes the shared registry matcher'
   $installText = Get-Content (Join-Path $result.OutputDir 'install.ps1') -Raw
   Assert ($installText -match '/S') 'Detected installer arguments reach generated install script'
+  Assert ($installText.Contains('$proc.WaitForExit()') -and $installText -notmatch 'Wait = \$true') 'Install waits for the installer, not for programs it launches'
   Assert ($result.OutputDir -notmatch '\.building-') 'Only completed outputs are published'
   $ManifestPath = $XmlFile
   Write-AtomicText -Path $DeployStatusFile -Text '{}'

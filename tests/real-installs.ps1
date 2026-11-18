@@ -103,6 +103,12 @@ try {
     $outcome = Invoke-PackageTest $outcome.Suggestion
     if ($outcome.Ok) { $summary.Result = 'PASS (learned name)'; $exitCode = 0 }
   } elseif ($outcome.Ok) { $summary.Result = 'PASS'; $exitCode = 0 }
+  if (-not $outcome.Ok) {
+    # Burn and many EXE installers log to the SYSTEM or user temp folder; the tail usually names the failing step.
+    Get-ChildItem -Path (Join-Path $env:windir 'Temp'), $env:TEMP -Filter '*.log' -ErrorAction SilentlyContinue |
+      Where-Object { $_.LastWriteTime -gt (Get-Date).AddMinutes(-45) } | Sort-Object LastWriteTime -Descending | Select-Object -First 3 |
+      ForEach-Object { Write-Host "--- $($_.FullName)"; Get-Content -LiteralPath $_.FullName -Tail 40 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" } }
+  }
 } catch {
   $summary.Detail += $_.Exception.Message
   Write-Host "ERROR: $($_.Exception.Message)"
