@@ -145,7 +145,7 @@ function Invoke-AgentTask([string]$AppId) {
   do { Start-Sleep -Seconds 5 } while ((Get-ScheduledTask -TaskName $task).State -eq 'Running' -and (Get-Date) -lt $deadline)
   $result = (Get-ScheduledTaskInfo -TaskName $task).LastTaskResult
   Write-Host "Agent task $task finished with result $result"
-  Get-ChildItem -Path "C:\ProgramData\AppUpdater\$AppId\logs" -File -ErrorAction SilentlyContinue |
+  Get-ChildItem -Path "C:\ProgramData\AppUpdater\$AppId" -Filter '*.log' -File -Recurse -ErrorAction SilentlyContinue |
     ForEach-Object { Write-Host "--- $($_.Name)"; Get-Content -LiteralPath $_.FullName -Tail 25 | ForEach-Object { Write-Host "    $_" } }
   return $result
 }
@@ -239,6 +239,18 @@ try {
   $summary.Detail += $_.Exception.Message
   Write-Host "ERROR: $($_.Exception.Message)"
   Write-Host $_.ScriptStackTrace
+  if ($_.Exception.Message -match 'IntuneWinAppUtil') {
+    # Rerun the packager on the kept staging folder with its output visible.
+    foreach ($staged in @(Get-ChildItem -Path $OutputBase -Directory -Force -Filter '.building-*' | ForEach-Object { Get-ChildItem -Path (Join-Path $_.FullName 'output') -Directory })) {
+      Write-Host "--- packaging $($staged.FullName) again"
+      Get-ChildItem -LiteralPath $staged.FullName -Recurse -File -Force | Where-Object { $_.IsReadOnly -or $_.FullName.Length -gt 240 } |
+        Select-Object -First 10 | ForEach-Object { Write-Host "    readonly=$($_.IsReadOnly) length=$($_.FullName.Length) $($_.FullName)" }
+      $probe = Join-Path $root 'probe-out'
+      [IO.Directory]::CreateDirectory($probe) | Out-Null
+      & $IntuneWinUtilPath -c $staged.FullName -s 'Deploy-Application.ps1' -o $probe -q *>&1 | Select-Object -Last 25 | ForEach-Object { Write-Host "    $_" }
+      Write-Host "    exit code $LASTEXITCODE"
+    }
+  }
 } finally {
   if ($env:GITHUB_STEP_SUMMARY) {
     $cells = $summary.Values | ForEach-Object { ([string]$_).Replace('|', '\|').Replace("`n", ' ') }

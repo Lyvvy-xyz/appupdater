@@ -1,7 +1,7 @@
 name: real-installs
 
 # Packages real vendor installers and installs, detects and uninstalls each one as SYSTEM on a throwaway runner.
-# Apps preinstalled on the runner image (Git, Node.js, the VC++ runtime, older Pythons) are left out or kept newer than the image: their installers refuse to downgrade.
+# Apps preinstalled on the runner image (Git, Node.js, the VC++ runtime, Python) are left out: their installers refuse to downgrade or clash with the image's copy.
 on:
   push:
     paths:
@@ -32,7 +32,6 @@ jobs:
           - { app: firefox, url: 'https://download-installer.cdn.mozilla.net/pub/firefox/releases/132.0/win64/en-US/Firefox%20Setup%20132.0.exe' }
           - { app: firefox-msi, url: 'https://download-installer.cdn.mozilla.net/pub/firefox/releases/132.0/win64/en-US/Firefox%20Setup%20132.0.msi' }
           - { app: powertoys, url: 'https://github.com/microsoft/PowerToys/releases/download/v0.83.0/PowerToysSetup-0.83.0-x64.exe' }
-          - { app: python, url: 'https://www.python.org/ftp/python/3.15.2/python-3.15.2-amd64.exe' }
           - { app: audacity, url: 'https://github.com/audacity/audacity/releases/download/Audacity-3.6.4/audacity-win-3.6.4-64bit.exe' }
           - { app: gimp, url: 'https://download.gimp.org/gimp/v2.10/windows/gimp-2.10.38-setup.exe' }
           - { app: obs, url: 'https://github.com/obsproject/obs-studio/releases/download/30.2.3/OBS-Studio-30.2.3-Windows-Installer.exe' }
