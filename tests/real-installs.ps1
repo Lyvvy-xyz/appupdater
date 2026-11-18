@@ -27,8 +27,9 @@ foreach ($source in @($coreSource, $hostSource)) {
         $node.Left.Extent.Text -match '^\$script:(Install|Detect|Uninstall)PrinterScriptSrc$') { . ([scriptblock]::Create($node.Extent.Text)) }
   }
 }
-foreach ($name in @('ArpMatchFnText', 'WingetSqliteSource')) {
-  Set-Variable -Scope Global -Name $name -Value ([regex]::Match($coreSource, "(?ms)^\`$global:$name = @'\r?\n(.*?)^'@").Groups[1].Value)
+# Not $name: PowerShell variables ignore case, so it would overwrite $Name.
+foreach ($sourceVariable in @('ArpMatchFnText', 'WingetSqliteSource')) {
+  Set-Variable -Scope Global -Name $sourceVariable -Value ([regex]::Match($coreSource, "(?ms)^\`$global:$sourceVariable = @'\r?\n(.*?)^'@").Groups[1].Value)
 }
 Invoke-Expression $global:ArpMatchFnText
 function Write-AppLog { param($Message, $Level = 'INFO') Write-Host "[$Level] $Message" }
