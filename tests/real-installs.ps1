@@ -173,7 +173,14 @@ try {
       $printer = Get-Printer -Name 'CI Printer' -ErrorAction SilentlyContinue
       Write-Host "Printer present: $([bool]$printer)$(if ($printer) { " (driver '$($printer.DriverName)', port '$($printer.PortName)')" })"
       if ($outcome.Ok -and $printer -and $task -eq 0) { $summary.Result = 'PASS'; $exitCode = 0 }
-      elseif (-not $printer) { $summary.Detail += 'The printer was not created. ' }
+      elseif (-not $printer) {
+        $summary.Detail += 'The printer was not created. '
+        Write-Host '--- Install-Printer.ps1 run directly'
+        $agentDir = 'C:\ProgramData\AppUpdater\CIPrinter'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$agentDir\Install-Printer.ps1" -ConfigPath "$agentDir\printer-config.json" -DriverPackageDir "$agentDir\driver" *>&1 |
+          Select-Object -Last 30 | ForEach-Object { Write-Host "    $_" }
+        Write-Host "    exit code $LASTEXITCODE"
+      }
     }
     'runtime' {
       $app = Get-Installer $Url $Name
