@@ -306,7 +306,7 @@ try {
 PackageIdentifier: Vendor.App
 Description: A long description that
   folds onto a second line.
-Copyright: "\xA9 Vendor ®"
+Copyright: "\xA9 Vendor \u00AE"
 InstallerType: inno
 Scope: machine
 InstallerSwitches:
@@ -336,7 +336,7 @@ Installers:
   }
   $fetch = { param($Path) $wingetManifests[$Path] }.GetNewClosure()
   $yaml = ConvertFrom-SimpleYaml $wingetManifests['manifests/v/Vendor/App/1.0.0/aaaa']
-  Assert ($yaml.Description -eq 'A long description that folds onto a second line.' -and $yaml.Copyright -eq "$([char]0xA9) Vendor $([char]0xAE)") "YAML reader folds scalars and decodes escapes: [$($yaml.Description)] [$($yaml.Copyright)] keys=$(@($yaml.Keys) -join ',')"
+  Assert ($yaml.Description -eq 'A long description that folds onto a second line.' -and $yaml.Copyright -eq "$([char]0xA9) Vendor $([char]0xAE)") 'YAML reader folds scalars and decodes escapes'
   Assert ($yaml.Installers.Count -eq 2 -and $yaml.Installers[1].AppsAndFeaturesEntries[0].DisplayName -eq "Vendor App 'One'" -and ($yaml.Tags -join ',') -eq 'one,two') 'YAML reader handles lists of maps and scalars'
   $exact = Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -Publisher 'Vendor Inc.' -Version '1.0.0' -IndexPath $wingetIndex -GetManifest $fetch
   Assert ($exact.Id -eq 'Vendor.App' -and $exact.Version -eq '1.0.0' -and $exact.Match -eq 'hash' -and $exact.InstallerType -eq 'inno' -and $exact.Scope -eq 'machine') 'winget matches an older version by file hash'
