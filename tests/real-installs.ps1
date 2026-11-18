@@ -107,7 +107,11 @@ try {
     # Burn and many EXE installers log to the SYSTEM or user temp folder; the tail usually names the failing step.
     Get-ChildItem -Path (Join-Path $env:windir 'Temp'), $env:TEMP -Filter '*.log' -ErrorAction SilentlyContinue |
       Where-Object { $_.LastWriteTime -gt (Get-Date).AddMinutes(-45) } | Sort-Object LastWriteTime -Descending | Select-Object -First 3 |
-      ForEach-Object { Write-Host "--- $($_.FullName)"; Get-Content -LiteralPath $_.FullName -Tail 40 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" } }
+      ForEach-Object {
+        Write-Host "--- $($_.FullName)"
+        $lines = @(Get-Content -LiteralPath $_.FullName -ErrorAction SilentlyContinue)
+        @($lines | Where-Object { $_ -match 'error|fail|return value 3|0x8' } | Select-Object -First 30) + @($lines | Select-Object -Last 10) | ForEach-Object { Write-Host "    $_" }
+      }
   }
 } catch {
   $summary.Detail += $_.Exception.Message

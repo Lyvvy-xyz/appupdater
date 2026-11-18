@@ -182,6 +182,7 @@ try {
   Invoke-HeadlessPackageBuild -Config $config -FormData $awkward -Profile @{} | Out-Null
   Assert ($script:packagedErrors.Count -eq 0 -and $script:packagedUninstall.Contains("`$silent = '/S'")) "Simple uninstall uses the installer's own silent switch: $($script:packagedErrors -join '; ')"
   Assert ($script:packagedUninstall.Contains('QuietUninstallString')) 'Simple uninstall prefers the vendor silent command'
+  Assert ($script:packagedUninstall.Contains('while ((Find-ARPEntry -Target') -and $script:packagedUninstall.Contains('-lt $deadline')) 'Uninstall waits for uninstallers that finish in the background'
   Assert ($script:packagedUninstall.Contains("-match 'Nullsoft') { `$silent = '/S' }")) 'Simple uninstall checks the uninstaller engine, not only the installer type'
   Invoke-Expression $global:ArpMatchFnText
   Assert ($null -eq (Find-ARPEntry -Target '---')) 'An empty registry name matches nothing'
