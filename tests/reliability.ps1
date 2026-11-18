@@ -211,6 +211,57 @@ try {
   Assert ($bothRuntime.OutputDirs.Count -eq 2) 'Runtime PSADT both produces two completed variants'
   $form.Mode = 'simple'
   $form.SimplePkgTarget = 'intunewin'
+
+  Assert ((ConvertTo-LooseVersion '1.2.3-beta') -eq [version]'1.2.3' -and (ConvertTo-LooseVersion '2024.10 build 5') -eq [version]'2024.10' -and
+          (ConvertTo-LooseVersion '1, 0, 0, 3') -eq [version]'1.0.0.3' -and (ConvertTo-LooseVersion '7') -eq [version]'7.0') 'Loose versions read the leading dotted number'
+  Assert ($null -eq (ConvertTo-LooseVersion 'latest') -and $null -eq (ConvertTo-LooseVersion '99999999999.1')) 'Unparseable versions compare as unknown'
+  Assert ($runtime -and (Get-Content (Join-Path $runtime.OutputDir 'Deploy-Example.ps1') -Raw) -notmatch '\[version\]\(`?\$fv') 'Runtime agent no longer casts raw file versions'
+  foreach ($case in @(@('Advanced Installer', 'AdvancedInstaller', '/exenoui'), @('InstallAware', 'InstallAware', '/s'), @('SquirrelSetup', 'Squirrel', '--silent'))) {
+    $marked = Join-Path $root "marked-$($case[1]).exe"
+    [IO.File]::WriteAllText($marked, "MZ fixture $($case[0]) fixture")
+    $type = Get-InstallerType -Path $marked
+    Assert ($type -eq $case[1] -and (Get-SilentArgs -Type $type).StartsWith($case[2])) "$($case[1]) installers are recognised"
+  }
+  $deepInno = Join-Path $root 'deep-inno.exe'
+  [IO.File]::WriteAllBytes($deepInno, [byte[]](@(0) * 700000) + [Text.Encoding]::ASCII.GetBytes('Inno Setup'))
+  Assert ((Get-InstallerType -Path $deepInno) -eq 'InnoSetup') 'Inno markers about 700 KB into the file are found'
+  $wideSquirrel = Join-Path $root 'wide-squirrel.exe'
+  [IO.File]::WriteAllBytes($wideSquirrel, [Text.Encoding]::Unicode.GetBytes('MZ SquirrelInstall'))
+  Assert ((Get-InstallerType -Path $wideSquirrel) -eq 'Squirrel') 'UTF-16 installer markers are found'
+  $unknown = Join-Path $root 'mystery.exe'
+  [IO.File]::WriteAllText($unknown, 'MZ fixture with no installer marker')
+  Assert ((Get-InstallerType -Path $unknown) -eq 'Unknown' -and -not (Get-SilentArgs -Type 'Unknown')) 'Unknown installers get no guessed switch'
+  $mystery = $form.Clone(); $mystery.InstallerPath = $unknown; $mystery.SilentArgs = ''
+  Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $mystery -Profile @{} } 'Unknown installers need an explicit silent switch'
+  $inspected = Invoke-InstallerInspector -InstallerPath $unknown
+  Assert ($inspected.DisplayName -eq 'mystery' -and $inspected.RegistryName -eq 'mystery') 'Installers without version info are named after the file, not another installed app'
+
+  $vendorDir = Join-Path $root "vendor O'Brien"
+  [IO.Directory]::CreateDirectory((Join-Path $vendorDir 'cabs')) | Out-Null
+  $vendorSetup = Join-Path $vendorDir "setup `$x'.exe"
+  [IO.File]::WriteAllText($vendorSetup, 'InstallShield fixture')
+  [IO.File]::WriteAllText((Join-Path $vendorDir 'setup.iss'), '[fixture]')
+  [IO.File]::WriteAllText((Join-Path $vendorDir 'cabs/data1.cab'), 'fixture')
+  $bundle = $form.Clone()
+  $bundle.InstallerPath = $vendorSetup; $bundle.BundleFolder = $true; $bundle.SilentArgs = '/s /f1"{pkg}\setup.iss"'
+  $script:packagedErrors = @()
+  $bundled = Invoke-HeadlessPackageBuild -Config $config -FormData $bundle -Profile @{}
+  $bundledInstall = Get-Content (Join-Path $bundled.OutputDir 'install.ps1') -Raw
+  Assert ($script:packagedErrors.Count -eq 0) "Bundled-folder scripts parse with awkward file names: $($script:packagedErrors -join '; ')"
+  Assert ($bundledInstall.Contains("'src\setup `$x''.exe'") -and $bundledInstall.Contains(".Replace('{pkg}'")) 'Bundled install keeps the vendor file name and expands {pkg}'
+  $bundle.SimplePkgTarget = 'psadt'
+  $bundledPsadt = Invoke-HeadlessPackageBuild -Config $config -FormData $bundle -Profile @{}
+  Assert ($script:packagedErrors.Count -eq 0) "Bundled-folder PSADT scripts parse: $($script:packagedErrors -join '; ')"
+  foreach ($path in $bundledPsadt.OutputDirs) {
+    Assert ((Test-Path (Join-Path $path 'SupportFiles/src/cabs/data1.cab')) -and (Test-Path (Join-Path $path 'SupportFiles/src/setup.iss'))) "PSADT package carries the whole installer folder: $([IO.Path]::GetFileName($path))"
+  }
+  $bundle.SimplePkgTarget = 'intunewin'; $bundle.Mode = 'runtime'; $bundle.DownloadURL = 'https://vendor.example.test/setup.exe'
+  Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $bundle -Profile @{} } 'Runtime packages refuse folder bundling'
+  $bundle.BundleFolder = $false
+  Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $bundle -Profile @{} } 'Runtime packages refuse {pkg} in the silent switch'
+  $folderInfo = Get-InstallerFolderInfo -InstallerPath $vendorSetup
+  Assert ($folderInfo.Files -eq 3 -and -not $folderInfo.IsRoot -and -not $folderInfo.TooMany) 'Folder info counts every bundled file'
+
   $captured = Get-BuildFunctionSource
   $done = [Collections.ArrayList]::Synchronized([Collections.ArrayList]::new())
   $variables = @{ _bq = [Collections.Queue]::Synchronized([Collections.Queue]::new()); _bd = $done
