@@ -259,6 +259,39 @@ try {
   Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $bundle -Profile @{} } 'Runtime packages refuse folder bundling'
   $bundle.BundleFolder = $false
   Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $bundle -Profile @{} } 'Runtime packages refuse {pkg} in the silent switch'
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  function New-ZipFixture([string]$Path, [hashtable]$Entries) {
+    $zip = [IO.Compression.ZipFile]::Open($Path, 'Create')
+    try { foreach ($name in $Entries.Keys) { $w = [IO.StreamWriter]::new($zip.CreateEntry($name).Open()); try { $w.Write($Entries[$name]) } finally { $w.Dispose() } } }
+    finally { $zip.Dispose() }
+  }
+  $msix = Join-Path $root "Vendor O'App.msix"
+  New-ZipFixture $msix @{ 'AppxManifest.xml' = "<Package xmlns='http://schemas.microsoft.com/appx/manifest/foundation/windows10'><Identity Name=""Vendor.OApp"" Version=""1.2.3.0"" Publisher=""CN=Vendor O'Brien, O=Vendor""/><Properties><DisplayName>ms-resource:AppName</DisplayName><PublisherDisplayName>Vendor</PublisherDisplayName></Properties></Package>" }
+  $msixInfo = Invoke-InstallerInspector -InstallerPath $msix
+  Assert ($msixInfo.InstallerType -eq 'MSIX' -and $msixInfo.PackageName -eq 'Vendor.OApp' -and $msixInfo.DisplayName -eq 'Vendor.OApp' -and $msixInfo.Version -eq '1.2.3.0') 'MSIX identity is read from its manifest'
+  $msixForm = $form.Clone(); $msixForm.InstallerPath = $msix; $msixForm.SilentArgs = ''; $msixForm.RegistryName = $msixInfo.PackageName; $msixForm.Version = $msixInfo.Version
+  $script:packagedErrors = @()
+  $msixBuild = Invoke-HeadlessPackageBuild -Config $config -FormData $msixForm -Profile @{}
+  $msixDetect = Get-Content (Join-Path $msixBuild.OutputDir 'detect.ps1') -Raw
+  Assert ($script:packagedErrors.Count -eq 0 -and (Get-Content (Join-Path $msixBuild.OutputDir 'install.ps1') -Raw).Contains('Add-AppxProvisionedPackage') -and
+          $msixDetect.Contains("-eq 'Vendor.OApp'") -and $msixDetect.Contains("'1.2.3.0'")) "MSIX packages provision for all users and detect by package name: $($script:packagedErrors -join '; ')"
+  $msixForm.SimplePkgTarget = 'psadt'
+  Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $msixForm -Profile @{} } 'MSIX packages are .intunewin only'
+
+  $portable = Join-Path $root 'portable.zip'
+  New-ZipFixture $portable @{ 'Tool/tool.exe' = ('MZ' + ('x' * 4000)); 'Tool/uninstall.exe' = ('MZ' + ('x' * 9000)); 'Tool/readme.txt' = 'fixture' }
+  $zipInfo = Invoke-InstallerInspector -InstallerPath $portable
+  Assert ($zipInfo.InstallerType -eq 'Zip' -and $zipInfo.EntryExe -eq 'Tool\tool.exe' -and $zipInfo.DisplayName -eq 'tool') 'Portable zips name their main program, skipping helpers'
+  $zipForm = $form.Clone(); $zipForm.InstallerPath = $portable; $zipForm.SilentArgs = ''; $zipForm.EntryExe = $zipInfo.EntryExe; $zipForm.Version = '2.0'
+  $zipForm.DisplayName = 'Tool: "Pro"'; $zipForm.RegistryName = "Tool O'Pro"
+  $script:packagedErrors = @(); $script:packagedUninstall = ''
+  $zipBuild = Invoke-HeadlessPackageBuild -Config $config -FormData $zipForm -Profile @{}
+  $zipInstall = Get-Content (Join-Path $zipBuild.OutputDir 'install.ps1') -Raw
+  Assert ($script:packagedErrors.Count -eq 0 -and $zipInstall.Contains("'Tool\tool.exe'") -and $zipInstall.Contains("DisplayName = 'Tool O''Pro'") -and
+          $zipInstall.Contains('Programs\Tool Pro.lnk') -and $script:packagedUninstall.Contains('AppUpdater-Example')) "Portable zips install, register and uninstall themselves: $($script:packagedErrors -join '; ')"
+  $zipForm.EntryExe = ''
+  Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $zipForm -Profile @{} } 'A zip without a program is refused'
+
   $folderInfo = Get-InstallerFolderInfo -InstallerPath $vendorSetup
   Assert ($folderInfo.Files -eq 3 -and -not $folderInfo.IsRoot -and -not $folderInfo.TooMany) 'Folder info counts every bundled file'
 
@@ -303,7 +336,7 @@ Installers:
   }
   $fetch = { param($Path) $wingetManifests[$Path] }.GetNewClosure()
   $yaml = ConvertFrom-SimpleYaml $wingetManifests['manifests/v/Vendor/App/1.0.0/aaaa']
-  Assert ($yaml.Description -eq 'A long description that folds onto a second line.' -and $yaml.Copyright -eq "$([char]0xA9) Vendor $([char]0xAE)") 'YAML reader folds scalars and decodes escapes'
+  Assert ($yaml.Description -eq 'A long description that folds onto a second line.' -and $yaml.Copyright -eq "$([char]0xA9) Vendor $([char]0xAE)") "YAML reader folds scalars and decodes escapes: [$($yaml.Description)] [$($yaml.Copyright)] keys=$(@($yaml.Keys) -join ',')"
   Assert ($yaml.Installers.Count -eq 2 -and $yaml.Installers[1].AppsAndFeaturesEntries[0].DisplayName -eq "Vendor App 'One'" -and ($yaml.Tags -join ',') -eq 'one,two') 'YAML reader handles lists of maps and scalars'
   $exact = Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -Publisher 'Vendor Inc.' -Version '1.0.0' -IndexPath $wingetIndex -GetManifest $fetch
   Assert ($exact.Id -eq 'Vendor.App' -and $exact.Version -eq '1.0.0' -and $exact.Match -eq 'hash' -and $exact.InstallerType -eq 'inno' -and $exact.Scope -eq 'machine') 'winget matches an older version by file hash'

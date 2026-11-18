@@ -32,6 +32,7 @@ $IntuneWinUtilPath = Join-Path $root 'IntuneWinAppUtil.exe'
 $IntuneWinUtilURL = 'https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe'
 $WingetCacheDir = Join-Path $root 'winget'
 $WingetCacheURL = 'https://cdn.winget.microsoft.com/cache'
+$WingetIndexURL = 'https://cdn.winget.microsoft.com/cache/source.msix'
 $summary = [ordered]@{ App = $Name; Type = ''; Winget = ''; Switch = ''; Registry = ''; Result = 'FAIL'; Detail = '' }
 $exitCode = 1
 try {
@@ -41,9 +42,12 @@ try {
   $magic = [byte[]]::new(8)
   $stream = [IO.File]::OpenRead($download)
   try { [void]$stream.Read($magic, 0, 8) } finally { $stream.Dispose() }
-  $extension = if ([BitConverter]::ToString($magic) -eq 'D0-CF-11-E0-A1-B1-1A-E1') { '.msi' } else { '.exe' }
   $leaf = [Uri]::UnescapeDataString(([Uri]$Url).Segments[-1])
-  if ([IO.Path]::GetExtension($leaf) -ne $extension) { $leaf = "$Name$extension" }
+  $leafExt = [IO.Path]::GetExtension($leaf).ToLowerInvariant()
+  $extension = if ([BitConverter]::ToString($magic) -eq 'D0-CF-11-E0-A1-B1-1A-E1') { '.msi' }
+               elseif ($magic[0] -eq 0x50 -and $magic[1] -eq 0x4B) { if ($leafExt -in '.msix', '.msixbundle', '.appx', '.appxbundle') { $leafExt } else { '.zip' } }
+               else { '.exe' }
+  if ($leafExt -ne $extension) { $leaf = "$Name$extension" }
   $installer = Join-Path $root $leaf
   Move-Item -LiteralPath $download -Destination $installer
 
@@ -54,7 +58,7 @@ try {
     -Publisher $inspection.Publisher -Version $inspection.Version -IndexPath $index
   if ($winget) { $summary.Winget = "$($winget.Id) $($winget.Version) ($($winget.Match)$(if ($winget.Scope) { ", $($winget.Scope)" }))" }
   $silent = if ($winget -and $winget.SilentArgs) { $winget.SilentArgs } else { $inspection.SilentArgs }
-  $registry = if ($winget -and $winget.ArpName) { $winget.ArpName } else { $inspection.RegistryName }
+  $registry = if ($inspection.PackageName) { $inspection.PackageName } elseif ($winget -and $winget.ArpName) { $winget.ArpName } else { $inspection.RegistryName }
   $summary.Switch = $silent; $summary.Registry = $registry
   Write-Host "Inspector: $($inspection.InstallerType) '$($inspection.DisplayName)' $($inspection.Version) by '$($inspection.Publisher)'"
   Write-Host "winget: $(if ($winget) { $summary.Winget } else { 'no match' })"
@@ -62,7 +66,8 @@ try {
 
   $appId = ($Name -replace '[^A-Za-z0-9._-]', '')
   $form = @{ AppID = $appId; DisplayName = $inspection.DisplayName; PackageKind = 'App'; Mode = 'simple'; SimplePkgTarget = 'intunewin'
-             PSADTVersion = 'v3'; InstallerPath = $installer; RegistryName = $registry; SilentArgs = $silent }
+             PSADTVersion = 'v3'; InstallerPath = $installer; RegistryName = $registry; SilentArgs = $silent
+             EntryExe = $inspection.EntryExe; Version = $inspection.Version }
   $build = Invoke-HeadlessPackageBuild -Config @{ OfflineMode = $true; WorkerURL = ''; ManifestToken = ''; OrgName = 'CI' } -FormData $form -Profile @{}
 
   $worker = (Get-Item Function:\Start-LocalTestJob).ScriptBlock.Ast.Find({ param($node)

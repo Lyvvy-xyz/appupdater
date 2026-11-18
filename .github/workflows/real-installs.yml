@@ -44,6 +44,8 @@ jobs:
           - { app: discord, url: 'https://discord.com/api/downloads/distributions/app/installers/latest?channel=stable&platform=win&arch=x64' }
           - { app: wireshark, url: 'https://2.na.dl.wireshark.org/win64/all-versions/Wireshark-4.4.1-x64.exe' }
           - { app: teamviewer, url: 'https://download.teamviewer.com/download/TeamViewer_Setup_x64.exe' }
+          - { app: slack-msix, url: 'https://downloads.slack-edge.com/desktop-releases/windows/x64/4.53.292/Slack.msix' }
+          - { app: notepadpp-zip, url: 'https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.6.9/npp.8.6.9.portable.x64.zip' }
     name: ${{ matrix.app }}
     steps:
       - uses: actions/checkout@v4
