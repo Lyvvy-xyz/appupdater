@@ -1,8 +1,10 @@
 param(
   [string]$Name = $env:APP_NAME,
   [string]$Url = $env:APP_URL,
-  [ValidateSet('', 'simple', 'psadt-v3', 'psadt-v4', 'runtime', 'printer', 'dependency')][string]$Scenario = $env:APP_SCENARIO,
+  [ValidateSet('', 'simple', 'psadt-v3', 'psadt-v4', 'runtime', 'printer', 'dependency', 'upgrade', 'user', 'java')][string]$Scenario = $env:APP_SCENARIO,
   [string]$DependentUrl = $env:APP_URL2,
+  # How a plain app is deployed: Simple .intunewin by default, or PSADT v3/v4 or Runtime in the weekly full run.
+  [ValidateSet('', 'psadt-v3', 'psadt-v4', 'runtime')][string]$Deploy = $env:APP_DEPLOY,
   [string]$HostPath = (Join-Path $PSScriptRoot '../host.ps1')
 )
 # Packages real installers the way the app does and deploys them on this machine as Intune would, by scenario:
@@ -10,6 +12,9 @@ param(
 #   psadt-v3/4  branded PSADT package with a close-apps list that holds a running app, a missing name and a protected one
 #   runtime     AppUpdater agent: deploy, detect, then run the agent task and confirm it installs the app
 #   printer     printer package using the inbox Microsoft Print To PDF driver
+#   upgrade     an older copy is installed first; it must not count as installed, and the package must upgrade it
+#   user        a per-user installer installed, detected and uninstalled as a standard user
+#   java        an MSI with properties, pre/post scripts and removal of an older side-by-side version
 #   dependency  the app stays installed and detected while a dependent PSADT app installs and uninstalls
 $ErrorActionPreference = 'Stop'
 if (-not $Scenario) { $Scenario = 'simple' }
@@ -99,7 +104,11 @@ function Get-Installer([string]$From, [string]$Label) {
   # Pre-deploy checks against the real vendor file: a red finding on a genuine installer is a false alarm.
   $sig = Get-AuthenticodeSignature -LiteralPath $path
   $fingerprint = @{ sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash; status = [string]$sig.Status; signer = $(if ($sig.SignerCertificate) { $sig.SignerCertificate.Subject }) }
-  $findings = @(Get-PreflightFindings -FormData @{ Version = $inspection.Version; InstallerPath = $path; Winget = $winget } -Installer $fingerprint)
+  $kevPath = try { Update-KevCatalogue -CacheDir (Join-Path $root 'kev') -Url 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json' } catch { Write-Host "CISA catalogue unavailable: $($_.Exception.Message)"; '' }
+  $findings = @(Get-PreflightFindings -FormData @{ Version = $inspection.Version; InstallerPath = $path; Winget = $winget; KevPath = $kevPath
+    Identity = @{ name = $inspection.DisplayName; publisher = $inspection.Publisher } } -Installer $fingerprint)
+  # 7-Zip has a CISA entry (CVE-2025-0411), so its job also proves the awareness check matches real data.
+  if ($Label -eq '7zip' -and $kevPath -and -not @($findings | Where-Object code -eq 'known-exploited').Count) { throw 'The CISA check found no entry for 7-Zip.' }
   Write-Host "[$Label] signature $($fingerprint.status) $(Get-SignerName $fingerprint.signer); pre-deploy findings: $(if ($findings.Count) { @($findings | ForEach-Object { "$($_.level) $($_.code)" }) -join ', ' } else { 'none' })"
   if (@($findings | Where-Object level -eq 'red').Count) { throw "Pre-deploy checks blocked a genuine installer: $(@($findings.message) -join ' ')" }
   $app = @{
@@ -183,6 +192,8 @@ function New-Png([string]$Path, [int]$Width, [int]$Height) {
 
 try {
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  if ($Deploy -eq 'runtime') { $Scenario = 'runtime' }
+  $deployOverrides = if ($Deploy -like 'psadt-*') { @{ SimplePkgTarget = 'psadt'; PSADTVersion = $Deploy.Substring(6); AllowDefer = $false } } else { @{} }
   switch ($Scenario) {
     'printer' {
       $driver = Get-PrinterDriver -Name 'Microsoft Print To PDF' -ErrorAction Stop
@@ -315,12 +326,12 @@ try {
     default {
       $app = Get-Installer $Url $Name
       $summary.Type = "$($app.Inspection.InstallerType)$(if ($app.PerUser) { ' (per-user)' })"; $summary.Winget = $app.Winget; $summary.Switch = $app.Silent; $summary.Registry = $app.Registry
-      $outcome = Test-Package $app
+      $outcome = Test-Package $app $deployOverrides
       if ($outcome.Ok -and $outcome.Version) {
         # Take the version the test read, as an admin would, and check detection accepts the app with it required.
         Write-Host "=== Rebuilding with minimum version $($outcome.Version)"
         $summary.Detail += "minimum version $($outcome.Version). "
-        $outcome = Test-Package $app @{ DetectVersion = $outcome.Version }
+        $outcome = Test-Package $app ($deployOverrides + @{ DetectVersion = $outcome.Version })
       }
       $epm = @(Import-Csv -LiteralPath (Join-Path $outcome.Build.OutputDir 'EPM-rules.csv') -ErrorAction SilentlyContinue)
       $epm | ForEach-Object { Write-Host "EPM: $($_.Role) $($_.FileName) $($_.SHA256) [$($_.SuggestedRule)] $($_.Signer)" }

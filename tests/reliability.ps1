@@ -32,6 +32,11 @@ function Assert-Throws([scriptblock]$Body, [string]$Message) {
   try { & $Body } catch { $thrown = $true }
   Assert $thrown $Message
 }
+$realInstalls = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'real-installs.ps1'), [ref]$null, [ref]$null)
+$accepted = @($realInstalls.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'Scenario' } | ForEach-Object { $_.Attributes } |
+  Where-Object { $_.TypeName.Name -eq 'ValidateSet' } | ForEach-Object { $_.PositionalArguments.Value })
+$listed = @((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'apps.json') -Raw | ConvertFrom-Json) | ForEach-Object { $_.scenario } | Where-Object { $_ } | Sort-Object -Unique)
+Assert (-not @($listed | Where-Object { $_ -notin $accepted }).Count) "Every CI scenario in tests/apps.json is one real-installs.ps1 accepts: $($listed -join ', ')"
 function Write-AppLog { param($Message, $Level) }
 function Invoke-TestWorker([string]$FunctionName, [hashtable]$Variables, [string]$Setup = '') {
   $definition = Get-Item "Function:\$FunctionName"
@@ -394,6 +399,18 @@ try {
   Assert ((& $codes $pf) -eq 'amber:newer-available') 'A differently named file is not compared with the listing'
   $pf = Get-PreflightFindings -FormData @{ Version = '2.0' } -History @(@{ version = '2.0'; deployOutcome = 'failed' }) -Installer @{ status = 'NotSigned' }
   Assert ((& $codes $pf) -eq 'amber:unsigned,amber:version-not-newer,amber:last-deploy-failed') "History findings warn without blocking: $(& $codes $pf)"
+  $kevFile = Join-Path $root 'kev.json'
+  Set-Content -LiteralPath $kevFile -Encoding UTF8 -Value (@{ vulnerabilities = @(
+    @{ cveID = 'CVE-2025-0411'; vendorProject = '7-Zip'; product = '7-Zip'; dateAdded = '2025-02-06' }
+    @{ cveID = 'CVE-2024-9680'; vendorProject = 'Mozilla'; product = 'Firefox'; dateAdded = '2024-10-15' }
+    @{ cveID = 'CVE-2019-5786'; vendorProject = 'Google'; product = 'Chrome Blink'; dateAdded = '2021-11-03' }
+    @{ cveID = 'CVE-2010-0840'; vendorProject = 'Oracle'; product = 'Java Runtime Environment (JRE)'; dateAdded = '2022-05-25' }) } | ConvertTo-Json -Depth 4)
+  $kevFor = { param($n, $p) @(Get-KevMatches -Path $kevFile -Name $n -Publisher $p | ForEach-Object { $_.cveID }) -join ',' }
+  Assert ((& $kevFor '7-Zip 24.08 (x64)' 'Igor Pavlov') -eq 'CVE-2025-0411' -and (& $kevFor 'Mozilla Firefox (x64 en-US)' 'Mozilla') -eq 'CVE-2024-9680' -and
+          (& $kevFor 'Google Chrome' 'Google LLC') -eq 'CVE-2019-5786' -and (& $kevFor 'Eclipse Temurin JRE with Hotspot 17.0.13+11 (x64)' 'Eclipse Adoptium') -eq '' -and
+          (& $kevFor 'Notepad++' 'Notepad++ Team') -eq '') 'CISA entries match by vendor and product, not by product alone'
+  $pf = Get-PreflightFindings -FormData @{ Version = '24.08'; KevPath = $kevFile; Identity = @{ name = '7-Zip 24.08 (x64)'; publisher = 'Igor Pavlov' } } -Installer @{ status = 'Valid'; signer = 'CN=x' }
+  Assert ((& $codes $pf) -eq 'amber:known-exploited' -and $pf[0].message -like '*CVE-2025-0411*24.08*') "Known-exploited vulnerabilities warn without blocking: $($pf.message)"
   $script:SessionStartedAt = (Get-Date).AddMinutes(5)
   Set-DeployStatus -AppID 'Tool' -AppName 'Tool' -Target 'intunewin' -OutputDir 'out'
   Save-AppMemoryBuild -FormData @{ AppID = 'Tool'; Version = '2.23'; Identity = @{} }
