@@ -411,6 +411,17 @@ try {
           (& $kevFor 'Notepad++' 'Notepad++ Team') -eq '') 'CISA entries match by vendor and product, not by product alone'
   $pf = Get-PreflightFindings -FormData @{ Version = '24.08'; KevPath = $kevFile; Identity = @{ name = '7-Zip 24.08 (x64)'; publisher = 'Igor Pavlov' } } -Installer @{ status = 'Valid'; signer = 'CN=x' }
   Assert ((& $codes $pf) -eq 'amber:known-exploited' -and $pf[0].message -like '*CVE-2025-0411*24.08*') "Known-exploited vulnerabilities warn without blocking: $($pf.message)"
+  $nvdApi = @{
+    'cpes/2.0?keywordSearch=Notepad%2B%2B&resultsPerPage=200' = @{ products = @(@{ cpe = @{ cpeName = 'cpe:2.3:a:don_ho:notepad\+\+:8.6.9:*:*:*:*:*:*:*' } }, @{ cpe = @{ cpeName = 'cpe:2.3:a:don_ho:notepad\+\+:8.6.8:*:*:*:*:*:*:*' } }) }
+    'cpes/2.0?cpeMatchString=cpe%3A2.3%3Aa%3Adon_ho%3Anotepad%5C%2B%5C%2B%3A8.6.9' = @{ products = @(@{ cpe = @{ cpeName = 'cpe:2.3:a:don_ho:notepad\+\+:8.6.9:*:*:*:*:*:*:*'; deprecated = $false } }) }
+    'cpes/2.0?cpeMatchString=cpe%3A2.3%3Aa%3Adon_ho%3Anotepad%5C%2B%5C%2B%3A9.0' = @{ products = @() }
+    'cves/2.0?cpeName=cpe%3A2.3%3Aa%3Adon_ho%3Anotepad%5C%2B%5C%2B%3A8.6.9%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A' = @{ vulnerabilities = @(
+      @{ cve = @{ id = 'CVE-2024-1'; metrics = @{ cvssMetricV31 = @(@{ cvssData = @{ baseScore = 5.5 } }) } } }, @{ cve = @{ id = 'CVE-2024-2'; metrics = @{ cvssMetricV31 = @(@{ cvssData = @{ baseScore = 7.8 } }) } } }) }
+  }
+  $nvdGet = { param($Url) $key = $Url.Substring('https://services.nvd.nist.gov/rest/json/'.Length); if (-not $nvdApi.ContainsKey($key)) { throw "unexpected NVD request $key" }; $nvdApi[$key] }.GetNewClosure()
+  $nvd = Get-NvdVulnerabilities -Name 'Notepad++ (64-bit x64)' -Publisher 'Notepad++ Team' -Version '8.6.9' -GetJson $nvdGet
+  Assert ($nvd.Product -eq 'notepad\+\+' -and $nvd.Cves.Count -eq 2 -and $nvd.Cves[0].Id -eq 'CVE-2024-2') "NVD finds the CVEs for the exact version, highest score first: $($nvd.Product) $($nvd.Cves.Count)"
+  Assert ((Get-NvdVulnerabilities -Name 'Notepad++' -Publisher '' -Version '9.0' -GetJson $nvdGet).Unknown) 'A version NVD does not list is reported as unknown, not as clean'
   $script:SessionStartedAt = (Get-Date).AddMinutes(5)
   Set-DeployStatus -AppID 'Tool' -AppName 'Tool' -Target 'intunewin' -OutputDir 'out'
   Save-AppMemoryBuild -FormData @{ AppID = 'Tool'; Version = '2.23'; Identity = @{} }
