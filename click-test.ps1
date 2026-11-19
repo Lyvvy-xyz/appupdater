@@ -363,7 +363,7 @@ window.__errors = [];
       }
       Eval-Js "document.getElementById('test-also-uninstall').checked = true; document.getElementById('test-simulate-system').checked = true" | Out-Null
       Invoke-Click '#test-modal-start'
-      Wait-Js "/✓ Done|✗ Failed/.test(document.getElementById('test-log').textContent)" 300
+      Wait-Js "/\u2713 Done|\u2717 Failed/.test(document.getElementById('test-log').textContent)" 300
       $testLog = Get-Text '#test-log'
       $passed = $testLog.Contains("$([char]0x2713) Done")
       Assert $passed "Local install and uninstall test succeeds$(if (-not $passed) { ': ' + $testLog })"

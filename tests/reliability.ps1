@@ -32,6 +32,12 @@ function Assert-Throws([scriptblock]$Body, [string]$Message) {
   try { & $Body } catch { $thrown = $true }
   Assert $thrown $Message
 }
+# Windows PowerShell reads a .ps1 without a BOM as ANSI, where UTF-8 bytes such as 0x93 become quote characters.
+$ansiRisk = @(Get-ChildItem -Path (Join-Path $PSScriptRoot '..'), $PSScriptRoot -Filter '*.ps1' -File | Where-Object {
+  $bytes = [IO.File]::ReadAllBytes($_.FullName)
+  -not ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) -and @($bytes | Where-Object { $_ -gt 0x7F }).Count
+} | ForEach-Object { $_.Name })
+Assert (-not $ansiRisk.Count) "Scripts with non-ASCII characters carry a UTF-8 BOM: $($ansiRisk -join ', ')"
 $realInstalls = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'real-installs.ps1'), [ref]$null, [ref]$null)
 $accepted = @($realInstalls.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'Scenario' } | ForEach-Object { $_.Attributes } |
   Where-Object { $_.TypeName.Name -eq 'ValidateSet' } | ForEach-Object { $_.PositionalArguments.Value })
