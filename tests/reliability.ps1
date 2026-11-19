@@ -424,7 +424,7 @@ try {
     'cves/2.0?cpeName=cpe%3A2.3%3Aa%3Adon_ho%3Anotepad%5C%2B%5C%2B%3A8.6.9%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A' = @{ vulnerabilities = @(
       @{ cve = @{ id = 'CVE-2024-1'; metrics = @{ cvssMetricV31 = @(@{ cvssData = @{ baseScore = 5.5 } }) } } }, @{ cve = @{ id = 'CVE-2024-2'; metrics = @{ cvssMetricV31 = @(@{ cvssData = @{ baseScore = 7.8 } }) } } }) }
   }
-  $nvdGet = { param($Url) $key = $Url.Substring('https://services.nvd.nist.gov/rest/json/'.Length); if (-not $nvdApi.ContainsKey($key)) { throw "unexpected NVD request $key" }; $nvdApi[$key] }.GetNewClosure()
+  $nvdGet = { param($Url) $key = $Url.Substring('https://services.nvd.nist.gov/rest/json/'.Length) -replace '\*', '%2A'; if (-not $nvdApi.ContainsKey($key)) { throw "unexpected NVD request $key" }; $nvdApi[$key] }.GetNewClosure()
   $nvd = Get-NvdVulnerabilities -Name 'Notepad++ (64-bit x64)' -Publisher 'Notepad++ Team' -Version '8.6.9' -GetJson $nvdGet
   Assert ($nvd.Product -eq 'notepad\+\+' -and $nvd.Cves.Count -eq 2 -and $nvd.Cves[0].Id -eq 'CVE-2024-2') "NVD finds the CVEs for the exact version, highest score first: $($nvd.Product) $($nvd.Cves.Count)"
   Assert ((Get-NvdVulnerabilities -Name 'Notepad++' -Publisher '' -Version '9.0' -GetJson $nvdGet).Unknown) 'A version NVD does not list is reported as unknown, not as clean'
