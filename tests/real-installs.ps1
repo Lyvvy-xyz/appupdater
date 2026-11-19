@@ -280,7 +280,9 @@ try {
       $app = Get-Installer $Url $Name
       $summary.Type = "$($app.Inspection.InstallerType) (per-user)"; $summary.Winget = $app.Winget; $summary.Switch = $app.Silent; $summary.Registry = $app.Registry
       $password = 'Ci-' + [guid]::NewGuid().ToString('N').Substring(0, 20) + '!a1'
-      New-LocalUser -Name 'ciuser' -Password (ConvertTo-SecureString $password -AsPlainText -Force) -PasswordNeverExpires | Out-Null
+      $secure = New-Object Security.SecureString
+      foreach ($char in $password.ToCharArray()) { $secure.AppendChar($char) }
+      New-LocalUser -Name 'ciuser' -Password $secure -PasswordNeverExpires | Out-Null
       # Scheduled tasks need "log on as a batch job", which Windows Server gives only to administrators by default.
       $sid = (Get-LocalUser -Name 'ciuser').SID.Value
       $exported = Join-Path $root 'rights.inf'
