@@ -61,7 +61,11 @@ $worker = (Get-Item Function:\Start-LocalTestJob).ScriptBlock.Ast.Find({ param($
 
 function Get-Installer([string]$From, [string]$Label) {
   $download = Join-Path $root "$Label.download"
-  Invoke-WebRequest -Uri $From -OutFile $download -UseBasicParsing -UserAgent 'Mozilla/5.0' -TimeoutSec 900
+  # Vendor mirrors fail now and then (502s, refused connections); that is not a packaging result.
+  for ($try = 1; ; $try++) {
+    try { Invoke-WebRequest -Uri $From -OutFile $download -UseBasicParsing -UserAgent 'Mozilla/5.0' -TimeoutSec 900; break }
+    catch { if ($try -ge 4) { throw }; Write-Host "Download attempt $try failed: $($_.Exception.Message)"; Start-Sleep -Seconds (30 * $try) }
+  }
   $magic = [byte[]]::new(8)
   $stream = [IO.File]::OpenRead($download)
   try { [void]$stream.Read($magic, 0, 8) } finally { $stream.Dispose() }
