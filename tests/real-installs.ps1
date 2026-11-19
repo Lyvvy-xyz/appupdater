@@ -236,6 +236,34 @@ try {
       if ($first.Ok -and $second.Ok -and $stillThere) { $summary.Result = 'PASS'; $exitCode = 0 }
       elseif (-not $stillThere) { $summary.Detail += 'Removing the dependent app removed the dependency. ' }
     }
+    'java' {
+      # An older JRE is already installed; the new package sets MSI features, runs scripts and removes the older copy.
+      $old = Get-Installer $DependentUrl "$Name-old"
+      $app = Get-Installer $Url $Name
+      $summary.Type = $app.Inspection.InstallerType; $summary.Winget = $app.Winget; $summary.Registry = $app.Registry
+      $oldInstall = Start-Process msiexec.exe -ArgumentList "/i `"$($old.Path)`" /qn /norestart" -Wait -PassThru
+      $oldEntry = Find-ARPEntry -Target $old.Registry
+      Write-Host "Older JRE installed (exit $($oldInstall.ExitCode)): $($oldEntry.DisplayName) $($oldEntry.DisplayVersion)"
+      $markers = Join-Path $env:ProgramData 'ci-java'
+      [IO.Directory]::CreateDirectory($markers) | Out-Null
+      $hooks = @{}
+      foreach ($hook in @(@{ Key = 'PreInstallHookPath'; Name = 'pre' }, @{ Key = 'PostInstallHookPath'; Name = 'post' }, @{ Key = 'PostUninstallHookPath'; Name = 'uninstalled' })) {
+        $path = Join-Path $root "$($hook.Name).ps1"
+        Set-Content -LiteralPath $path -Value "Set-Content -LiteralPath '$markers\$($hook.Name).txt' -Value ([Environment]::GetEnvironmentVariable('JAVA_HOME', 'Machine'))"
+        $hooks[$hook.Key] = $path
+      }
+      $summary.Switch = 'ADDLOCAL=FeatureMain,FeatureEnvironment,FeatureJavaHome'
+      $outcome = Test-Package $app ($hooks + @{ SimplePkgTarget = 'psadt'; PSADTVersion = 'v4'; AllowDefer = $false; SilentArgs = $summary.Switch
+                                                RemoveOlderVersions = $true; DetectVersion = $app.Inspection.Version }) $true
+      $oldGone = -not (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+        Where-Object { $_.DisplayName -eq $oldEntry.DisplayName })
+      $javaHome = if (Test-Path "$markers\post.txt") { (Get-Content "$markers\post.txt" -Raw).Trim() } else { '' }
+      Write-Host "Older JRE removed: $oldGone; pre-install ran: $(Test-Path "$markers\pre.txt"); JAVA_HOME after install: '$javaHome'; post-uninstall ran: $(Test-Path "$markers\uninstalled.txt")"
+      if (-not $oldGone) { $summary.Detail += 'The older JRE is still installed. ' }
+      if (-not $javaHome) { $summary.Detail += 'JAVA_HOME was not set by the MSI feature. ' }
+      if (-not ((Test-Path "$markers\pre.txt") -and (Test-Path "$markers\uninstalled.txt"))) { $summary.Detail += 'A pre-install or post-uninstall script did not run. ' }
+      if ($outcome.Ok -and $oldGone -and $javaHome -and (Test-Path "$markers\pre.txt") -and (Test-Path "$markers\uninstalled.txt")) { $summary.Result = 'PASS'; $exitCode = 0 }
+    }
     default {
       $app = Get-Installer $Url $Name
       $summary.Type = "$($app.Inspection.InstallerType)$(if ($app.PerUser) { ' (per-user)' })"; $summary.Winget = $app.Winget; $summary.Switch = $app.Silent; $summary.Registry = $app.Registry

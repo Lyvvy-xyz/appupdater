@@ -60,7 +60,7 @@ try {
   $DeployHistoryMaxEvents = 500
   $AppMemoryFile = Join-Path $root 'app-memory.json'
   $AppMemoryMaxBuilds = 20
-  $AppMemorySettingKeys = @('AppID','DisplayName','RegistryName','SilentArgs','Mode','SimplePkgTarget','PSADTVersion','ProfileName','ProcessesToKill','AllowDefer','BundleFolder','PerUser','DownloadURL')
+  $AppMemorySettingKeys = @('AppID','DisplayName','RegistryName','SilentArgs','Mode','SimplePkgTarget','PSADTVersion','ProfileName','ProcessesToKill','AllowDefer','BundleFolder','PerUser','DownloadURL','PreInstallHookPath','PostInstallHookPath','PostUninstallHookPath','RemoveOlderVersions')
   Set-DeployStatus -AppID 'Example' -AppName "O'Brien & Sons" -Target 'intunewin' -OutputDir 'example'
   Set-DeployStatus -AppID 'Example' -MarkDeployed
   $store = Get-DeployStatusStore
@@ -144,7 +144,7 @@ try {
   Assert (Test-Path (Join-Path $runtime.OutputDir 'Deploy-Example.ps1')) 'Runtime build creates a deploy script'
   Assert (Test-Path $XmlFile) 'Runtime manifest is published after packaging'
   Assert (@(Get-ChildItem $OutputBase -Directory -Filter '.building-*' -Force).Count -eq 0) 'Successful builds remove their staging copies'
-  $script:packagedErrors = @(); $script:packagedUninstall = ''
+  $script:packagedErrors = @(); $script:packagedUninstall = ''; $script:packagedFiles = @{}
   function Start-Process {
     param($FilePath, $ArgumentList, [switch]$Wait, [switch]$PassThru, $WindowStyle)
     $destination = [regex]::Match($ArgumentList, '-o "([^"]+)"').Groups[1].Value
@@ -156,6 +156,7 @@ try {
       if ($syntax) { $script:packagedErrors += "$($packaged.Name): $syntax" }
       if ($packaged.Name -eq 'uninstall.ps1') { $script:packagedUninstall = $text }
       if ($packaged.Name -eq 'install.ps1') { $script:packagedInstall = $text }
+      if ($script:packagedFiles) { $script:packagedFiles[$packaged.Name] = $text }
     }
     [IO.File]::WriteAllText((Join-Path $destination ([IO.Path]::GetFileNameWithoutExtension($setup) + '.intunewin')), 'fixture artifact')
     return New-FakeProcess 0
@@ -209,6 +210,29 @@ try {
   $script:installedVersion = '2.0.0.0'; $current = (& $runDetect)[-1]
   Remove-Item Function:\Get-ItemProperty
   Assert ($older -eq 1 -and $current -eq 0) "Detection with a minimum version treats older copies as not installed (older $older, current $current)"
+  $preHook = Join-Path $root 'pre.ps1'; $postUninstall = Join-Path $root 'post-uninstall.ps1'
+  Set-Content -LiteralPath $preHook -Value 'Write-Host pre'; Set-Content -LiteralPath $postUninstall -Value 'Write-Host post'
+  $scripted = $versioned.Clone(); $scripted.DetectVersion = '2.0'; $scripted.RemoveOlderVersions = $true; $scripted.SimplePkgTarget = 'intunewin'
+  $scripted.PreInstallHookPath = $preHook; $scripted.PostUninstallHookPath = $postUninstall
+  $script:packagedErrors = @(); $script:packagedFiles = @{}
+  Invoke-HeadlessPackageBuild -Config $config -FormData $scripted -Profile @{} | Out-Null
+  Assert ($script:packagedErrors.Count -eq 0 -and @('PreInstall.ps1', 'PostUninstall.ps1', 'uninstall-app.ps1', 'remove-older.ps1', 'uninstall.ps1' | Where-Object { $script:packagedFiles.ContainsKey($_) }).Count -eq 5 -and
+          $script:packagedFiles['uninstall.ps1'].Contains("'PostUninstall.ps1'") -and $script:packagedFiles['install.ps1'].Contains("'remove-older.ps1', 'PreInstall.ps1'")) "Packages carry the pre-install, post-uninstall and remove-older scripts: $($script:packagedErrors -join '; ')"
+  $removeOlder = [scriptblock]::Create(($script:packagedFiles['remove-older.ps1'] -replace '\bexit ', 'return '))
+  $script:removed = @()
+  & {
+    function Start-Process { param($FilePath, $ArgumentList, [switch]$Wait, [switch]$PassThru, $WindowStyle) $script:removed += "$FilePath $ArgumentList"; New-FakeProcess 0 }
+    function Get-ItemProperty { @(
+      [pscustomobject]@{ PSChildName = '{11111111-1111-1111-1111-111111111111}'; DisplayName = 'Versioned App 1.5.3 (x64)'; DisplayVersion = '1.5.3'; UninstallString = 'MsiExec.exe /X{11111111-1111-1111-1111-111111111111}' }
+      [pscustomobject]@{ PSChildName = 'new'; DisplayName = 'Versioned App 2.0.1 (x64)'; DisplayVersion = '2.0.1'; QuietUninstallString = 'new.exe /S' }
+      [pscustomobject]@{ PSChildName = 'helper'; DisplayName = 'Versioned App Helper'; DisplayVersion = '1.0'; QuietUninstallString = 'helper.exe /S' }
+      [pscustomobject]@{ PSChildName = 'quiet'; DisplayName = 'Versioned App 1.2'; DisplayVersion = '1.2'; QuietUninstallString = 'old.exe /S' }
+      [pscustomobject]@{ PSChildName = 'loud'; DisplayName = 'Versioned App 1.1'; DisplayVersion = '1.1'; UninstallString = 'old11.exe' }) }
+    & $removeOlder | Out-Null
+  }
+  Assert (($script:removed -join '|') -eq 'msiexec.exe /x {11111111-1111-1111-1111-111111111111} /qn /norestart|cmd.exe /c old.exe /S') "Remove older versions removes only older copies of the same app, silently: $($script:removed -join '|')"
+  $scripted.DetectVersion = ''
+  Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $scripted -Profile @{} } 'Removing older versions without a minimum version is refused'
   $versioned.DetectVersion = 'latest'
   Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $versioned -Profile @{} } 'A minimum version that is not a number is refused'
   $configPath = Join-Path $root 'config.json'

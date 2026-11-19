@@ -49,6 +49,7 @@ jobs:
           - { app: notepadpp-psadt-v4, scenario: psadt-v4, url: 'https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.6.9/npp.8.6.9.Installer.x64.exe' }
           - { app: 7zip-runtime, scenario: runtime, url: 'https://www.7-zip.org/a/7z2408-x64.exe' }
           - { app: pdf-printer, scenario: printer, url: '' }
+          - { app: temurin-jre, scenario: java, url: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.13%2B11/OpenJDK17U-jre_x64_windows_hotspot_17.0.13_11.msi', url2: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jre_x64_windows_hotspot_17.0.12_7.msi' }
           - { app: deps-7zip-notepadpp, scenario: dependency, url: 'https://www.7-zip.org/a/7z2408-x64.exe', url2: 'https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.6.9/npp.8.6.9.Installer.x64.exe' }
     name: ${{ matrix.app }}
     steps:
