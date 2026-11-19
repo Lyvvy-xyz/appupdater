@@ -8,7 +8,7 @@ Builds deployment-ready packages from any `.exe` or `.msi` installer — and opt
 
 <br/>
 
-![Version](https://img.shields.io/badge/version-52.0.4-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-52.1.0-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-informational?style=flat-square&logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=flat-square&logo=powershell&logoColor=white)
 ![Intune](https://img.shields.io/badge/Microsoft-Intune-0078d4?style=flat-square&logo=microsoft&logoColor=white)
@@ -794,7 +794,7 @@ Console output on the build machine uses consistent prefixes:
 
 `tests/reliability.ps1` runs the regression suite under PowerShell 7 and Windows PowerShell 5.1. The **real-installs** workflow downloads real vendor installers (listed in `tests/apps.json`), packages them and installs, detects and uninstalls each one as SYSTEM on a clean Windows runner. Every push covers each app as a Simple package plus upgrade, per-user, Java, dependency, printer, PSADT and Runtime scenarios; the weekly run also packages every app as PSADT v3, PSADT v4 and Runtime.
 
-`click-test.ps1` smoke-tests the real app: it launches `host.ps1` with a Chrome DevTools Protocol port open, uses the page's own JS to open the Fleet, Client profiles, History and Worker screens, checks that each one asks the PowerShell side for its data, then closes the window and confirms the app exits.
+`click-test.ps1` drives the real app over the Chrome DevTools Protocol: it opens every screen, picks an installer, checks the build form in both modes and its guards, builds Simple and PSADT packages, runs a local install and uninstall as SYSTEM, re-packages a known app, triggers and overrides a pre-deploy block, answers the deployment feedback card and toggles settings. It saves a screenshot of each step, which the **click-test** workflow uploads as the `click-test-screenshots` artifact.
 
 ```powershell
 .\click-test.ps1          # test against the host.ps1 next to it
