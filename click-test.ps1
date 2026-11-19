@@ -224,9 +224,6 @@ $proc = Start-Process -FilePath 'powershell.exe' `
   }
   function Test-On([string]$Selector) { return [bool](Eval-Js "document.querySelector('$Selector').classList.contains('on')") }
   function Set-Toggle([string]$Selector, [bool]$On) {
-    # A settings reply still on its way would put the saved value back after the click.
-    Eval-Js "window.__msgs = []; send('get-settings', {})" | Out-Null
-    Wait-Js "window.__msgs.indexOf('settings-data') >= 0"
     if ((Test-On $Selector) -ne $On) {
       Eval-Js "window.__msgs = []" | Out-Null
       Invoke-Click $Selector
@@ -284,7 +281,7 @@ window.__errors = [];
 "@ | Out-Null
 
   Invoke-Flow 'Deploy feedback card' {
-    Wait-Js "document.getElementById('deploy-feedback').style.display !== 'none'" 30
+    Wait-Js "document.getElementById('deploy-feedback').style.display === 'block'" 30
     Assert ((Get-Text '#deploy-feedback-list') -like '*Feedback Sample*1.2.3*') 'Home asks about the app deployed before this launch'
     Save-Shot 'home-deploy-feedback' '#deploy-feedback'
     Invoke-Click "#deploy-feedback-list [data-feedback=$feedbackId][data-outcome=ok]"
@@ -319,8 +316,6 @@ window.__errors = [];
   Invoke-Flow 'NIST vulnerability check setting' {
     Invoke-Click '.nav-btn[data-go=worker]'
     Wait-Js "window.__msgs.indexOf('settings-data') >= 0"
-    Assert (-not (Test-Shown '#tgl-nvd')) 'The NIST check is hidden while online lookups are off'
-    Eval-Js "document.getElementById('nvd-row').style.display = 'flex'" | Out-Null
     Assert (Test-Shown '#tgl-nvd') 'Settings show the NIST vulnerability check toggle'
     Assert (-not (Eval-Js "document.getElementById('tgl-nvd').classList.contains('on')")) 'The NIST vulnerability check is off by default'
     Eval-Js "window.__msgs = []" | Out-Null
@@ -394,9 +389,7 @@ window.__errors = [];
 
       Invoke-Click '#segMode button[data-val=simple]'
       Assert (Test-Shown '#detectversion-wrap') 'Simple mode shows the minimum version for detection'
-      Assert (-not (Eval-Js "document.getElementById('advanced').open")) 'Advanced options start collapsed'
-      Invoke-Click '#advanced > summary'
-      Assert (Test-Shown '#scripts-wrap') 'Simple mode shows the scripts section under Advanced'
+      Assert (Test-Shown '#scripts-wrap') 'Simple mode shows the scripts section'
       foreach ($selector in '.tgl[data-val=RemoveOlderVersions]', '#f-prehook', '#f-posthook', '#f-postuninstallhook',
                             '[data-browse-script=f-prehook]', '[data-browse-script=f-posthook]', '[data-browse-script=f-postuninstallhook]') {
         Assert (Test-Shown $selector) "Simple mode shows $selector"
@@ -463,12 +456,12 @@ window.__errors = [];
       $testLog = Get-Text '#test-log'
       $passed = $testLog.Contains("$([char]0x2713) Done")
       Assert $passed "Local install and uninstall test succeeds$(if (-not $passed) { ': ' + $testLog })"
-      $fixLabel = [string](Eval-Js "(Array.from(document.querySelectorAll('#test-modal button')).find(function (b) { return /^Require version .+ or newer$/.test(b.textContent); }) || {}).textContent || ''")
+      $fixLabel = [string](Eval-Js "(Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return /^Require version .+ or newer$/.test(b.textContent); }) || {}).textContent || ''")
       Assert ($fixLabel -ne '') 'The test offers a minimum version for detection'
       Save-Shot 'test-modal-done'
       if ($fixLabel) {
         $script:suggestedVersion = $fixLabel -replace '^Require version (.+) or newer$', '$1'
-        Eval-Js "Array.from(document.querySelectorAll('#test-modal button')).find(function (b) { return /^Require version /.test(b.textContent); }).click()" | Out-Null
+        Eval-Js "Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return /^Require version /.test(b.textContent); }).click()" | Out-Null
         Assert ((Test-ScreenOn 'build') -and (Get-Value '#f-detectversion') -eq $script:suggestedVersion) "The suggestion returns to the build form with minimum version $($script:suggestedVersion)"
       }
     }
@@ -478,7 +471,7 @@ window.__errors = [];
       Write-Field '#f-appid' 'placeholder-id'
       Write-Field '#f-registryname' 'placeholder name'
       Select-TestInstaller
-      Assert ((Test-Shown '#known-banner') -and (Get-Text '#known-text') -like 'Packaged before*') "The 'packaged before' banner is shown"
+      Assert ((Get-Text '#inspect-chips') -like '*packaged before*') "The 'packaged before' chip is shown"
       Assert ((Get-Value '#f-appid') -eq $script:appId) 'App ID is restored from the last build'
       Assert ((Get-Value '#f-registryname') -eq $script:registryName) 'Registry name is restored from the last build'
       if ($script:suggestedVersion) {
@@ -571,9 +564,9 @@ window.__errors = [];
       Invoke-Click '#btn-build'
       Wait-Build 'Simple build with online lookups'
       # Either row proves the setting reached the build: NIST answered, or it was unreachable.
-      $nvdRow = [string](Eval-Js "Array.from(document.querySelectorAll('#done-findings-list li')).map(function (li) { return li.textContent; }).filter(function (t) { return /NVD/.test(t); }).join(' | ')")
-      Assert ($nvdRow -ne '') "The done screen lists an NVD finding$(if ($nvdRow) { ': ' + $nvdRow })"
-      Save-Shot 'done-nvd-check' '#done-findings'
+      $nvdRow = [string](Eval-Js "Array.from(document.querySelectorAll('#done-sheet .srow')).map(function (r) { return r.querySelector('.sk').textContent + ': ' + r.querySelector('.sv').textContent; }).filter(function (t) { return /^Check: .*NVD/.test(t); }).join(' | ')")
+      Assert ($nvdRow -ne '') "Done sheet has an NVD check row$(if ($nvdRow) { ': ' + $nvdRow })"
+      Save-Shot 'done-nvd-check' '#done-sheet'
     }
 
     Invoke-Flow 'winget contribution' {
@@ -600,17 +593,17 @@ window.__errors = [];
       Eval-Js "document.getElementById('test-also-uninstall').checked = true; document.getElementById('test-simulate-system').checked = true" | Out-Null
       Invoke-Click '#test-modal-start'
       Wait-Js "/\u2713 Done|\u2717 Failed/.test(document.getElementById('test-log').textContent)" 300
-      $contributeJs = "Array.from(document.querySelectorAll('#test-modal button')).find(function (b) { return b.textContent === 'Contribute what this test verified to winget'; })"
+      $contributeJs = "Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return b.textContent === 'Contribute what this test verified to winget'; })"
       $offered = [bool](Eval-Js "!!$contributeJs")
       Assert $offered "The passed test offers to contribute to winget$(if (-not $offered) { ': ' + (Get-Text '#test-log') })"
       if (-not $offered) { return }
       Eval-Js "window.__msgs = []; $contributeJs.click()" | Out-Null
       Wait-Js "window.__msgs.indexOf('winget-prepared') >= 0" 120
       # The submit button is never clicked: it would open a real pull request.
-      $prepared = [string](Eval-Js "document.getElementById('winget-submit') ? 'preview' : (/winget already has/.test(document.getElementById('test-summary').textContent) ? 'nothing to add' : '')")
+      $prepared = [string](Eval-Js "document.getElementById('winget-submit') ? 'preview' : (/winget already has/.test(document.getElementById('test-log').textContent) ? 'nothing to add' : '')")
       $log = Get-Text '#test-log'
       Assert ($prepared -ne '') "The winget contribution shows a pull request preview or says winget has the data: $(if ($prepared) { $prepared } else { $log.Substring([Math]::Max(0, $log.Length - 300)) })"
-      Save-Shot 'winget-contribution' '#test-summary'
+      Save-Shot 'winget-contribution' '#test-log'
       Invoke-Click '#test-modal-close'
     }
 
@@ -641,7 +634,7 @@ window.__errors = [];
       Save-Shot 'predeploy-blocked'
       Invoke-Click '#preflight-override'
       Wait-Build "'Build anyway'"
-      Assert ((Get-Text '#done-findings') -like '*Built anyway*') 'The done screen lists the overridden findings'
+      Assert ((Get-Text '#done-sheet') -like '*Check overridden*') "Done sheet has a 'Check overridden' row"
       Save-Shot 'done-check-overridden' '#done-sheet'
     }
   }
@@ -675,7 +668,7 @@ window.__errors = [];
     Invoke-Click '#segKind button[data-val=app]'
     Clear-AppFields
     Select-TestInstaller $portableZip
-    Assert ((Get-Text '#inspect-chips') -like '*Portable app*' -and (Eval-Js "Array.from(document.querySelectorAll('#inspect-chips .chip')).filter(function (c) { return c.textContent.indexOf('Portable app') >= 0; }).map(function (c) { return c.dataset.detail; }).join('')") -like '*Tool\tool.exe*') "The zip shows the 'Portable app' tag with its program"
+    Assert ((Get-Text '#inspect-chips') -like '*portable app: Tool\tool.exe*') "The zip shows the 'portable app' chip"
     Invoke-Click '#segMode button[data-val=simple]'
     Invoke-Click '#segTarget button[data-val=psadt]'
     Test-BuildGuard 'Simple .intunewin only' 'A zip with the PSADT target'
@@ -691,7 +684,7 @@ window.__errors = [];
     Invoke-Click '.nav-btn[data-go=build]'
     Clear-AppFields
     Select-TestInstaller $msixFile
-    Assert ((Get-Text '#inspect-chips') -like '*MSIX*All users*') 'The MSIX shows its provisioning tag'
+    Assert ((Get-Text '#inspect-chips') -like '*MSIX*provisioned for every user*') 'The MSIX shows its provisioning chip'
     Invoke-Click '#segMode button[data-val=simple]'
     Invoke-Click '#segTarget button[data-val=intunewin]'
     Assert (-not (Test-Shown '#detectversion-wrap')) 'MSIX hides the minimum version for detection'

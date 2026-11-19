@@ -18,8 +18,11 @@ $__UiHtml = @'
   --ink:#E4E6F2; --dim:#6C6F8E; --faint:#3D4060;
   --signal:#5EA2FF; --signal-2:#8B7CFF;
   --ok:#4ADE9B; --warn:#FFB454; --bad:#FF6B6B;
-  --ok-tint-bd:rgba(74,222,155,.3); --ok-tint-bg:rgba(74,222,155,.07);
-  --warn-tint-bd:rgba(255,180,84,.3); --warn-tint-bg:rgba(255,180,84,.07);
+  /* Channel values of the accent and status colours, for their translucent tints. */
+  --signal-rgb:94,162,255; --signal-2-rgb:139,124,255; --ok-rgb:74,222,155; --warn-rgb:255,180,84; --bad-rgb:255,90,90;
+  --on-accent:#0A0B14;
+  --ok-tint-bd:rgba(var(--ok-rgb),.3); --ok-tint-bg:rgba(var(--ok-rgb),.07);
+  --warn-tint-bd:rgba(var(--warn-rgb),.3); --warn-tint-bg:rgba(var(--warn-rgb),.07);
   --grad:linear-gradient(135deg,var(--signal),var(--signal-2));
   --r:10px; --r-sm:7px;
   --ease:cubic-bezier(.2,.8,.2,1);
@@ -29,15 +32,15 @@ $__UiHtml = @'
 html,body{height:100%}
 body{background:var(--void);color:var(--ink);font-family:var(--font-b);font-size:13.5px;line-height:1.5;overflow:hidden}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;
-  background:radial-gradient(600px 400px at 12% -8%, rgba(94,162,255,.055), transparent 60%),
-             radial-gradient(700px 500px at 105% 110%, rgba(139,124,255,.05), transparent 60%)}
-::selection{background:rgba(94,162,255,.28)}
+  background:radial-gradient(600px 400px at 12% -8%, rgba(var(--signal-rgb),.055), transparent 60%),
+             radial-gradient(700px 500px at 105% 110%, rgba(var(--signal-2-rgb),.05), transparent 60%)}
+::selection{background:rgba(var(--signal-rgb),.28)}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 input,textarea,select{font:inherit;color:inherit}
 
 .app{display:grid;grid-template-columns:64px 1fr;grid-template-rows:calc(100vh - 6px);height:calc(100vh - 6px)}
 .rail{border-right:1px solid var(--edge);background:rgba(13,14,26,.6);display:flex;flex-direction:column;align-items:center;padding:14px 0 20px;gap:6px;z-index:5}
-.logo{width:36px;height:36px;border-radius:9px;background:var(--grad);display:grid;place-items:center;margin-bottom:14px;box-shadow:0 0 24px rgba(94,162,255,.35);cursor:pointer}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--grad);display:grid;place-items:center;margin-bottom:14px;box-shadow:0 0 24px rgba(var(--signal-rgb),.35);cursor:pointer}
 .logo svg{transition:none}
 .logo.spin svg{animation:logospin .6s cubic-bezier(.3,.1,.3,1)}
 @keyframes logospin{to{transform:rotate(360deg)}}
@@ -62,15 +65,19 @@ input,textarea,select{font:inherit;color:inherit}
 
 .pipe{display:flex;align-items:center;gap:0;margin-left:auto}
 .pnode{display:flex;align-items:center}
+.pnode[data-pipe-step]{cursor:pointer}
+.card.pulse{animation:pulse 1s var(--ease)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(var(--signal-rgb),.55)}100%{box-shadow:0 0 0 14px rgba(var(--signal-rgb),0)}}
+@media (prefers-reduced-motion:reduce){.card.pulse{animation:none}}
 .pdot{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--edge-hi);display:grid;place-items:center;
   font-family:var(--font-m);font-size:10px;color:var(--faint);position:relative;background:var(--panel);
   transition:border-color .4s var(--ease),color .4s var(--ease),box-shadow .4s var(--ease)}
 .pdot .tick{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transform:scale(.4);transition:opacity .3s var(--ease),transform .35s var(--ease)}
-.pdot .tick svg{width:11px;height:11px;stroke:#0A0B14;stroke-width:3;fill:none}
-.pnode.done .pdot{background:var(--grad);border-color:transparent;color:transparent;box-shadow:0 0 14px rgba(94,162,255,.35)}
+.pdot .tick svg{width:11px;height:11px;stroke:var(--on-accent);stroke-width:3;fill:none}
+.pnode.done .pdot{background:var(--grad);border-color:transparent;color:transparent;box-shadow:0 0 14px rgba(var(--signal-rgb),.35)}
 .pnode.done .pdot .tick{opacity:1;transform:scale(1)}
 .pnode.live .pdot{border-color:var(--signal);color:var(--signal);animation:livepulse 1.6s var(--ease) infinite}
-@keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(94,162,255,.35)}50%{box-shadow:0 0 0 6px rgba(94,162,255,0)}}
+@keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--signal-rgb),.35)}50%{box-shadow:0 0 0 6px rgba(var(--signal-rgb),0)}}
 .plabel{font-size:10px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;margin-left:7px;transition:color .4s var(--ease)}
 .pnode.done .plabel,.pnode.live .plabel{color:var(--dim)}
 .pnode.live .plabel{color:var(--signal)}
@@ -121,9 +128,9 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 
 .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);transition:border-color .2s var(--ease)}
 .card:hover{border-color:var(--edge-hi)}
-.build-cta{position:relative;border-color:rgba(94,162,255,.35);background:linear-gradient(180deg,rgba(94,162,255,.06),rgba(139,124,255,.03));
+.build-cta{position:relative;border-color:rgba(var(--signal-rgb),.35);background:linear-gradient(180deg,rgba(var(--signal-rgb),.06),rgba(var(--signal-2-rgb),.03));
   transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease)}
-.build-cta:hover{border-color:var(--signal);transform:translateY(-2px);box-shadow:0 10px 30px rgba(94,162,255,.18)}
+.build-cta:hover{border-color:var(--signal);transform:translateY(-2px);box-shadow:0 10px 30px rgba(var(--signal-rgb),.18)}
 .build-cta:hover .build-cta-arrow{transform:translateX(3px)}
 .build-cta-arrow{transition:transform .18s var(--ease)}
 .card-h{padding:14px 18px 0}
@@ -134,7 +141,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 .field{width:100%;background:var(--panel-2);border:1px solid var(--edge);border-radius:var(--r-sm);
   padding:9px 12px;font-size:12.5px;outline:none;transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
 .field:hover{border-color:var(--edge-hi)}
-.field:focus{border-color:var(--signal);box-shadow:0 0 0 3px rgba(94,162,255,.16),0 0 18px rgba(94,162,255,.10)}
+.field:focus{border-color:var(--signal);box-shadow:0 0 0 3px rgba(var(--signal-rgb),.16),0 0 18px rgba(var(--signal-rgb),.10)}
 .field.mono{font-family:var(--font-m);font-size:11.5px}
 .hint{font-size:10.5px;color:var(--faint);margin-top:5px}
 .row{display:grid;gap:14px}
@@ -145,8 +152,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
   background:var(--panel-2);border:1px solid var(--edge);color:var(--dim);font-size:12.5px;font-weight:500;transition:all .16s var(--ease)}
 .btn:hover{color:var(--ink);border-color:var(--edge-hi);transform:translateY(-1px)}
 .btn:active{transform:translateY(0) scale(.98)}
-.btn.primary{background:var(--grad);border:none;color:#0A0B14;font-weight:600;box-shadow:0 2px 14px rgba(94,162,255,.25)}
-.btn.primary:hover{box-shadow:0 4px 22px rgba(94,162,255,.4);filter:brightness(1.06)}
+.btn.primary{background:var(--grad);border:none;color:var(--on-accent);font-weight:600;box-shadow:0 2px 14px rgba(var(--signal-rgb),.25)}
+.btn.primary:hover{box-shadow:0 4px 22px rgba(var(--signal-rgb),.4);filter:brightness(1.06)}
 .btn.big{padding:12px 26px;font-size:13.5px;border-radius:9px}
 .btn.ghost{background:transparent}
 .btn.danger{background:transparent;border-color:#4a1a1a;color:#cc6666}
@@ -158,11 +165,11 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 .seg button.on{color:var(--ink)}
 .seg .thumb{position:absolute;top:3px;bottom:3px;border-radius:6px;background:var(--void);border:1px solid var(--edge-hi);
   box-shadow:0 1px 6px rgba(0,0,0,.4);transition:left .22s var(--ease),width .22s var(--ease)}
-.seg.accent .thumb{background:linear-gradient(135deg,rgba(94,162,255,.16),rgba(139,124,255,.16));border-color:rgba(94,162,255,.4)}
+.seg.accent .thumb{background:linear-gradient(135deg,rgba(var(--signal-rgb),.16),rgba(var(--signal-2-rgb),.16));border-color:rgba(var(--signal-rgb),.4)}
 .seg.accent button.on{color:var(--signal)}
 
 .drop{border:1.5px dashed var(--edge-hi);border-radius:var(--r);padding:30px 20px;text-align:center;transition:all .2s var(--ease);cursor:pointer;position:relative;overflow:hidden}
-.drop:hover{border-color:var(--signal);background:rgba(94,162,255,.035)}
+.drop:hover{border-color:var(--signal);background:rgba(var(--signal-rgb),.035)}
 .drop:hover .drop-ico{transform:translateY(-3px);color:var(--signal)}
 .drop-ico{color:var(--faint);transition:all .25s var(--ease);margin-bottom:8px}
 .drop-ico svg{width:30px;height:30px}
@@ -180,36 +187,11 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 .chip-pop{position:fixed;z-index:60;max-width:330px;padding:10px 12px;border-radius:var(--r-sm);background:var(--panel);border:1px solid var(--edge);
   box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12px;line-height:1.5;color:var(--ink)}
 .chip-pop .btn{margin-top:8px}
-.done-findings{margin-top:20px;text-align:left;padding:12px 16px;border-radius:var(--r-sm);background:var(--warn-tint-bg);border:1px solid var(--warn-tint-bd);font-size:12.5px}
-.done-findings ul{margin:6px 0 0;padding-left:18px;line-height:1.55} .done-findings li.red{color:var(--bad)}
-.tglrow.sub{margin-left:22px;padding-left:12px;border-left:2px solid var(--edge)}
-.feedback-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px}
-.feedback-banner .fb-item{display:flex;align-items:center;gap:6px}
-.test-summary{margin:0 22px 12px;padding:12px 14px;border-radius:var(--r-sm);border:1px solid var(--edge);background:var(--panel-2)}
-.test-summary.ok{border-color:rgba(74,222,155,.35)} .test-summary.bad{border-color:rgba(255,107,107,.4)}
-#test-result{font-size:13px;font-weight:600} .test-summary.ok #test-result{color:var(--ok)} .test-summary.bad #test-result{color:var(--bad)}
-.test-fixes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px} .test-fixes:empty{display:none}
-.test-fixes>div{flex-basis:100%}
-.test-log-wrap{margin:0 22px;flex:1;min-height:0;display:flex;flex-direction:column}
-.test-log-wrap>summary{cursor:pointer;font-size:11.5px;color:var(--dim);margin-bottom:6px}
-.known-banner{display:flex;align-items:center;gap:10px;margin-top:10px;padding:8px 10px;border-radius:var(--r-sm);font-size:12px;
-  background:rgba(74,222,155,.08);border:1px solid rgba(74,222,155,.3)}
-.known-banner.warn{background:var(--warn-tint-bg);border-color:var(--warn-tint-bd)}
-.known-banner span{flex:1;min-width:0}
-.build-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;align-items:start;padding-bottom:8px}
-.build-col{display:grid;gap:14px;min-width:0}
-.detect-line{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12.5px}
-.detect-line #detect-text{font-family:var(--font-m);color:var(--ink)}
-details.advanced>summary{list-style:none;cursor:pointer}
-details.advanced>summary::-webkit-details-marker{display:none}
-details.advanced>summary .card-t::after{content:'\25B8';margin-left:8px;color:var(--dim);display:inline-block;transition:transform .2s var(--ease)}
-details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
-.adv-count{font-family:var(--font-m);font-size:10.5px;color:var(--signal);margin-left:6px}
 
 .tgl{position:relative;width:36px;height:20px;border-radius:20px;background:var(--panel-2);border:1px solid var(--edge);transition:all .2s var(--ease);flex-shrink:0}
 .tgl::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--dim);transition:all .22s var(--ease)}
-.tgl.on{background:rgba(94,162,255,.2);border-color:rgba(94,162,255,.5)}
-.tgl.on::after{left:18px;background:var(--signal);box-shadow:0 0 8px rgba(94,162,255,.6)}
+.tgl.on{background:rgba(var(--signal-rgb),.2);border-color:rgba(var(--signal-rgb),.5)}
+.tgl.on::after{left:18px;background:var(--signal);box-shadow:0 0 8px rgba(var(--signal-rgb),.6)}
 .tgl:disabled{opacity:.4;cursor:not-allowed}
 .tglrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0}
 .tglrow + .tglrow{border-top:1px solid var(--edge)}
@@ -225,7 +207,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 .fleet th{font-family:var(--font-m);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:left;padding:0 14px 10px;font-weight:400}
 .fleet td{padding:13px 14px;border-top:1px solid var(--edge);font-size:12.5px}
 .fleet tr.r{transition:background .15s var(--ease)}
-.fleet tr.r:hover{background:rgba(94,162,255,.04)}
+.fleet tr.r:hover{background:rgba(var(--signal-rgb),.04)}
 .fleet .mono{font-family:var(--font-m);font-size:11px;color:var(--dim)}
 .badge{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:10.5px;font-family:var(--font-m);padding:3px 10px;border-radius:20px;border:1px solid}
 .badge.ok{color:var(--ok);border-color:var(--ok-tint-bd);background:var(--ok-tint-bg)}
@@ -235,7 +217,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 .phase{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--edge);color:var(--faint);transition:color .3s var(--ease)}
 .phase:last-child{border-bottom:none}
 .phase .pi{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--edge-hi);display:grid;place-items:center;flex-shrink:0;transition:all .3s var(--ease)}
-.phase .pi svg{width:9px;height:9px;stroke:#0A0B14;stroke-width:3.5;fill:none;opacity:0;transform:scale(.4);transition:all .25s var(--ease)}
+.phase .pi svg{width:9px;height:9px;stroke:var(--on-accent);stroke-width:3.5;fill:none;opacity:0;transform:scale(.4);transition:all .25s var(--ease)}
 .phase.doing{color:var(--ink)}
 .phase.doing .pi{border-color:var(--signal)}
 .phase.doing .pi::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--signal);animation:livepulse 1.4s infinite}
@@ -268,7 +250,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 .sheet .sv{color:var(--ink);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sheet .sv.wrap{white-space:normal;line-height:1.45}
 .copybtn{color:var(--faint);padding:4px;border-radius:5px;transition:all .15s var(--ease);flex-shrink:0}
-.copybtn:hover{color:var(--signal);background:rgba(94,162,255,.1)}
+.copybtn:hover{color:var(--signal);background:rgba(var(--signal-rgb),.1)}
 .copybtn svg{width:13px;height:13px;display:block}
 
 .toasts{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:10px;z-index:100}
@@ -293,7 +275,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 #bp-disclosure svg{width:12px;height:12px;transition:transform .15s var(--ease);flex-shrink:0}
 #bp-disclosure.open svg{transform:rotate(90deg)}
 #bp-disclosure.tour-click-sim{animation:tourClickSim .42s var(--ease)}
-@keyframes tourClickSim{0%{box-shadow:0 0 0 0 rgba(94,162,255,.55)}30%{transform:scale(.96);box-shadow:0 0 0 6px rgba(94,162,255,.28)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(94,162,255,0)}}
+@keyframes tourClickSim{0%{box-shadow:0 0 0 0 rgba(var(--signal-rgb),.55)}30%{transform:scale(.96);box-shadow:0 0 0 6px rgba(var(--signal-rgb),.28)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(var(--signal-rgb),0)}}
 </style>
 </head>
 <body>
@@ -302,7 +284,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 
 <div class="app">
   <nav class="rail">
-    <div class="logo" title="AppUpdater"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#0A0B14" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5.2M20 12a8 8 0 0 1-14 5.2"/><path d="M17.5 4.5v3h-3M6.5 19.5v-3h3"/></svg></div>
+    <div class="logo" title="AppUpdater"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" style="stroke:var(--on-accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5.2M20 12a8 8 0 0 1-14 5.2"/><path d="M17.5 4.5v3h-3M6.5 19.5v-3h3"/></svg></div>
     <button class="nav-btn on" data-go="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span class="nav-tip">Home</span></button>
     <button class="nav-btn" data-go="build"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7l8.7 5 8.7-5M12 22V12"/></svg><span class="nav-tip">Package builder</span></button>
     <button class="nav-btn" data-go="fleet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="7" height="7" rx="1.3"/><path d="M13 5h8M13 8.5h8M3 15h18M3 18.5h12"/></svg><span class="nav-tip">App fleet</span></button>
@@ -332,7 +314,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 
       <!-- ========== HOME ========== -->
       <section class="screen on" data-screen="home" id="screen-home">
-        <div style="max-width:980px;margin:0 auto;padding-bottom:20px">
+        <div style="max-width:1240px;margin:0 auto;padding-bottom:20px">
           <div class="rise" style="margin:20px 0 16px">
             <div class="eyebrow">packaging console</div>
             <h1 style="font-family:var(--font-d);font-weight:700;font-size:28px;letter-spacing:-.01em;margin-top:4px">Good afternoon.</h1>
@@ -369,7 +351,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
             <div id="getting-started-list"></div>
           </div>
 
-          <div class="card rise" id="release-banner" style="display:none;padding:12px 16px;margin-bottom:14px;border-color:rgba(94,162,255,.3);background:rgba(94,162,255,.06);align-items:center;gap:10px">
+          <div class="card rise" id="release-banner" style="display:none;padding:12px 16px;margin-bottom:14px;border-color:rgba(var(--signal-rgb),.3);background:rgba(var(--signal-rgb),.06);align-items:center;gap:10px">
             <span style="font-family:var(--font-m);font-size:12px;color:var(--signal);flex:1" id="release-banner-text"></span>
             <button class="btn sm" id="release-banner-github">View</button>
             <button class="btn ghost sm" id="release-banner-dismiss">Dismiss</button>
@@ -423,15 +405,10 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
             </div>
           </div>
 
-          <div class="card feedback-banner" id="deploy-feedback" style="display:none">
-            <b>Did these install correctly on devices?</b>
-            <div id="deploy-feedback-list" style="display:flex;gap:14px;flex-wrap:wrap"></div>
-          </div>
-
           <div class="card rise build-cta" id="home-build-cta" style="cursor:pointer" data-go="build" role="button" tabindex="0">
             <div class="card-b" style="display:flex;align-items:center;gap:18px;padding:22px 24px">
-              <div style="width:58px;height:58px;border-radius:14px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 30px rgba(94,162,255,.45)">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#0A0B14" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              <div style="width:58px;height:58px;border-radius:14px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 30px rgba(var(--signal-rgb),.45)">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" style="stroke:var(--on-accent)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
               </div>
               <div>
                 <div class="eyebrow">start here</div>
@@ -452,6 +429,10 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
                 <p class="hint" style="margin:0">Nothing yet - build, deploy, or remove an app to see activity here.</p>
               </div>
             </div>
+            <div class="card" id="deploy-feedback" style="display:none;margin-bottom:16px">
+              <div class="card-h"><div class="eyebrow">since last time</div><div class="card-t">Did these install correctly on devices?</div></div>
+              <div class="card-b" style="padding-top:10px" id="deploy-feedback-list"></div>
+            </div>
             <div class="card">
               <div class="card-h" style="display:flex;align-items:baseline;justify-content:space-between">
                 <div><div class="eyebrow">fleet</div><div class="card-t">Tracked in local manifest</div></div>
@@ -467,8 +448,9 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 
       <!-- ========== BUILDER ========== -->
       <section class="screen" data-screen="build" id="screen-build">
-        <div class="build-grid">
-            <div class="build-col">
+        <div style="max-width:1240px;margin:0 auto;padding-bottom:8px">
+          <div style="display:grid;grid-template-columns:1fr 1.15fr;gap:12px;align-items:start">
+            <div style="display:grid;gap:12px">
               <div class="card rise">
                 <div class="card-h" style="padding-top:11px"><div class="eyebrow">00 &middot; kind</div><div class="card-t">What are you packaging?</div></div>
                 <div class="card-b" style="padding-top:12px;padding-bottom:14px">
@@ -481,8 +463,8 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
                 </div>
               </div>
 
-              <div class="card rise" id="app-source-card">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">01 &middot; source</div><div class="card-t">Installer</div></div>
+              <div class="card rise" id="app-source-card" data-pipe="0">
+                <div class="card-h" style="padding-top:11px"><div class="eyebrow">1 &middot; source</div><div class="card-t">Installer</div></div>
                 <div class="card-b" style="padding-top:12px;padding-bottom:14px">
                   <div class="drop" id="drop">
                     <div class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
@@ -499,16 +481,19 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
                       <button class="btn ghost" style="padding:5px 9px;font-size:11px" id="reDrop">Change</button>
                     </div>
                     <div class="chips" id="inspect-chips"></div>
-                    <div class="known-banner" id="known-banner" hidden>
-                      <span id="known-text"></span>
-                      <button type="button" class="btn ghost sm" id="known-undo">Undo</button>
-                    </div>
+                    <label class="lbl" for="f-silentargs" style="margin-top:10px">Silent install switch</label>
+                    <input class="field mono" id="f-silentargs" placeholder="e.g. /S or /quiet /norestart">
+                    <div class="hint">Pre-filled for recognised installers. <span class="mono">{pkg}</span> is replaced with the installer's folder, e.g. <span class="mono">/s /f1"{pkg}\setup.iss"</span> (Simple packages only).</div>
+                    <div class="tglrow"><div><b>Bundle the whole folder</b><small id="bundle-hint">Include every file next to the installer (Simple packages only)</small></div><button class="tgl" data-val="BundleFolder"></button></div>
                   </div>
+                  <label class="lbl" for="f-download-url" style="margin-top:10px">Runtime installer URL</label>
+                  <input class="field" id="f-download-url" type="url" placeholder="https://vendor.example/installer.exe">
+                  <div class="hint">Required for Runtime packages so devices can download the installer. Simple packages bundle the selected file.</div>
                 </div>
               </div>
 
               <div class="card rise" id="printer-source-card" style="display:none">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">01 &middot; source</div><div class="card-t">Printer &amp; driver</div></div>
+                <div class="card-h" style="padding-top:11px"><div class="eyebrow">1 &middot; source</div><div class="card-t">Printer &amp; driver</div></div>
                 <div class="card-b" style="padding-top:12px;padding-bottom:14px">
                   <label class="lbl">Printer name</label>
                   <input class="field" id="f-printername" placeholder="Finance-3F-HP4200">
@@ -568,10 +553,9 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
                   <div class="hint">Detection checks the printer actually exists with this driver and port, not just that it once ran.</div>
                 </div>
               </div>
-            </div>
-            <div class="build-col">
+
               <div class="card rise">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">identity</div><div class="card-t">How Intune sees it</div></div>
+                <div class="card-h" style="padding-top:11px"><div class="eyebrow">2 &middot; identity</div><div class="card-t">How Intune sees it</div></div>
                 <div class="card-b" style="padding-top:12px;padding-bottom:14px">
                   <label class="lbl">Display name</label>
                   <input class="field" id="f-displayname">
@@ -579,24 +563,42 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
                     <div><label class="lbl">App ID</label><input class="field mono" id="f-appid"></div>
                     <div><label class="lbl">Registry display name</label><input class="field mono" id="f-registryname"></div>
                   </div>
-                  <div class="hint">Must match Add/Remove Programs exactly; a local test suggests the right name.</div>
-                  <div class="detect-line" id="detectversion-wrap">
-                    <span class="lbl" style="margin:0">Detection</span>
-                    <span id="detect-text">any version</span>
-                    <button type="button" class="btn ghost sm" id="detect-change">Change</button>
+                  <div class="hint">Registry name must match Add/Remove Programs exactly — used for detection.</div>
+                  <div id="detectversion-wrap" style="margin-top:10px"><label class="lbl">Minimum version for detection</label><input class="field mono" id="f-detectversion" placeholder="any version">
+                  <div class="hint">Older copies count as not installed, so Intune upgrades them. A local test reads the version the app registers.</div></div>
+                </div>
+              </div>
+
+              <div class="card rise">
+                <div class="card-h" style="padding-top:11px"><div class="eyebrow">3 &middot; configure</div><div class="card-t">On the endpoint</div></div>
+                <div class="card-b" style="padding-top:10px;padding-bottom:12px">
+                  <div class="tglrow"><div><b>Close blocking apps</b><small id="close-apps-hint">Detected process to close on install</small></div><button class="tgl on" data-val="closeAppsOn"></button></div>
+                  <div class="tglrow"><div><b>Allow deferral</b><small>Users may postpone 3 times</small></div><button class="tgl on" data-val="allowDefer"></button></div>
+                  <div id="scripts-wrap">
+                    <div class="tglrow"><div><b>Remove older versions first</b><small>For apps that install side by side, such as Java. Needs the minimum version above.</small></div><button class="tgl" data-val="RemoveOlderVersions"></button></div>
+                    <label class="lbl" style="margin-top:8px">Scripts (PowerShell, run as the install account)</label>
+                    <div class="hint" style="margin-top:0">Configuration the installer cannot do: settings files, environment variables, disabling an updater.</div>
+                    <div style="display:grid;gap:6px;margin-top:6px">
+                      <div style="display:flex;gap:6px"><input class="field mono" id="f-prehook" placeholder="Before install - optional"><button class="btn sm" data-browse-script="f-prehook">Browse</button></div>
+                      <div style="display:flex;gap:6px"><input class="field mono" id="f-posthook" placeholder="After install - optional"><button class="btn sm" data-browse-script="f-posthook">Browse</button></div>
+                      <div style="display:flex;gap:6px"><input class="field mono" id="f-postuninstallhook" placeholder="After uninstall - optional"><button class="btn sm" data-browse-script="f-postuninstallhook">Browse</button></div>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div style="display:grid;gap:12px">
               <div class="card rise">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">package type</div><div class="card-t">Wrap &amp; behaviour</div></div>
+                <div class="card-h" style="padding-top:11px"><div class="eyebrow">4 &middot; wrap</div><div class="card-t">Wrap &amp; behaviour</div></div>
                 <div class="card-b" style="padding-top:12px;padding-bottom:14px">
-                  <div id="mode-explainer" style="display:none;margin-bottom:10px;padding:10px;border:1px solid var(--signal);border-radius:var(--r-sm);background:rgba(94,162,255,.08)">
+                  <div id="mode-explainer" style="display:none;margin-bottom:10px;padding:10px;border:1px solid var(--signal);border-radius:var(--r-sm);background:rgba(var(--signal-rgb),.08)">
                     <div style="font-size:12.5px;line-height:1.6" id="mode-explainer-text"></div>
                     <button type="button" class="btn ghost sm" id="mode-explainer-dismiss" style="margin-top:8px">Got it, stop guiding me</button>
                   </div>
                   <div style="display:flex;align-items:center;gap:8px">
                     <label class="lbl" style="margin:0">Package mode</label>
-                    <button type="button" class="btn sm" id="mode-explainer-toggle" style="padding:3px 10px;font-size:11px;color:var(--signal);border:1px solid var(--signal);border-radius:20px;background:rgba(94,162,255,.1)">&#9432; What's this?</button>
+                    <button type="button" class="btn sm" id="mode-explainer-toggle" style="padding:3px 10px;font-size:11px;color:var(--signal);border:1px solid var(--signal);border-radius:20px;background:rgba(var(--signal-rgb),.1)">&#9432; What's this?</button>
                   </div>
                   <div class="seg" id="segMode">
                     <div class="thumb"></div>
@@ -700,47 +702,9 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div class="build-col">
-              <div class="card rise" id="endpoint-card">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">on the endpoint</div><div class="card-t">Install behaviour</div></div>
-                <div class="card-b" style="padding-top:10px;padding-bottom:12px">
-                  <div id="runtime-url-wrap">
-                    <label class="lbl" for="f-download-url">Installer download URL</label>
-                    <input class="field" id="f-download-url" type="url" placeholder="https://vendor.example/installer.exe">
-                    <div class="hint">Devices download the installer from here when an update is due.</div>
-                  </div>
-                  <div class="tglrow" id="close-apps-row"><div><b>Close blocking apps</b><small id="close-apps-hint">Detected process to close on install</small></div><button class="tgl on" data-val="closeAppsOn"></button></div>
-                  <div class="tglrow" id="defer-row"><div><b>Allow deferral</b><small>Users may postpone 3 times; turn off when this app is a dependency</small></div><button class="tgl on" data-val="allowDefer"></button></div>
-                </div>
-              </div>
-
-              <details class="card rise advanced" id="advanced">
-                <summary class="card-h"><div class="eyebrow">optional</div><div class="card-t">Advanced <span class="adv-count" id="adv-count"></span></div></summary>
-                <div class="card-b" style="padding-top:6px;padding-bottom:14px">
-                  <label class="lbl" for="f-silentargs">Silent install switch</label>
-                  <input class="field mono" id="f-silentargs" placeholder="e.g. /S or /quiet /norestart">
-                  <div class="hint"><span class="mono">{pkg}</span> stands for the installer's folder, e.g. <span class="mono">/s /f1"{pkg}\setup.iss"</span></div>
-                  <div class="tglrow"><div><b>Bundle the whole folder</b><small id="bundle-hint">Include every file next to the installer</small></div><button class="tgl" data-val="BundleFolder"></button></div>
-                  <div id="detectversion-field">
-                    <label class="lbl" for="f-detectversion" style="margin-top:10px">Minimum version for detection</label>
-                    <input class="field mono" id="f-detectversion" placeholder="any version">
-                    <div class="hint">Older copies count as not installed, so Intune upgrades them.</div>
-                  </div>
-                  <div id="scripts-wrap">
-                    <div class="tglrow"><div><b>Remove older versions first</b><small>For apps that install side by side, such as Java</small></div><button class="tgl" data-val="RemoveOlderVersions"></button></div>
-                    <label class="lbl" style="margin-top:10px">Scripts</label>
-                    <div class="hint" style="margin-top:0">PowerShell, run as the install account, for what the installer cannot set.</div>
-                    <div style="display:grid;gap:6px;margin-top:6px">
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-prehook" placeholder="Before install"><button class="btn sm" data-browse-script="f-prehook">Browse</button></div>
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-posthook" placeholder="After install"><button class="btn sm" data-browse-script="f-posthook">Browse</button></div>
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-postuninstallhook" placeholder="After uninstall"><button class="btn sm" data-browse-script="f-postuninstallhook">Browse</button></div>
-                    </div>
-                  </div>
-                </div>
-              </details>
             </div>
+          </div>
         </div>
       </section>
 
@@ -752,12 +716,12 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
             <h2 style="font-family:var(--font-d);font-weight:600;font-size:21px;margin-top:4px" id="progress-title">Package</h2>
             <div class="pbar" style="max-width:420px;margin:16px auto 0"><i id="progress-bar"></i></div>
           </div>
-          <div id="progress-error" class="rise" style="display:none;margin-bottom:16px;padding:14px 16px;border-radius:var(--r);background:rgba(255,90,90,.08);border:1px solid rgba(255,90,90,.35)">
+          <div id="progress-error" class="rise" style="display:none;margin-bottom:16px;padding:14px 16px;border-radius:var(--r);background:rgba(var(--bad-rgb),.08);border:1px solid rgba(var(--bad-rgb),.35)">
             <div style="font-weight:600;font-size:13.5px;color:var(--bad)" id="progress-error-title">Build failed</div>
             <div id="progress-error-msg" style="font-size:12.5px;color:var(--dim);margin-top:4px;line-height:1.5"></div>
             <button class="btn ghost sm" id="progress-error-back" style="margin-top:10px">Back to Build</button>
           </div>
-          <div style="display:grid;grid-template-columns:260px 1fr;gap:16px" class="rise" id="progress-body">
+          <div style="display:grid;grid-template-columns:260px 1fr;gap:16px" class="rise">
             <div class="card"><div class="card-b" style="padding-top:12px" id="step-list"></div></div>
             <div class="log" id="log"></div>
           </div>
@@ -766,28 +730,29 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 
       <!-- ========== DONE ========== -->
       <section class="screen" data-screen="done" id="screen-done">
-        <div style="max-width:1000px;margin:0 auto;text-align:center;padding-top:24px">
+        <div style="max-width:640px;margin:0 auto;text-align:center;padding-top:24px">
           <div class="done-ring rise">
             <svg viewBox="0 0 76 76"><circle class="rg" cx="38" cy="38" r="34"/><circle class="rp" cx="38" cy="38" r="34"/></svg>
             <div class="chk"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
           </div>
           <h2 class="rise" style="font-family:var(--font-d);font-weight:600;font-size:22px">Package ready</h2>
           <p class="rise" style="color:var(--dim);font-size:12.5px;margin-top:4px" id="done-path">&nbsp;</p>
-          <div class="done-findings rise" id="done-findings" hidden><b id="done-findings-title"></b><ul id="done-findings-list"></ul></div>
           <div class="sheet rise" style="margin-top:22px;text-align:left" id="done-sheet"></div>
           <div class="rise" style="display:flex;gap:10px;justify-content:center;margin-top:22px">
+            <button class="btn primary" id="done-test">Test on this machine</button>
+            <button class="btn" id="done-deployed">Mark deployed</button>
             <button class="btn" data-go="fleet">View fleet</button>
-            <button class="btn primary" data-go="home">Done</button>
+            <button class="btn ghost" data-go="home">Done</button>
           </div>
         </div>
       </section>
 
       <!-- ========== FLEET ========== -->
       <section class="screen" data-screen="fleet" id="screen-fleet">
-        <div style="max-width:980px;margin:0 auto">
+        <div style="max-width:1240px;margin:0 auto">
           <div class="rise" style="margin:10px 0 18px;display:flex;align-items:center;gap:14px">
             <h2 style="font-family:var(--font-d);font-weight:600;font-size:20px">App fleet</h2>
-            <span id="fleet-demo-badge" style="display:none;font-family:var(--font-m);font-size:10.5px;color:var(--warn);border:1px solid rgba(255,180,84,.35);background:rgba(255,180,84,.08);padding:3px 9px;border-radius:20px">example data - tour only</span>
+            <span id="fleet-demo-badge" style="display:none;font-family:var(--font-m);font-size:10.5px;color:var(--warn);border:1px solid rgba(var(--warn-rgb),.35);background:rgba(var(--warn-rgb),.08);padding:3px 9px;border-radius:20px">example data - tour only</span>
             <input class="field" id="fleet-filter" placeholder="Filter apps&hellip;" style="max-width:240px;padding:7px 12px">
             <button class="btn primary" style="margin-left:auto" data-go="build">New package</button>
           </div>
@@ -805,7 +770,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
              scripts (or PSADT's own test invocation) on this machine, no
              Intune needed. Separate from "Preview". -->
         <div id="test-modal" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:90;align-items:center;justify-content:center">
-          <div class="card" style="width:min(980px,92vw);max-height:90vh;display:flex;flex-direction:column;padding:0">
+          <div class="card" style="width:560px;max-height:80vh;display:flex;flex-direction:column;padding:0">
             <div style="padding:18px 22px 0"><div class="eyebrow">local sanity check</div><div class="card-t" id="test-modal-title" style="margin-top:4px">Test locally</div></div>
             <div style="padding:12px 22px">
               <p class="hint" style="margin:0 0 10px">Decrypts the real <b>.intunewin</b> file if one exists and tests that (not just loose scripts) - it will actually install (and optionally uninstall) the app on <b style="color:var(--warn)">this machine</b>. No Intune required.</p>
@@ -816,14 +781,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
                 <input type="checkbox" id="test-also-uninstall"> Also test uninstall afterwards
               </label>
             </div>
-            <div class="test-summary" id="test-summary" hidden>
-              <div id="test-result"></div>
-              <div class="test-fixes" id="test-fixes"></div>
-            </div>
-            <details class="test-log-wrap" id="test-log-wrap" open>
-              <summary>Log</summary>
-              <div class="log" id="test-log" style="min-height:180px;max-height:52vh"></div>
-            </details>
+            <div class="log" id="test-log" style="margin:0 22px;flex:1;min-height:180px;max-height:320px"></div>
             <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px">
               <button class="btn" id="test-modal-close">Close</button>
               <button class="btn primary" id="test-modal-start">Start test</button>
@@ -840,8 +798,8 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
           <!-- Worker stays its own card - it has real distinct actions, not just toggles -->
           <div class="card rise" id="worker-connect-card" style="margin-bottom:12px;padding:16px 20px">
             <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
-              <div style="width:38px;height:38px;border-radius:10px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 18px rgba(94,162,255,.3)">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0A0B14" stroke-width="2"><path d="M4 12a8 8 0 0 1 14-5.2M20 12a8 8 0 0 1-14 5.2"/><path d="M17.5 4.5v3h-3M6.5 19.5v-3h3"/></svg>
+              <div style="width:38px;height:38px;border-radius:10px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 18px rgba(var(--signal-rgb),.3)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" style="stroke:var(--on-accent)" stroke-width="2"><path d="M4 12a8 8 0 0 1 14-5.2M20 12a8 8 0 0 1-14 5.2"/><path d="M17.5 4.5v3h-3M6.5 19.5v-3h3"/></svg>
               </div>
               <div>
                 <div class="card-t" style="margin:0">Cloudflare worker</div>
@@ -883,8 +841,8 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
             </div>
 
             <div style="padding:0 22px">
-              <div class="tglrow"><div><b>Online lookups</b><small>New releases, installer details from winget and CISA's list of exploited vulnerabilities. Off means no outbound calls.</small></div><button class="tgl on" id="tgl-release-check"></button></div>
-              <div class="tglrow sub" id="nvd-row"><div><b>Also check NIST for CVEs</b><small>Asks NIST which CVEs affect the exact version being packaged. Sends the app's name and version.</small></div><button class="tgl" id="tgl-nvd"></button></div>
+              <div class="tglrow"><div><b>Online lookups</b><small>New releases on GitHub, installer switches from Microsoft's winget catalogue and CISA's list of actively exploited vulnerabilities. Off = no outbound call is ever made. Recommended off for air-gapped machines.</small></div><button class="tgl on" id="tgl-release-check"></button></div>
+              <div class="tglrow"><div><b>NIST vulnerability check</b><small>Before each build, asks NIST's National Vulnerability Database which CVEs affect the exact version being packaged. Sends the app's name and version to NIST. Warnings only; needs online lookups.</small></div><button class="tgl" id="tgl-nvd"></button></div>
               <div class="tglrow"><div><b>Show Cloudflare connection promo</b><small>The "Not connected to Cloudflare" card on Home and the fleet empty-state tip. Off if you dismissed it, or if you're offline-only by design.</small></div><button class="tgl on" id="tgl-cf-advert"></button></div>
               <div class="tglrow"><div><b>Show getting-started checklist</b><small>The "A few things to try" card on Home. Off if you dismissed it or it's not needed anymore.</small></div><button class="tgl on" id="tgl-getting-started"></button></div>
             </div>
@@ -903,7 +861,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 
           <!-- Recovery kept visually distinct - these are the two genuinely
                destructive/consequential actions on this screen. -->
-          <div class="card rise" style="border-color:rgba(255,180,84,.25)">
+          <div class="card rise" style="border-color:rgba(var(--warn-rgb),.25)">
             <div class="card-b">
               <div style="display:flex;align-items:center;gap:8px"><span class="eyebrow" style="color:var(--warn)">recovery</span></div>
               <p class="hint" style="margin:8px 0 12px">A passphrase-protected backup of your config, token, client profiles and manifest. Restores only on THIS machine - for a new machine, reconnect to the Worker and re-run setup.</p>
@@ -920,14 +878,14 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 
       <!-- ========== CLIENT PROFILES ========== -->
       <section class="screen" data-screen="profiles" id="screen-profiles">
-        <div style="max-width:980px;margin:0 auto">
+        <div style="max-width:1240px;margin:0 auto">
           <div class="rise" style="margin:10px 0 14px;display:flex;align-items:center;gap:14px">
             <h2 style="font-family:var(--font-d);font-weight:600;font-size:20px">Client profiles</h2>
             <p class="hint" style="margin:0">Branding + defaults applied to every build for a client.</p>
           </div>
           <div id="profiles-strip" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
 
-          <div id="profile-editor" style="max-width:980px;margin:0 auto">
+          <div id="profile-editor" style="max-width:1240px;margin:0 auto">
           <div class="card rise" style="display:flex;overflow:hidden">
             <div style="width:320px;flex-shrink:0;padding:20px;overflow-y:auto;border-right:1px solid var(--edge)">
               <div class="eyebrow" style="margin-bottom:10px" id="pf-editing-label">new profile</div>
@@ -1011,10 +969,10 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
 
       <!-- ========== HISTORY ========== -->
       <section class="screen" data-screen="history" id="screen-history">
-        <div style="max-width:980px;margin:0 auto">
+        <div style="max-width:1240px;margin:0 auto">
           <div class="rise" style="margin:10px 0 18px;display:flex;align-items:center;gap:14px">
             <h2 style="font-family:var(--font-d);font-weight:600;font-size:20px">History</h2>
-            <span id="history-demo-badge" style="display:none;font-family:var(--font-m);font-size:10.5px;color:var(--warn);border:1px solid rgba(255,180,84,.35);background:rgba(255,180,84,.08);padding:3px 9px;border-radius:20px">example data - tour only</span>
+            <span id="history-demo-badge" style="display:none;font-family:var(--font-m);font-size:10.5px;color:var(--warn);border:1px solid rgba(var(--warn-rgb),.35);background:rgba(var(--warn-rgb),.08);padding:3px 9px;border-radius:20px">example data - tour only</span>
             <p class="hint" style="margin:0">Every build, deploy-mark, and removal recorded on this machine, most recent first.</p>
           </div>
           <div class="card rise"><div class="card-b" style="padding-top:6px">
@@ -1056,8 +1014,8 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
           </div>
 
           <div class="card rise" style="margin-bottom:12px;display:flex;align-items:center;gap:14px;padding:14px 18px">
-            <div style="width:38px;height:38px;border-radius:10px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 20px rgba(94,162,255,.3)">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0A0B14" stroke-width="1.8"><path d="M12 1a11 11 0 0 0-3.48 21.44c.55.1.75-.24.75-.53v-1.85c-3.06.67-3.7-1.47-3.7-1.47-.5-1.27-1.22-1.6-1.22-1.6-1-.68.08-.67.08-.67 1.1.08 1.68 1.13 1.68 1.13.98 1.68 2.57 1.2 3.2.92.1-.71.38-1.2.7-1.48-2.44-.28-5.02-1.22-5.02-5.42 0-1.2.43-2.18 1.12-2.94-.11-.28-.49-1.4.1-2.9 0 0 .93-.3 3.03 1.12a10.4 10.4 0 0 1 5.52 0c2.1-1.42 3.03-1.12 3.03-1.12.6 1.5.22 2.62.1 2.9.7.76 1.12 1.74 1.12 2.94 0 4.21-2.58 5.13-5.04 5.4.39.35.75 1.02.75 2.06v3.05c0 .3.2.64.76.53A11 11 0 0 0 12 1z"/></svg>
+            <div style="width:38px;height:38px;border-radius:10px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 20px rgba(var(--signal-rgb),.3)">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" style="stroke:var(--on-accent)" stroke-width="1.8"><path d="M12 1a11 11 0 0 0-3.48 21.44c.55.1.75-.24.75-.53v-1.85c-3.06.67-3.7-1.47-3.7-1.47-.5-1.27-1.22-1.6-1.22-1.6-1-.68.08-.67.08-.67 1.1.08 1.68 1.13 1.68 1.13.98 1.68 2.57 1.2 3.2.92.1-.71.38-1.2.7-1.48-2.44-.28-5.02-1.22-5.02-5.42 0-1.2.43-2.18 1.12-2.94-.11-.28-.49-1.4.1-2.9 0 0 .93-.3 3.03 1.12a10.4 10.4 0 0 1 5.52 0c2.1-1.42 3.03-1.12 3.03-1.12.6 1.5.22 2.62.1 2.9.7.76 1.12 1.74 1.12 2.94 0 4.21-2.58 5.13-5.04 5.4.39.35.75 1.02.75 2.06v3.05c0 .3.2.64.76.53A11 11 0 0 0 12 1z"/></svg>
             </div>
             <div style="flex:1">
               <div style="font-family:var(--font-d);font-weight:600;font-size:14.5px">Source &amp; issues</div>
@@ -1227,12 +1185,33 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
       const st = i < doneUpTo ? 'done' : i === activeIdx ? 'live' : '';
       const flow = flowIdx === i ? ' flow' : '';
       const line = i < pipeLabels.length - 1 ? `<div class="pline${flow}"><i></i></div>` : '';
-      return `<div class="pnode ${st}"><div class="pdot">${i + 1}<span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span></div><span class="plabel">${label}</span></div>${line}`;
+      return `<div class="pnode ${st}" data-pipe-step="${i}" role="button" tabindex="0"><div class="pdot">${i + 1}<span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span></div><span class="plabel">${label}</span></div>${line}`;
     }).join('');
   }
 
+  // On the builder the progress bar is the way through the form: it shows which steps are complete and jumps to a step.
+  const pipeCards = () => [form.Kind === 'printer' ? '#printer-source-card' : '#app-source-card', '#f-displayname', '#close-apps-hint', '#segMode', '#btn-build'];
+  function builderProgress() {
+    if (!$('#screen-build').classList.contains('on')) return;
+    const done = [form.Kind === 'printer' ? !!$('#f-printername').value.trim() : inspected,
+      !!($('#f-displayname').value.trim() && $('#f-appid').value.trim() && (form.Kind === 'printer' || $('#f-registryname').value.trim())),
+      form.Kind === 'printer' || !!$('#f-silentargs').value.trim() || /\.(msi|msix|msixbundle|appx|appxbundle|zip)$/i.test(window._selectedInstaller || ''),
+      true];
+    const reached = done.findIndex(d => !d);
+    const count = reached === -1 ? 4 : reached;
+    renderPipe(Math.min(count, 4), count);
+  }
+  document.getElementById('pipe').addEventListener('click', e => {
+    const node = e.target.closest('[data-pipe-step]');
+    if (!node || !$('#screen-build').classList.contains('on')) return;
+    const target = $(pipeCards()[Number(node.dataset.pipeStep)]);
+    const card = target && (target.closest('.card') || target);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse');
+  });
   document.getElementById('drag-region').addEventListener('mousedown', (e) => {
-    if (e.target.closest('#win-minimize, #win-close')) return;
+    if (e.target.closest('#win-minimize, #win-close') || e.target.closest('#pipe')) return;
     if (e.button !== 0) return;
     send('drag-window', {});
   });
@@ -1250,7 +1229,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     $('#crumb').textContent = crumbs[id] || 'AppUpdater';
     $('#buildbar').style.display = (id === 'build') ? 'flex' : 'none';
     if (id === 'build') {
-      renderPipe(0, inspected ? 2 : 0);
+      builderProgress();
       if (!window._tourActive && !window._modeExplainerSeen && !window._modeExplainerShownThisSession) {
         window._modeExplainerShownThisSession = true;
         updateModeExplainerText();
@@ -1502,7 +1481,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     btn.classList.toggle('on', form[key]);
   }));
 
-  ['f-displayname','f-appid','f-registryname'].forEach(id => $('#' + id).addEventListener('input', updateSummary));
+  ['f-displayname','f-appid','f-registryname','f-silentargs','f-printername'].forEach(id => $('#' + id).addEventListener('input', updateSummary));
 
   $('#drop').addEventListener('click', () => send('browse-installer', {}));
   $('#reDrop').addEventListener('click', e => { e.stopPropagation(); resetInstaller(); });
@@ -1511,27 +1490,15 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     inspected = false; window._selectedInstaller = null;
     $('#inspect').style.display = 'none'; $('#drop').style.display = 'block';
     $('#btn-build').disabled = true;
-    if ($('#screen-build').classList.contains('on')) renderPipe(0, 0);
+    builderProgress();
     updateSummary();
   }
 
   function updateSummary() {
-    // Only what applies to this mode and target is shown. Runtime detection checks the agent, and MSIX detection reads the
-    // package version itself.
-    const simpleApp = form.Mode === 'simple' && window._installerType !== 'MSIX';
-    $('#detectversion-wrap').style.display = simpleApp ? 'flex' : 'none';
-    $('#detectversion-field').style.display = simpleApp ? 'block' : 'none';
+    builderProgress();
+    // Runtime detection checks the agent, and MSIX detection reads the package version itself.
+    $('#detectversion-wrap').style.display = form.Mode === 'simple' && window._installerType !== 'MSIX' ? 'block' : 'none';
     $('#scripts-wrap').style.display = form.Mode === 'simple' && !['MSIX', 'Zip'].includes(window._installerType) ? 'block' : 'none';
-    const psadt = form.SimplePkgTarget === 'psadt', runtime = form.Mode === 'runtime';
-    $('#runtime-url-wrap').style.display = runtime ? 'block' : 'none';
-    $('#close-apps-row').style.display = psadt || runtime ? 'flex' : 'none';
-    $('#defer-row').style.display = psadt ? 'flex' : 'none';
-    $('#endpoint-card').style.display = psadt || runtime ? 'block' : 'none';
-    const minVersion = $('#f-detectversion').value.trim();
-    $('#detect-text').textContent = minVersion ? `${minVersion} or newer` : 'any version';
-    const advancedSet = [!!$('#f-detectversion').value.trim(), !!form.BundleFolder, !!form.RemoveOlderVersions,
-      ...['f-prehook', 'f-posthook', 'f-postuninstallhook'].map(id => !!$('#' + id).value.trim())].filter(Boolean).length;
-    $('#adv-count').textContent = advancedSet ? `${advancedSet} set` : '';
     const mode = form.Mode === 'runtime' ? 'AppUpdater Runtime' : 'Simple Package';
     const target = form.SimplePkgTarget === 'intunewin' ? '.intunewin' : 'PSADT package';
     const org = resolveBuildOrgName();
@@ -1565,8 +1532,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     } else if (!inspected) {
       toast('No installer', 'Drop or browse to an installer first'); return;
     } else if (!$('#f-silentargs').value.trim() && !/\.(msi|msix|msixbundle|appx|appxbundle|zip)$/i.test(window._selectedInstaller || '')) {
-      $('#advanced').open = true; $('#f-silentargs').focus();
-      toast('Silent switch needed', 'AppUpdater does not recognise this installer. Enter its silent install switch under Advanced.', true); return;
+      toast('Silent switch needed', 'AppUpdater does not recognise this installer. Enter its silent install switch first.', true); return;
     }
     if (form.Kind !== 'printer') {
       const simpleOnly = form.Mode !== 'simple';
@@ -1588,7 +1554,6 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     $('#progress-title').textContent = $('#f-displayname').value || $('#f-printername').value || 'Package';
     $('#step-list').innerHTML = '';
     $('#progress-error').style.display = 'none';
-    $('#progress-body').style.display = 'grid';
     const payload = {
       AppID: $('#f-appid').value,
       DisplayName: $('#f-displayname').value,
@@ -1659,15 +1624,12 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
             $('#inspect-name').textContent = base;
             $('#inspect-sub').textContent = payload.detected ? payload.detected.summary || '' : 'Inspecting…';
             $('#inspect-chips').innerHTML = (payload.detected && payload.detected.chips || []).map(chipHtml).join('');
-            $('#known-banner').hidden = true;
             if (!$('#f-appid').value) $('#f-appid').value = (payload.detected && payload.detected.appId) || stem.replace(/[^A-Za-z0-9._-]/g, '');
             if (!$('#f-displayname').value) $('#f-displayname').value = (payload.detected && payload.detected.displayName) || stem;
             const registryWasEmpty = !$('#f-registryname').value;
             if (registryWasEmpty) $('#f-registryname').value = (payload.detected && payload.detected.registryName) || $('#f-displayname').value;
             $('#f-silentargs').value = (payload.detected && payload.detected.silentArgs) || '';
             window._autoSilentArgs = $('#f-silentargs').value;
-            // Advanced opens by itself only when it needs an answer: an installer without a known silent switch.
-            $('#advanced').open = !$('#f-silentargs').value && !/\.(msi|msix|msixbundle|appx|appxbundle|zip)$/i.test(payload.path);
             window._entryExe = (payload.detected && payload.detected.entryExe) || '';
             window._perUser = !!(payload.detected && payload.detected.installerType === 'Squirrel');
             // null never equals a field value, so a name the user typed is never replaced later.
@@ -1689,7 +1651,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
             form.ProcessesToKill = (payload.detected && payload.detected.processesToKill) || '';
             $('#close-apps-hint').textContent = form.ProcessesToKill || 'No blocking process detected';
             $('#btn-build').disabled = false;
-            renderPipe(0, 2);
+            builderProgress();
             updateSummary();
             if (det.known) applyKnownApp(det.known);
             else if (!payload.detected) toast('Installer picked', 'Fill in the identity fields to continue');
@@ -1716,7 +1678,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
             const repoPath = `manifests/${m.Id.charAt(0).toLowerCase()}/${m.Id.split('.').join('/')}`;
             chips.push({ label: 'winget', tone: m.Match === 'name' ? '' : 'g', detail: `Matched ${m.Id} ${m.Version} in Microsoft's winget catalogue by ${how}. Its silent switch and registry name are used where you have not changed them.`, link: `https://github.com/microsoft/winget-pkgs/tree/master/${repoPath}`, linkLabel: 'Open in winget-pkgs' });
             if (m.Scope === 'user') { window._perUser = true; chips.push({ label: 'Per-user', tone: 'w', detail: 'winget lists this installer as per-user. Deploy it in Intune with install behaviour User.' }); }
-            if (!m.SilentArgs && !$('#f-silentargs').value) chips.push({ label: 'No silent switch', tone: 'w', detail: 'Neither the installer nor winget gives a silent switch. Enter one under Advanced before building.' });
+            if (!m.SilentArgs && !$('#f-silentargs').value) chips.push({ label: 'No silent switch', tone: 'w', detail: 'Neither the installer nor winget gives a silent switch. Enter one below before building.' });
           } else if (payload.note) {
             const off = /lookups are off/.test(payload.note);
             chips.push({ label: off ? 'winget off' : /downloading/.test(payload.note) ? 'winget loading' : /not in the winget/.test(payload.note) ? 'Not in winget' : 'winget error',
@@ -1777,29 +1739,29 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
           break;
         }
         case 'winget-prepared': {
-          if (!payload.ok || payload.nothing) { noteInFixes(payload.message || 'Nothing to contribute.', payload.ok ? 'in' : 'wr'); break; }
-          noteInFixes(payload.summary, 'ac');
+          if (!payload.ok || payload.nothing) { logTestLine(payload.message || 'Nothing to contribute.', payload.ok ? 'in' : 'wr'); break; }
+          logTestLine(payload.summary, 'ac');
           const box = document.createElement('div');
           box.style.cssText = 'margin:8px 0;padding:10px;border:1px solid var(--edge);border-radius:var(--r-sm)';
           box.innerHTML = `<pre style="white-space:pre-wrap;font-size:11px;margin:0 0 8px">${escapeHtml(payload.preview)}</pre>
             <div class="hint" style="margin:0 0 6px">Submitted as a pull request to microsoft/winget-pkgs from your GitHub account, where Microsoft's checks and reviewers take over. A GitHub token with public_repo scope is needed once; wingetcreate keeps it, AppUpdater does not.</div>
             <div style="display:flex;gap:6px"><input class="field mono" type="password" id="winget-token" placeholder="GitHub token - only the first time"><button class="btn primary sm" id="winget-submit">Submit pull request</button></div>`;
-          appendToTestFixes(box);
+          appendToTestLog(box);
           $('#winget-submit').addEventListener('click', () => {
             $('#winget-submit').disabled = true;
-            noteInFixes('Submitting with wingetcreate...', 'ac');
+            logTestLine('Submitting with wingetcreate...', 'ac');
             send('winget-submit', { id: payload.id, token: $('#winget-token').value.trim() });
             $('#winget-token').value = '';
           });
           break;
         }
         case 'winget-submitted': {
-          noteInFixes(payload.message || (payload.ok ? 'Submitted.' : 'Submission failed.'), payload.ok ? 'ok' : 'wr');
+          logTestLine(payload.message || (payload.ok ? 'Submitted.' : 'Submission failed.'), payload.ok ? 'ok' : 'wr');
           if (payload.prUrl) {
             const open = document.createElement('button');
             open.className = 'btn primary sm'; open.textContent = 'Open the pull request';
             open.addEventListener('click', () => send('open-pr', { url: payload.prUrl }));
-            appendToTestFixes(open);
+            appendToTestLog(open);
           } else if (payload.needsToken && $('#winget-submit')) { $('#winget-submit').disabled = false; }
           break;
         }
@@ -1808,8 +1770,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
           break;
         case 'preflight-blocked': {
           const list = (payload.findings || []).map(f => `<li style="margin:4px 0;color:${f.level === 'red' ? 'var(--bad)' : 'var(--warn)'}">${escapeHtml(f.message)}</li>`).join('');
-          // Nothing was built, so the step list and log would only repeat the findings.
-          $('#progress-body').style.display = 'none';
+          $('#step-list').innerHTML = `<div class="phase doing"><span class="pi"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Pre-deploy checks &middot; stopped</div>`;
           $('#progress-error-title').textContent = 'Build stopped by pre-deploy checks';
           $('#progress-error-msg').innerHTML = `<div>Pre-deploy checks found a problem with this installer. Check where it came from before deploying it.</div><ul style="margin:8px 0 0 18px;padding:0">${list}</ul>
             <button class="btn danger sm" id="preflight-override" style="margin-top:10px">Build anyway</button>`;
@@ -1817,7 +1778,6 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
           $('#preflight-override').addEventListener('click', () => {
             if (!window._lastBuildPayload) return;
             $('#progress-error').style.display = 'none';
-            $('#progress-body').style.display = 'grid';
             send('build-package', Object.assign({}, window._lastBuildPayload, { OverrideRed: true }));
           });
           break;
@@ -1826,6 +1786,8 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
           logLine(payload.line, 'in');
           break;
         case 'build-done':
+          window._lastBuiltAppId = $('#f-appid').value;
+          $('#done-deployed').disabled = false;
           $('#progress-bar').style.width = '100%';
           $('#done-path').textContent = payload.path || '';
           renderDoneSheet(payload);
@@ -1913,7 +1875,6 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
           document.body.classList.toggle('colorblind-safe', !!payload.colorblindSafe);
           $('#tgl-release-check').classList.toggle('on', !!payload.releaseCheckEnabled);
           $('#tgl-nvd').classList.toggle('on', !!payload.nvdEnabled);
-          $('#nvd-row').style.display = payload.releaseCheckEnabled ? 'flex' : 'none';
           $('#tgl-cf-advert').classList.toggle('on', payload.showCloudflareAdvert !== false);
           window._showCfAdvert = payload.showCloudflareAdvert !== false;
           $('#tgl-getting-started').classList.toggle('on', payload.showGettingStarted !== false);
@@ -1951,17 +1912,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
           break;
         case 'test-log':
           if (payload.line) logTestLine(payload.line);
-          if (payload.line && /^ERROR:/.test(payload.line)) window._lastTestError = payload.line.replace(/^ERROR:\s*/, '');
-          if (payload.done) {
-            logTestLine(payload.ok ? '\u2713 Done' : '\u2717 Failed', payload.ok ? 'ok' : 'wr');
-            // The outcome and what to do about it come first; the log stays one click away.
-            $('#test-result').textContent = payload.ok
-              ? `Passed: installed and detected${$('#test-also-uninstall').checked ? ', then uninstalled' : ''}.`
-              : `Failed${window._lastTestError ? ': ' + window._lastTestError : '. See the log for the step that failed.'}`;
-            $('#test-summary').className = 'test-summary ' + (payload.ok ? 'ok' : 'bad');
-            $('#test-summary').hidden = false;
-            $('#test-log-wrap').open = !payload.ok;
-          }
+          if (payload.done) logTestLine(payload.ok ? '\u2713 Done' : '\u2717 Failed', payload.ok ? 'ok' : 'wr');
           if (payload.done && payload.suggestedRegistryName) {
             addTestFix(`Use "${payload.suggestedRegistryName}" as the registry name`, () => {
               $('#f-registryname').value = payload.suggestedRegistryName;
@@ -1973,8 +1924,8 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
             const contribute = document.createElement('button');
             contribute.className = 'btn sm';
             contribute.textContent = 'Contribute what this test verified to winget';
-            contribute.addEventListener('click', () => { contribute.disabled = true; noteInFixes('Checking what winget is missing...', 'ac'); send('winget-prepare', { id: currentTestId }); });
-            appendToTestFixes(contribute);
+            contribute.addEventListener('click', () => { contribute.disabled = true; logTestLine('Checking what winget is missing...', 'ac'); send('winget-prepare', { id: currentTestId }); });
+            appendToTestLog(contribute);
           }
           if (payload.done && payload.suggestedDetectVersion) {
             addTestFix(`Require version ${payload.suggestedDetectVersion} or newer`, () => {
@@ -1992,10 +1943,10 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     // Asked once per launch; "Later" asks again next time.
     window._feedbackAnswered = window._feedbackAnswered || new Set();
     const items = (Array.isArray(due) ? due : []).filter(d => !window._feedbackAnswered.has(d.id));
-    $('#deploy-feedback').style.display = items.length ? 'flex' : 'none';
+    $('#deploy-feedback').style.display = items.length ? 'block' : 'none';
     $('#deploy-feedback-list').innerHTML = items.map(d => `
-      <div class="fb-item">
-        <span>${escapeHtml(d.name)} <span class="mono">${escapeHtml(d.version || '')}</span></span>
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+        <span style="flex:1"><b style="font-weight:600">${escapeHtml(d.name)}</b> <span class="mono">${escapeHtml(d.version || '')}</span></span>
         <button class="btn sm" data-feedback="${escapeHtml(d.id)}" data-outcome="ok">Yes</button>
         <button class="btn sm danger" data-feedback="${escapeHtml(d.id)}" data-outcome="failed">No</button>
         <button class="btn ghost sm" data-feedback="${escapeHtml(d.id)}" data-outcome="later">Later</button>
@@ -2006,28 +1957,6 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
       if (b.dataset.outcome === 'failed') toast('Noted', 'The next package of this app will show a warning before it is built.');
       renderDeployFeedback(items);
     }));
-  }
-  $('#known-undo').addEventListener('click', undoKnownApp);
-  $('#detect-change').addEventListener('click', () => { $('#advanced').open = true; $('#f-detectversion').focus(); });
-  ['f-detectversion', 'f-prehook', 'f-posthook', 'f-postuninstallhook'].forEach(id => $('#' + id).addEventListener('input', updateSummary));
-  $('#chip-pop-link').addEventListener('click', () => {
-    const link = $('#chip-pop-link').dataset.link;
-    $('#chip-pop').hidden = true;
-    if (link === 'settings') goTo('worker'); else if (link) send('open-link', { url: link });
-  });
-  function undoKnownApp() {
-    // Puts back what the installer's own inspection filled in before the remembered settings replaced it.
-    const b = window._beforeKnown;
-    if (!b) return;
-    for (const id of knownFields) $('#' + id).value = b.fields[id];
-    pickSeg('segMode', b.form.Mode); pickSeg('segTarget', b.form.SimplePkgTarget); pickSeg('segPsadtVersion', b.form.PSADTVersion);
-    form.ProcessesToKill = b.form.ProcessesToKill;
-    setToggle('closeAppsOn', b.form.closeAppsOn); setToggle('allowDefer', b.form.allowDefer); setToggle('RemoveOlderVersions', b.form.RemoveOlderVersions);
-    const prof = $('#f-profile');
-    if (prof.value !== b.profile) { prof.value = b.profile; prof.dispatchEvent(new Event('change')); }
-    window._autoRegistryName = b.autoRegistryName; window._autoSilentArgs = b.autoSilentArgs;
-    $('#known-banner').hidden = true;
-    updateSummary();
   }
   function chipHtml(c) {
     const detail = c.detail ? ` data-detail="${escapeHtml(c.detail)}" data-link="${escapeHtml(c.link || '')}" data-link-label="${escapeHtml(c.linkLabel || '')}" tabindex="0" role="button"` : '';
@@ -2057,6 +1986,22 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     if (chip && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); showChipDetail(chip); }
     if (e.key === 'Escape') $('#chip-pop').hidden = true;
   });
+  $('#chip-pop-link').addEventListener('click', () => {
+    const link = $('#chip-pop-link').dataset.link;
+    $('#chip-pop').hidden = true;
+    if (link === 'settings') goTo('worker'); else if (link) send('open-link', { url: link });
+  });
+  $('#done-test').addEventListener('click', () => {
+    // Finishing a build leads straight to testing it.
+    goTo('fleet');
+    send('get-fleet', {});
+    openTestModal(window._lastBuiltAppId);
+  });
+  $('#done-deployed').addEventListener('click', () => {
+    send('mark-deployed', { id: window._lastBuiltAppId });
+    $('#done-deployed').disabled = true;
+    toast('Marked deployed', 'AppUpdater will ask on a later launch whether it installed correctly.');
+  });
   function setToggle(key, on) {
     form[key] = !!on;
     const t = document.querySelector(`.tgl[data-val="${key}"]`);
@@ -2066,15 +2011,10 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     const b = val && document.querySelector(`#${id} button[data-val="${val}"]`);
     if (b && !b.classList.contains('on')) b.click();
   }
-  const knownFields = ['f-appid', 'f-displayname', 'f-registryname', 'f-silentargs', 'f-download-url', 'f-detectversion', 'f-prehook', 'f-posthook', 'f-postuninstallhook'];
   function applyKnownApp(k) {
     // Restores the settings of the last build of this app, once per picked installer.
     if (!k || window._knownAppliedFor === window._selectedInstaller) return;
     window._knownAppliedFor = window._selectedInstaller;
-    window._beforeKnown = { fields: Object.fromEntries(knownFields.map(id => [id, $('#' + id).value])),
-                            form: { Mode: form.Mode, SimplePkgTarget: form.SimplePkgTarget, PSADTVersion: form.PSADTVersion, ProcessesToKill: form.ProcessesToKill,
-                                    closeAppsOn: form.closeAppsOn, allowDefer: form.allowDefer, RemoveOlderVersions: !!form.RemoveOlderVersions },
-                            profile: $('#f-profile').value, autoRegistryName: window._autoRegistryName, autoSilentArgs: window._autoSilentArgs };
     const s = k.settings || {};
     $('#f-appid').value = k.appId;
     if (s.DisplayName) $('#f-displayname').value = s.DisplayName;
@@ -2097,7 +2037,6 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     setToggle('closeAppsOn', !!s.ProcessesToKill || !form.ProcessesToKill);
     setToggle('allowDefer', s.AllowDefer !== false);
     window._knownBundle = !!s.BundleFolder;
-    if (s.RemoveOlderVersions || s.PreInstallHookPath || s.PostInstallHookPath || s.PostUninstallHookPath || s.BundleFolder) $('#advanced').open = true;
     setToggle('RemoveOlderVersions', !!s.RemoveOlderVersions);
     for (const [field, key] of [['f-prehook', 'PreInstallHookPath'], ['f-posthook', 'PostInstallHookPath'], ['f-postuninstallhook', 'PostUninstallHookPath']]) {
       if (s[key]) $('#' + field).value = s[key];
@@ -2109,9 +2048,8 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     }
     const when = k.lastBuiltAt ? new Date(k.lastBuiltAt).toLocaleDateString() : '';
     const same = k.lastVersion && k.lastVersion === window._selectedVersion;
-    $('#known-text').textContent = `Packaged before${k.lastVersion ? ' as ' + k.lastVersion : ''}${when ? ' on ' + when : ''}. Its settings are filled in${same ? ' - this is the same version' : ''}.`;
-    $('#known-banner').classList.toggle('warn', !!same);
-    $('#known-banner').hidden = false;
+    $('#inspect-chips').insertAdjacentHTML('beforeend', chipHtml({ label: same ? 'Same version' : 'Known app', tone: same ? 'w' : 'g',
+      detail: `Packaged before${k.lastVersion ? ' as ' + k.lastVersion : ''}${when ? ' on ' + when : ''}; its settings are filled in.${same ? ' This installer is the same version as that package.' : ''}` }));
     updateSummary();
   }
 
@@ -2132,7 +2070,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
       apply();
       updateSummary();
     });
-    appendToTestFixes(fix);
+    appendToTestLog(fix);
   }
 
   function renderProfiles(profiles, lastUsed) {
@@ -2285,12 +2223,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     document.body.classList.toggle('colorblind-safe', $('#tgl-colorblind').classList.contains('on'));
     saveSettingsNow(); flashSaved();
   });
-  $('#tgl-release-check').addEventListener('click', function(){
-    $('#tgl-release-check').classList.toggle('on');
-    // The NIST check runs only with online lookups on.
-    $('#nvd-row').style.display = $('#tgl-release-check').classList.contains('on') ? 'flex' : 'none';
-    saveSettingsNow(); flashSaved();
-  });
+  $('#tgl-release-check').addEventListener('click', function(){ $('#tgl-release-check').classList.toggle('on'); saveSettingsNow(); flashSaved(); });
   $('#tgl-nvd').addEventListener('click', function(){ $('#tgl-nvd').classList.toggle('on'); saveSettingsNow(); flashSaved(); });
   $('#tgl-cf-advert').addEventListener('click', function(){
     $('#tgl-cf-advert').classList.toggle('on');
@@ -2362,13 +2295,11 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
                 ['Detection', 'Custom script: detect.ps1'],
                 ['As a dependency', form.allowDefer ? 'Turn off "Allow deferral": a deferred dependency blocks the app that needs it' : 'Ready - deferral is off']);
     }
-    // Pre-deploy findings show once, above the settings to copy into Intune.
-    const findings = payload.findings || [];
-    $('#done-findings').hidden = !findings.length;
-    $('#done-findings-title').textContent = findings.some(f => f.level === 'red') ? 'Built anyway, despite:' : 'Check before deploying:';
-    $('#done-findings-list').innerHTML = findings.map(f => `<li class="${f.level === 'red' ? 'red' : ''}">${escapeHtml(f.message)}</li>`).join('');
+    for (const f of (payload.findings || [])) {
+      rows.push([f.level === 'red' ? 'Check overridden' : 'Check', f.message, true]);
+    }
     if (form.Kind !== 'printer' && form.Mode === 'simple') {
-      rows.push(['EPM elevation rules', 'EPM-rules.csv in the output folder']);
+      rows.push(['EPM elevation rules', 'EPM-rules.csv in the output folder: installer hash and signer certificate; a local test adds the installed program and its updaters']);
     }
     if (form.Kind === 'printer' || form.Mode === 'runtime') {
       rows.push(['As a dependency', 'Detection confirms the AppUpdater agent; its first update runs during install, so the app or printer is normally in place before Intune moves on']);
@@ -2408,7 +2339,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
   window._showCfNav = true;
   function badgeHtml(status) {
     if (status === 'deployed') return `<span class="badge ok"><i></i>deployed</span>`;
-    if (status === 'built - not deployed') return `<span class="badge" style="color:var(--signal);border-color:rgba(94,162,255,.3);background:rgba(94,162,255,.07)"><i style="background:currentColor"></i>built &middot; not deployed</span>`;
+    if (status === 'built - not deployed') return `<span class="badge" style="color:var(--signal);border-color:rgba(var(--signal-rgb),.3);background:rgba(var(--signal-rgb),.07)"><i style="background:currentColor"></i>built &middot; not deployed</span>`;
     if (status === 'unknown') return `<span class="badge" style="color:var(--faint);border-color:var(--edge)"><i style="background:currentColor"></i>untracked</span>`;
     return `<span class="badge wn"><i></i>update available</span>`;
   }
@@ -2451,7 +2382,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
       <div class="tglrow" style="cursor:pointer" data-go="${s.go}" role="button" tabindex="0">
         <div style="display:flex;align-items:center;gap:10px">
           <span style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? 'transparent' : 'var(--edge-hi)'};background:${s.done ? 'var(--grad)' : 'transparent'};display:grid;place-items:center;flex-shrink:0">
-            ${s.done ? '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#0A0B14" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>' : ''}
+            ${s.done ? '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" style="stroke:var(--on-accent)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>' : ''}
           </span>
           <span style="font-size:12.5px;${s.done ? 'color:var(--faint);text-decoration:line-through' : ''}">${s.label}</span>
         </div>
@@ -2728,7 +2659,7 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
   function historyBadgeHtml(ev) {
     if (ev.indexOf('deployed') === 0) return `<span class="badge ok"><i></i>${escapeHtml(ev)}</span>`;
     if (ev.indexOf('removed') === 0) return `<span class="badge wn"><i></i>${escapeHtml(ev)}</span>`;
-    return `<span class="badge" style="color:var(--signal);border-color:rgba(94,162,255,.3);background:rgba(94,162,255,.07)"><i style="background:currentColor"></i>${escapeHtml(ev)}</span>`;
+    return `<span class="badge" style="color:var(--signal);border-color:rgba(var(--signal-rgb),.3);background:rgba(var(--signal-rgb),.07)"><i style="background:currentColor"></i>${escapeHtml(ev)}</span>`;
   }
   function renderHistory(events) {
     const has = events && events.length;
@@ -2795,7 +2726,6 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
     const app = lastFleet.find(a => a.id === id);
     $('#test-modal-title').textContent = 'Test locally' + (app ? ' - ' + app.name : '');
     $('#test-log').innerHTML = '';
-    $('#test-summary').hidden = true; $('#test-fixes').innerHTML = ''; $('#test-log-wrap').open = true;
     $('#test-also-uninstall').checked = false;
     $('#test-modal').style.display = 'flex';
   }
@@ -2805,19 +2735,13 @@ details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
   });
   $('#test-modal-start').addEventListener('click', () => {
     $('#test-log').innerHTML = '';
-    $('#test-summary').hidden = true; $('#test-fixes').innerHTML = ''; $('#test-log-wrap').open = true; window._lastTestError = '';
     logTestLine('Starting...', 'ac');
     send('test-locally', { id: currentTestId, alsoUninstall: $('#test-also-uninstall').checked, simulateSystem: $('#test-simulate-system').checked });
   });
-  function appendToTestFixes(el) { $('#test-fixes').appendChild(el); }
-  function noteInFixes(text, cls) {
-    // Follow-up steps report under the test result, where their buttons are.
-    const note = document.createElement('div');
-    note.className = 'hint';
-    if (cls === 'wr') note.style.color = 'var(--warn)';
-    if (cls === 'ok') note.style.color = 'var(--ok)';
-    note.textContent = text;
-    $('#test-fixes').appendChild(note);
+  function appendToTestLog(el) {
+    const log = $('#test-log');
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
   }
   function logTestLine(text, cls) {
     const log = $('#test-log');
@@ -3442,11 +3366,8 @@ function Get-WingetLatestVersion {
 $window = New-Object System.Windows.Window
 $window.Title           = 'AppUpdater'
 $workArea = [System.Windows.SystemParameters]::WorkArea
-# Most of the screen, so the builder's three columns fit without scrolling.
-$window.Width           = [Math]::Min(1760, [Math]::Max(1100, $workArea.Width * 0.9))
-$window.Height          = [Math]::Min(1080, [Math]::Max(720, $workArea.Height * 0.9))
-$window.Width           = [Math]::Min($window.Width, $workArea.Width)
-$window.Height          = [Math]::Min($window.Height, $workArea.Height)
+$window.Width           = [Math]::Min(1280, $workArea.Width - 40)
+$window.Height          = [Math]::Min(800, $workArea.Height - 40)
 $window.MinWidth        = 860
 $window.MinHeight       = 640
 $window.WindowStyle     = 'None'
@@ -3527,8 +3448,8 @@ try {
                 # Tags stay a word or two; the explanation opens when the tag is clicked.
                 $names = @{ InnoSetup = 'Inno Setup'; WiXBurn = 'WiX Burn'; '7ZipSFX' = '7-Zip SFX'; AdvancedInstaller = 'Advanced Installer'; SetupFactory = 'Setup Factory' }
                 $chips = @()
-                if ($d.InstallerType -eq 'Unknown') { $chips += @{ label = 'Unknown installer'; tone = 'w'; detail = 'AppUpdater does not recognise this installer, so it cannot guess a silent switch. Enter one under Advanced (check the vendor documentation or run the installer with /?).' } }
-                elseif ($d.InstallerType) { $chips += @{ label = $(if ($names[$d.InstallerType]) { $names[$d.InstallerType] } else { $d.InstallerType }); tone = 'g'; detail = $(if ($d.SilentArgs) { "Installer family detected from the file. The silent switch under Advanced is filled in for it: $($d.SilentArgs)" } else { 'Package type detected from the file. It installs without a silent switch.' }) } }
+                if ($d.InstallerType -eq 'Unknown') { $chips += @{ label = 'Unknown installer'; tone = 'w'; detail = 'AppUpdater does not recognise this installer, so it cannot guess a silent switch. Enter one below (check the vendor documentation or run the installer with /?).' } }
+                elseif ($d.InstallerType) { $chips += @{ label = $(if ($names[$d.InstallerType]) { $names[$d.InstallerType] } else { $d.InstallerType }); tone = 'g'; detail = $(if ($d.SilentArgs) { "Installer family detected from the file. Its silent switch is filled in below: $($d.SilentArgs)" } else { 'Package type detected from the file. It installs without a silent switch.' }) } }
                 if ($d.InstallerType -eq 'InstallShield') { $chips += @{ label = 'Needs setup.iss'; tone = 'w'; detail = 'InstallScript setups only run silently with a recorded response file. Record one with setup.exe /r, put it next to the installer, turn on "Bundle the whole folder" and use /s /f1"{pkg}\setup.iss".' } }
                 if ($d.InstallerType -eq 'Squirrel') { $chips += @{ label = 'Per-user'; tone = 'w'; detail = 'This installer only installs for the signed-in user. Deploy it in Intune with install behaviour User; as SYSTEM it only reaches the SYSTEM profile.' } }
                 if ($d.InstallerType -eq 'Zip') { $chips += $(if ($d.EntryExe) { @{ label = 'Portable app'; tone = 'g'; detail = "The zip is unpacked to Program Files with a Start menu shortcut to $($d.EntryExe), and registered in Add/Remove Programs so detection and uninstall work." } } else { @{ label = 'No program found'; tone = 'w'; detail = 'The zip holds no executable that looks like the main program, so it cannot be packaged.' } }) }
