@@ -224,6 +224,9 @@ $proc = Start-Process -FilePath 'powershell.exe' `
   }
   function Test-On([string]$Selector) { return [bool](Eval-Js "document.querySelector('$Selector').classList.contains('on')") }
   function Set-Toggle([string]$Selector, [bool]$On) {
+    # A settings reply still on its way would put the saved value back after the click.
+    Eval-Js "window.__msgs = []; send('get-settings', {})" | Out-Null
+    Wait-Js "window.__msgs.indexOf('settings-data') >= 0"
     if ((Test-On $Selector) -ne $On) {
       Eval-Js "window.__msgs = []" | Out-Null
       Invoke-Click $Selector
@@ -281,7 +284,7 @@ window.__errors = [];
 "@ | Out-Null
 
   Invoke-Flow 'Deploy feedback card' {
-    Wait-Js "document.getElementById('deploy-feedback').style.display === 'block'" 30
+    Wait-Js "document.getElementById('deploy-feedback').style.display !== 'none'" 30
     Assert ((Get-Text '#deploy-feedback-list') -like '*Feedback Sample*1.2.3*') 'Home asks about the app deployed before this launch'
     Save-Shot 'home-deploy-feedback' '#deploy-feedback'
     Invoke-Click "#deploy-feedback-list [data-feedback=$feedbackId][data-outcome=ok]"
@@ -391,7 +394,7 @@ window.__errors = [];
 
       Invoke-Click '#segMode button[data-val=simple]'
       Assert (Test-Shown '#detectversion-wrap') 'Simple mode shows the minimum version for detection'
-      Assert (-not (Test-Shown '#scripts-wrap')) 'Advanced options start collapsed'
+      Assert (-not (Eval-Js "document.getElementById('advanced').open")) 'Advanced options start collapsed'
       Invoke-Click '#advanced > summary'
       Assert (Test-Shown '#scripts-wrap') 'Simple mode shows the scripts section under Advanced'
       foreach ($selector in '.tgl[data-val=RemoveOlderVersions]', '#f-prehook', '#f-posthook', '#f-postuninstallhook',
@@ -475,7 +478,7 @@ window.__errors = [];
       Write-Field '#f-appid' 'placeholder-id'
       Write-Field '#f-registryname' 'placeholder name'
       Select-TestInstaller
-      Assert ((Get-Text '#inspect-chips') -like '*packaged before*') "The 'packaged before' chip is shown"
+      Assert ((Test-Shown '#known-banner') -and (Get-Text '#known-text') -like 'Packaged before*') "The 'packaged before' banner is shown"
       Assert ((Get-Value '#f-appid') -eq $script:appId) 'App ID is restored from the last build'
       Assert ((Get-Value '#f-registryname') -eq $script:registryName) 'Registry name is restored from the last build'
       if ($script:suggestedVersion) {
@@ -672,7 +675,7 @@ window.__errors = [];
     Invoke-Click '#segKind button[data-val=app]'
     Clear-AppFields
     Select-TestInstaller $portableZip
-    Assert ((Get-Text '#inspect-chips') -like '*portable app: Tool\tool.exe*') "The zip shows the 'portable app' chip"
+    Assert ((Get-Text '#inspect-chips') -like '*Portable app*' -and (Eval-Js "Array.from(document.querySelectorAll('#inspect-chips .chip')).filter(function (c) { return c.textContent.indexOf('Portable app') >= 0; }).map(function (c) { return c.dataset.detail; }).join('')") -like '*Tool\tool.exe*') "The zip shows the 'Portable app' tag with its program"
     Invoke-Click '#segMode button[data-val=simple]'
     Invoke-Click '#segTarget button[data-val=psadt]'
     Test-BuildGuard 'Simple .intunewin only' 'A zip with the PSADT target'
@@ -688,7 +691,7 @@ window.__errors = [];
     Invoke-Click '.nav-btn[data-go=build]'
     Clear-AppFields
     Select-TestInstaller $msixFile
-    Assert ((Get-Text '#inspect-chips') -like '*MSIX*provisioned for every user*') 'The MSIX shows its provisioning chip'
+    Assert ((Get-Text '#inspect-chips') -like '*MSIX*All users*') 'The MSIX shows its provisioning tag'
     Invoke-Click '#segMode button[data-val=simple]'
     Invoke-Click '#segTarget button[data-val=intunewin]'
     Assert (-not (Test-Shown '#detectversion-wrap')) 'MSIX hides the minimum version for detection'
