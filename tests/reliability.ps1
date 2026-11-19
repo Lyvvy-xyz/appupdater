@@ -384,20 +384,20 @@ try {
   Assert (@((Get-AppMemory)['Tool'].builds).Count -eq 20 -and (Find-KnownApp -WingetId 'Vendor.Tool').lastVersion -eq '2.22') 'App memory keeps the last 20 builds and the identity keys'
   $signed = @{ version = '2.0'; signed = 'Valid'; signer = 'CN="Vendor, Inc.", O="Vendor, Inc.", C=US' }
   $codes = { param($f) @($f | ForEach-Object { "$($_.level):$($_.code)" }) -join ',' }
-  $pf = Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'NotSigned' }
+  $pf = @(Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'NotSigned' })
   Assert ((& $codes $pf) -eq 'red:signature-missing') "An unsigned installer of a previously signed app is blocked: $(& $codes $pf)"
-  $pf = Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'Valid'; signer = 'CN=Someone Else, O=Other' }
+  $pf = @(Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'Valid'; signer = 'CN=Someone Else, O=Other' })
   Assert ((& $codes $pf) -eq 'red:signer-changed') "A different signer is blocked: $(& $codes $pf)"
-  $pf = Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'Valid'; signer = 'CN="Vendor, Inc.", O="Vendor, Inc.", L=Renewed' }
+  $pf = @(Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'Valid'; signer = 'CN="Vendor, Inc.", O="Vendor, Inc.", L=Renewed' })
   Assert ($pf.Count -eq 0) "A renewed certificate from the same signer passes: $(& $codes $pf)"
-  $pf = Get-PreflightFindings -FormData @{ Version = '2.1' } -Installer @{ status = 'HashMismatch' }
+  $pf = @(Get-PreflightFindings -FormData @{ Version = '2.1' } -Installer @{ status = 'HashMismatch' })
   Assert ((& $codes $pf) -eq 'red:signature-broken') 'An installer changed after signing is blocked'
   $winget = @{ Id = 'Vendor.Tool'; Version = '2.1'; Match = 'name'; VersionMatch = $true; Latest = '2.3'; Files = @(@{ File = 'tool-2.1.exe'; Sha256 = 'GOOD' }) }
-  $pf = Get-PreflightFindings -FormData @{ Version = '2.1'; InstallerPath = (Join-Path $root 'tool-2.1.exe'); Winget = $winget } -Installer @{ sha256 = 'BAD'; status = 'Valid'; signer = 'CN=V' }
+  $pf = @(Get-PreflightFindings -FormData @{ Version = '2.1'; InstallerPath = (Join-Path $root 'tool-2.1.exe'); Winget = $winget } -Installer @{ sha256 = 'BAD'; status = 'Valid'; signer = 'CN=V' })
   Assert ((& $codes $pf) -eq 'red:winget-hash,amber:newer-available') "A file whose hash differs from winget's listing for that version is blocked: $(& $codes $pf)"
-  $pf = Get-PreflightFindings -FormData @{ Version = '2.1'; InstallerPath = (Join-Path $root 'renamed.exe'); Winget = $winget } -Installer @{ sha256 = 'BAD'; status = 'Valid'; signer = 'CN=V' }
+  $pf = @(Get-PreflightFindings -FormData @{ Version = '2.1'; InstallerPath = (Join-Path $root 'renamed.exe'); Winget = $winget } -Installer @{ sha256 = 'BAD'; status = 'Valid'; signer = 'CN=V' })
   Assert ((& $codes $pf) -eq 'amber:newer-available') 'A differently named file is not compared with the listing'
-  $pf = Get-PreflightFindings -FormData @{ Version = '2.0' } -History @(@{ version = '2.0'; deployOutcome = 'failed' }) -Installer @{ status = 'NotSigned' }
+  $pf = @(Get-PreflightFindings -FormData @{ Version = '2.0' } -History @(@{ version = '2.0'; deployOutcome = 'failed' }) -Installer @{ status = 'NotSigned' })
   Assert ((& $codes $pf) -eq 'amber:unsigned,amber:version-not-newer,amber:last-deploy-failed') "History findings warn without blocking: $(& $codes $pf)"
   $kevFile = Join-Path $root 'kev.json'
   Set-Content -LiteralPath $kevFile -Encoding UTF8 -Value (@{ vulnerabilities = @(
@@ -409,7 +409,7 @@ try {
   Assert ((& $kevFor '7-Zip 24.08 (x64)' 'Igor Pavlov') -eq 'CVE-2025-0411' -and (& $kevFor 'Mozilla Firefox (x64 en-US)' 'Mozilla') -eq 'CVE-2024-9680' -and
           (& $kevFor 'Google Chrome' 'Google LLC') -eq 'CVE-2019-5786' -and (& $kevFor 'Eclipse Temurin JRE with Hotspot 17.0.13+11 (x64)' 'Eclipse Adoptium') -eq '' -and
           (& $kevFor 'Notepad++' 'Notepad++ Team') -eq '') 'CISA entries match by vendor and product, not by product alone'
-  $pf = Get-PreflightFindings -FormData @{ Version = '24.08'; KevPath = $kevFile; Identity = @{ name = '7-Zip 24.08 (x64)'; publisher = 'Igor Pavlov' } } -Installer @{ status = 'Valid'; signer = 'CN=x' }
+  $pf = @(Get-PreflightFindings -FormData @{ Version = '24.08'; KevPath = $kevFile; Identity = @{ name = '7-Zip 24.08 (x64)'; publisher = 'Igor Pavlov' } } -Installer @{ status = 'Valid'; signer = 'CN=x' })
   Assert ((& $codes $pf) -eq 'amber:known-exploited' -and $pf[0].message -like '*CVE-2025-0411*24.08*') "Known-exploited vulnerabilities warn without blocking: $($pf.message)"
   $nvdApi = @{
     'cpes/2.0?keywordSearch=Notepad%2B%2B&resultsPerPage=200' = @{ products = @(@{ cpe = @{ cpeName = 'cpe:2.3:a:don_ho:notepad\+\+:8.6.9:*:*:*:*:*:*:*' } }, @{ cpe = @{ cpeName = 'cpe:2.3:a:don_ho:notepad\+\+:8.6.8:*:*:*:*:*:*:*' } }) }
@@ -610,6 +610,16 @@ function Start-Process {
   foreach ($code in @(1,0,0)) { $testVariables.ExitCodes.Enqueue($code) }
   Invoke-TestWorker 'Start-LocalTestJob' $testVariables $processSetup
   Assert ($testDone.Count -eq 1 -and $testDone[0].ok -and $testCalls.Count -eq 3) 'Encrypted runtime package uses sidecar detection and real extraction'
+  $savedProgramData = $env:ProgramData
+  try {
+    $env:ProgramData = Join-Path $root 'programdata'
+    [IO.Directory]::CreateDirectory((Join-Path $env:ProgramData 'AppUpdater\Example')) | Out-Null
+    Set-Content -LiteralPath (Join-Path $env:ProgramData 'AppUpdater\Example\Example.ps1') -Value "`$RegistryName  = 'Not Installed App'"
+    $testDone.Clear(); $testCalls.Clear(); $testVariables.ExitCodes.Clear()
+    foreach ($code in @(1,0,0)) { $testVariables.ExitCodes.Enqueue($code) }
+    Invoke-TestWorker 'Start-LocalTestJob' $testVariables $processSetup
+    Assert ($testDone.Count -eq 1 -and -not $testDone[0].ok) 'A Runtime agent whose registry name matches nothing installed fails the local test'
+  } finally { $env:ProgramData = $savedProgramData }
   Assert ($testCalls[1] -match 'iwt_extracted_' -and $testCalls[1] -match 'Deploy-Example.ps1') 'Local test runs the extracted deploy script'
 
   $originalPackage = [IO.File]::ReadAllText((Join-Path $result.OutputDir 'Example-Simple.intunewin'))

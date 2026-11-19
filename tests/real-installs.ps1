@@ -4,7 +4,7 @@ param(
   [ValidateSet('', 'simple', 'psadt-v3', 'psadt-v4', 'runtime', 'printer', 'dependency', 'upgrade', 'user', 'java')][string]$Scenario = $env:APP_SCENARIO,
   [string]$DependentUrl = $env:APP_URL2,
   # How a plain app is deployed: Simple .intunewin by default, or PSADT v3/v4 or Runtime in the weekly full run.
-  [ValidateSet('', 'psadt-v3', 'psadt-v4', 'runtime')][string]$Deploy = $env:APP_DEPLOY,
+  [ValidateSet('', 'psadt-v3', 'psadt-v4', 'runtime')][string]$DeployType = $env:APP_DEPLOY,
   [string]$HostPath = (Join-Path $PSScriptRoot '../host.ps1')
 )
 # Packages real installers the way the app does and deploys them on this machine as Intune would, by scenario:
@@ -192,8 +192,8 @@ function New-Png([string]$Path, [int]$Width, [int]$Height) {
 
 try {
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-  if ($Deploy -eq 'runtime') { $Scenario = 'runtime' }
-  $deployOverrides = if ($Deploy -like 'psadt-*') { @{ SimplePkgTarget = 'psadt'; PSADTVersion = $Deploy.Substring(6); AllowDefer = $false } } else { @{} }
+  if ($DeployType -eq 'runtime') { $Scenario = 'runtime' }
+  $deployOverrides = if ($DeployType -like 'psadt-*') { @{ SimplePkgTarget = 'psadt'; PSADTVersion = $DeployType.Substring(6); AllowDefer = $false } } else { @{} }
   switch ($Scenario) {
     'printer' {
       $driver = Get-PrinterDriver -Name 'Microsoft Print To PDF' -ErrorAction Stop
@@ -220,13 +220,11 @@ try {
     'runtime' {
       $app = Get-Installer $Url $Name
       $summary.Type = $app.Inspection.InstallerType; $summary.Winget = $app.Winget; $summary.Switch = $app.Silent; $summary.Registry = $app.Registry
-      $form = New-AppForm $app @{ Mode = 'runtime'; DownloadURL = $Url }
-      $build = Invoke-HeadlessPackageBuild -Config $config -FormData $form -Profile @{}
-      $outcome = Invoke-LocalTest $build.OutputDir $app.AppId 'intunewin' $false $true
+      $outcome = Test-Package $app @{ Mode = 'runtime'; DownloadURL = $Url } $false
       $task = Invoke-AgentTask $app.AppId
       $installed = Find-ARPEntry -Target $app.Registry
       Write-Host "Agent installed the app: $([bool]$installed)$(if ($installed) { " ('$($installed.DisplayName)' $($installed.DisplayVersion))" })"
-      if ($outcome.Ok -and $installed) { $summary.Result = 'PASS'; $exitCode = 0 }
+      if ($outcome.Ok -and $installed) { $summary.Result = $(if ($outcome.Learned) { 'PASS (learned name)' } else { 'PASS' }); $exitCode = 0 }
       elseif (-not $installed) { $summary.Detail += "The agent task (result $task) did not install the app. " }
     }
     { $_ -in 'psadt-v3', 'psadt-v4' } {
@@ -333,7 +331,8 @@ try {
         # Take the version the test read, as an admin would, and check detection accepts the app with it required.
         Write-Host "=== Rebuilding with minimum version $($outcome.Version)"
         $summary.Detail += "minimum version $($outcome.Version). "
-        $outcome = Test-Package $app ($deployOverrides + @{ DetectVersion = $outcome.Version })
+        # Uninstalling was proven by the first pass; some uninstallers leave work for a reboot that a second one would trip over.
+        $outcome = Test-Package $app ($deployOverrides + @{ DetectVersion = $outcome.Version }) $false
       }
       $epm = @(Import-Csv -LiteralPath (Join-Path $outcome.Build.OutputDir 'EPM-rules.csv') -ErrorAction SilentlyContinue)
       $epm | ForEach-Object { Write-Host "EPM: $($_.Role) $($_.FileName) $($_.SHA256) [$($_.SuggestedRule)] $($_.Signer)" }
