@@ -3343,11 +3343,17 @@ try {
       }
       switch ($msg.action) {
             'browse-installer' {
-              $ofd = New-Object Microsoft.Win32.OpenFileDialog
-              $ofd.Filter = 'Installers and packages (*.exe;*.msi;*.msix;*.msixbundle;*.appx;*.appxbundle;*.zip)|*.exe;*.msi;*.msix;*.msixbundle;*.appx;*.appxbundle;*.zip|All files (*.*)|*.*'
-              $ok = $ofd.ShowDialog($window)
-              if ($ok) {
-                $d = Invoke-InstallerInspector -InstallerPath $ofd.FileName
+              # APPUPDATER_TEST_INSTALLER stands in for the file dialog, which CDP cannot drive.
+              $pickedPath = $null
+              if ($env:APPUPDATER_TEST_INSTALLER -and (Test-Path -LiteralPath $env:APPUPDATER_TEST_INSTALLER -PathType Leaf)) {
+                $pickedPath = $env:APPUPDATER_TEST_INSTALLER
+              } else {
+                $ofd = New-Object Microsoft.Win32.OpenFileDialog
+                $ofd.Filter = 'Installers and packages (*.exe;*.msi;*.msix;*.msixbundle;*.appx;*.appxbundle;*.zip)|*.exe;*.msi;*.msix;*.msixbundle;*.appx;*.appxbundle;*.zip|All files (*.*)|*.*'
+                if ($ofd.ShowDialog($window)) { $pickedPath = $ofd.FileName }
+              }
+              if ($pickedPath) {
+                $d = Invoke-InstallerInspector -InstallerPath $pickedPath
                 $chips = @()
                 if ($d.InstallerType -eq 'Unknown') { $chips += @{ label = 'unrecognised installer - enter its silent switch'; tone = 'w' } }
                 elseif ($d.InstallerType) { $chips += @{ label = $d.InstallerType; tone = 'g' } }
@@ -3367,8 +3373,8 @@ try {
                 }
                 $known = Find-KnownApp -UpgradeCode $d.UpgradeCode -Name $d.DisplayName -Publisher $d.Publisher
                 if ($known) { $detected.known = $known }
-                Send-ToPage $wv 'browse-installer-result' @{ ok = $true; path = $ofd.FileName; detected = $detected }
-                Start-WingetLookupJob -Wv $wv -InstallerPath $ofd.FileName -Inspection $d -UseWinget (-not $config.DisableReleaseCheck)
+                Send-ToPage $wv 'browse-installer-result' @{ ok = $true; path = $pickedPath; detected = $detected }
+                Start-WingetLookupJob -Wv $wv -InstallerPath $pickedPath -Inspection $d -UseWinget (-not $config.DisableReleaseCheck)
               } else {
                 Send-ToPage $wv 'browse-installer-result' @{ ok = $false }
               }
@@ -3539,9 +3545,15 @@ $_result.needsToken = -not $run.PrUrl -and $run.Output -match '(?i)token|unautho
               }
             }
             'browse-script' {
-              $sfd = New-Object Microsoft.Win32.OpenFileDialog
-              $sfd.Filter = 'PowerShell scripts (*.ps1)|*.ps1'
-              if ($sfd.ShowDialog($window)) { Send-ToPage $wv 'browse-script-result' @{ ok = $true; field = [string]$msg.payload.field; path = $sfd.FileName } }
+              $pickedPath = $null
+              if ($env:APPUPDATER_TEST_SCRIPT -and (Test-Path -LiteralPath $env:APPUPDATER_TEST_SCRIPT -PathType Leaf)) {
+                $pickedPath = $env:APPUPDATER_TEST_SCRIPT
+              } else {
+                $sfd = New-Object Microsoft.Win32.OpenFileDialog
+                $sfd.Filter = 'PowerShell scripts (*.ps1)|*.ps1'
+                if ($sfd.ShowDialog($window)) { $pickedPath = $sfd.FileName }
+              }
+              if ($pickedPath) { Send-ToPage $wv 'browse-script-result' @{ ok = $true; field = [string]$msg.payload.field; path = $pickedPath } }
             }
             'get-image-preview' {
               Send-ToPage $wv 'image-preview-result' @{ field = $msg.payload.field; dataUrl = (Get-ImageDataUrl -Path $msg.payload.path) }

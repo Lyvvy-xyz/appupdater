@@ -32,7 +32,8 @@ jobs:
           if ($found) { exit 1 }
   windows:
     runs-on: windows-2022
-    timeout-minutes: 15
+    # The click test builds three packages and installs one as SYSTEM.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
@@ -61,8 +62,24 @@ jobs:
             throw 'WebView2 runtime installation failed.'
           }
 
+      # The build flows need a real installer; without one they are skipped.
+      - name: Download an installer for the build flows
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'click-test-installer'
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          $file = Join-Path $dir '7z2408-x64.exe'
+          try {
+            Invoke-WebRequest 'https://www.7-zip.org/a/7z2408-x64.exe' -OutFile $file -TimeoutSec 120
+            "CLICK_TEST_INSTALLER=$file" >> $env:GITHUB_ENV
+          } catch {
+            Write-Host "::notice::7-Zip download failed, so the click test skips its build flows: $($_.Exception.Message)"
+          }
+
       - name: Smoke-test AppUpdater.ps1 over CDP (Windows PowerShell 5.1)
         shell: powershell
+        env:
+          CLICK_TEST_SHOTS: ${{ runner.temp }}\click-test-shots
         run: |
           Copy-Item -LiteralPath host.ps1 -Destination AppUpdater.ps1
           if ((Get-FileHash host.ps1).Hash -ne (Get-FileHash AppUpdater.ps1).Hash) { throw 'Release filename copy differs from host.ps1.' }
@@ -78,3 +95,11 @@ jobs:
             $tail = (Get-Content AppUpdater.log -Tail 15) -join '%0A'
             Write-Host "::notice title=AppUpdater.log tail::$tail"
           }
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: click-test-screenshots
+          path: ${{ runner.temp }}\click-test-shots
+          if-no-files-found: ignore

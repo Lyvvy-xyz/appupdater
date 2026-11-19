@@ -1,11 +1,14 @@
 <#
 Smoke-tests host.ps1 over the Chrome DevTools Protocol; UI Automation can't see inside WebView2.
-Usage: .\click-test.ps1 [-HostPath <path to host.ps1>] [-Port 9333]
+Usage: .\click-test.ps1 [-HostPath <path to host.ps1>] [-Port 9333] [-InstallerPath <real installer>]
+Without an installer the build, local-test and repeat-packaging flows are skipped.
+Screenshots go to $env:CLICK_TEST_SHOTS, or a folder under the test root.
 #>
 param(
   [string]$HostPath = (Join-Path $PSScriptRoot 'host.ps1'),
   [int]$Port = 9333,
-  [switch]$Reset
+  [switch]$Reset,
+  [string]$InstallerPath = $env:CLICK_TEST_INSTALLER
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,11 +28,14 @@ $originalNoElevate = $env:APPUPDATER_NO_ELEVATE
 $originalDebugPort = $env:APPUPDATER_DEBUG_PORT
 $originalProgramData = $env:ProgramData
 $originalLocalAppData = $env:LOCALAPPDATA
+$originalTestInstaller = $env:APPUPDATER_TEST_INSTALLER
+$originalTestScript = $env:APPUPDATER_TEST_SCRIPT
 $proc = $ws = $null
 $redirect = @{}
 try {
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+$elevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $elevated) {
   Write-Host "Not elevated - launching host.ps1 with APPUPDATER_NO_ELEVATE=1 to skip the UAC prompt."
   $env:APPUPDATER_NO_ELEVATE = '1'
 }
@@ -39,7 +45,40 @@ $env:ProgramData = Join-Path $testRoot 'ProgramData'
 $env:LOCALAPPDATA = Join-Path $testRoot 'LocalAppData'
 New-Item -ItemType Directory -Path (Join-Path $env:ProgramData 'AppUpdater'), $env:LOCALAPPDATA -Force | Out-Null
 $seed = @{ OfflineMode = $true; WorkerURL = ''; ManifestToken = ''; OrgName = 'Test organisation'; OnboardingSeen = $true; DisableReleaseCheck = $true }
-$seed | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $env:ProgramData 'AppUpdater/.appupdater-config') -Encoding UTF8
+$configFile = Join-Path $env:ProgramData 'AppUpdater/.appupdater-config'
+$seed | ConvertTo-Json | Set-Content -LiteralPath $configFile -Encoding UTF8
+
+# An app marked deployed before this launch, with a recorded build, is asked about on the home screen.
+$feedbackId = 'click-test-feedback'
+$past = (Get-Date).AddDays(-2).ToString('o')
+@{ $feedbackId = @{ name = 'Feedback Sample'; target = 'intunewin'; profile = ''; outputDir = ''; builtAt = $past; deployedAt = $past } } |
+  ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $env:ProgramData 'AppUpdater/deploy-status.json') -Encoding UTF8
+$memoryFile = Join-Path $env:ProgramData 'AppUpdater/app-memory.json'
+@{ $feedbackId = @{ settings = @{ AppID = $feedbackId; DisplayName = 'Feedback Sample' }; keys = @{}; builds = @(@{ version = '1.2.3'; at = $past }) } } |
+  ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $memoryFile -Encoding UTF8
+
+$shotDir = if ($env:CLICK_TEST_SHOTS) { $env:CLICK_TEST_SHOTS } else { Join-Path $testRoot 'screenshots' }
+New-Item -ItemType Directory -Path $shotDir -Force | Out-Null
+$script:shotCount = 0
+
+# The host's test seams answer its file dialogs with these files.
+$hookScript = Join-Path $testRoot 'hook.ps1'
+Set-Content -LiteralPath $hookScript -Value '# Intentionally empty.' -Encoding UTF8
+$env:APPUPDATER_TEST_SCRIPT = $hookScript
+$installer = $null
+$env:APPUPDATER_TEST_INSTALLER = ''
+if ($InstallerPath -and (Test-Path -LiteralPath $InstallerPath -PathType Leaf)) {
+  # A folder of its own keeps "Bundle the whole folder" available and small.
+  $installerDir = Join-Path $testRoot 'installer'
+  New-Item -ItemType Directory -Path $installerDir -Force | Out-Null
+  $installer = Join-Path $installerDir (Split-Path $InstallerPath -Leaf)
+  Copy-Item -LiteralPath $InstallerPath -Destination $installer
+  $env:APPUPDATER_TEST_INSTALLER = $installer
+} else {
+  $skipNote = "No installer at '$InstallerPath' - skipping the build, local test and repeat-packaging flows."
+  Write-Host $skipNote -ForegroundColor Yellow
+  if ($env:GITHUB_ACTIONS) { Write-Host "::notice::$skipNote" }
+}
 
 $logStartLen = 0
 if (Test-Path $logFile) { $logStartLen = (Get-Item $logFile).Length }
@@ -110,22 +149,102 @@ $proc = Start-Process -FilePath 'powershell.exe' `
     } while ($elapsed.Elapsed.TotalSeconds -lt $TimeoutSeconds)
     throw "Timed out waiting for browser condition: $Expression"
   }
+
+  function Save-Shot([string]$Name) {
+    try {
+      $shot = Send-Cdp 'Page.captureScreenshot' @{ format = 'png' }
+      $script:shotCount++
+      [IO.File]::WriteAllBytes((Join-Path $shotDir ('{0:D2}-{1}.png' -f $script:shotCount, $Name)), [Convert]::FromBase64String($shot.result.data))
+    } catch { Write-Host "Screenshot '$Name' failed: $($_.Exception.Message)" -ForegroundColor Yellow }
+  }
+
+  # Selectors are embedded in single-quoted JS strings, so they must not contain single quotes.
+  function Invoke-Click([string]$Selector) {
+    if (-not (Eval-Js "(function () { const el = document.querySelector('$Selector'); if (!el) return false; el.click(); return true; })()")) {
+      throw "No element matches $Selector"
+    }
+  }
+  function Test-Shown([string]$Selector) {
+    return [bool](Eval-Js "(function () { const el = document.querySelector('$Selector'); return !!el && el.getClientRects().length > 0; })()")
+  }
+  function Test-ScreenOn([string]$Screen) {
+    return [bool](Eval-Js "document.getElementById('screen-$Screen').classList.contains('on')")
+  }
+  function Get-Value([string]$Selector) { return [string](Eval-Js "document.querySelector('$Selector').value") }
+  function Write-Field([string]$Selector, [string]$Value) { Eval-Js "document.querySelector('$Selector').value = $(ConvertTo-Json $Value)" | Out-Null }
+  function Get-Text([string]$Selector) { return [string](Eval-Js "document.querySelector('$Selector').textContent") }
+  function Test-Toast([string]$Title) {
+    return [bool](Eval-Js "Array.from(document.querySelectorAll('#toasts .toast b')).some(function (b) { return b.textContent === $(ConvertTo-Json $Title); })")
+  }
+
+  # A failing flow is recorded with a screenshot and the sweep moves on to the next one.
+  function Invoke-Flow([string]$Name, [scriptblock]$Body) {
+    Write-Host "--- $Name"
+    try { & $Body }
+    catch {
+      Assert $false "$Name threw: $($_.Exception.Message)"
+      Save-Shot (($Name -replace '[^A-Za-z0-9]+', '-').Trim('-') + '-failure')
+    }
+  }
+
+  function Select-TestInstaller {
+    Eval-Js "window.__msgs = []" | Out-Null
+    Invoke-Click '#drop'
+    Wait-Js "window.__msgs.indexOf('browse-installer-result') >= 0" 120
+    # The folder count and winget lookup arrive separately and enable the bundle toggle.
+    Wait-Js "window.__msgs.indexOf('installer-winget-result') >= 0" 120
+  }
+
+  function Wait-Build([string]$Label) {
+    Wait-Js "document.getElementById('screen-done').classList.contains('on') || document.getElementById('progress-error').style.display === 'block'" 600
+    $buildError = if (Test-Shown '#progress-error') { ': ' + (Get-Text '#progress-error') } else { '' }
+    Assert (Test-ScreenOn 'done') "$Label reaches the done screen$buildError"
+  }
+
+  function Test-BuildGuard([string]$Title, [string]$Label) {
+    Eval-Js "document.getElementById('toasts').innerHTML = ''; window.__log = window.__log.filter(function (a) { return a !== 'build-package'; })" | Out-Null
+    Invoke-Click '#btn-build'
+    Assert (Test-Toast $Title) "$Label shows the '$Title' toast"
+    Assert ((Test-ScreenOn 'build') -and -not (Eval-Js "window.__log.indexOf('build-package') >= 0")) "$Label does not start a build"
+  }
+
   Wait-Js "typeof window.send === 'function' && window._defaultOrgName !== undefined"
 
   Assert ([bool](Eval-Js "typeof window.chrome.webview !== 'undefined'")) "WebView2 bridge object exists"
 
   Eval-Js @"
 window.__log = [];
+window.__msgs = [];
+window.__errors = [];
 (function () {
   const orig = window.send;
   window.send = function (action, payload) { window.__log.push(action); return orig(action, payload); };
+  window.chrome.webview.addEventListener('message', function (e) {
+    window.__msgs.push(e.data.type);
+    if (e.data.type === 'error') window.__errors.push(String(e.data.payload && e.data.payload.message));
+  });
 })();
 "@ | Out-Null
 
-  foreach ($screen in 'fleet', 'profiles', 'history', 'worker') {
-    Eval-Js "goTo('$screen')" | Out-Null
+  Invoke-Flow 'Deploy feedback card' {
+    Wait-Js "document.getElementById('deploy-feedback').style.display === 'block'" 30
+    Assert ((Get-Text '#deploy-feedback-list') -like '*Feedback Sample*1.2.3*') 'Home asks about the app deployed before this launch'
+    Save-Shot 'home-deploy-feedback'
+    Invoke-Click "#deploy-feedback-list [data-feedback=$feedbackId][data-outcome=ok]"
+    Assert (-not (Test-Shown '#deploy-feedback')) 'Answering Yes hides the deploy feedback card'
+    $outcome = $null
+    for ($i = 0; $i -lt 50 -and $outcome -ne 'ok'; $i++) {
+      Start-Sleep -Milliseconds 200
+      try { $outcome = @((Get-Content -LiteralPath $memoryFile -Raw -Encoding UTF8 | ConvertFrom-Json).$feedbackId.builds)[-1].deployOutcome } catch {}
+    }
+    Assert ($outcome -eq 'ok') 'The Yes answer is recorded in app-memory.json'
+  }
+
+  foreach ($screen in 'home', 'build', 'fleet', 'profiles', 'history', 'worker', 'accessibility', 'docs') {
+    Invoke-Click ".nav-btn[data-go=$screen]"
     Start-Sleep -Milliseconds 500
-    Assert ([bool](Eval-Js "document.getElementById('screen-$screen').classList.contains('on')")) "goTo('$screen') shows its screen"
+    Assert ((Test-ScreenOn $screen) -and (Get-Text "#screen-$screen").Trim().Length -gt 0) "nav '$screen' shows its screen"
+    Save-Shot "screen-$screen"
   }
 
   Assert ([bool](Eval-Js "window.__log.includes('get-fleet')")) "'fleet' screen requested fleet data"
@@ -139,6 +258,177 @@ window.__log = [];
   Wait-Js "document.getElementById('toasts').textContent.includes('Invalid application message')"
   Wait-Js "window._defaultOrgName !== undefined"
   Assert ([bool](Eval-Js "window._defaultOrgName !== undefined")) 'Bridge survives malformed input'
+
+  Invoke-Flow 'NIST vulnerability check setting' {
+    Invoke-Click '.nav-btn[data-go=worker]'
+    Wait-Js "window.__msgs.indexOf('settings-data') >= 0"
+    Assert (Test-Shown '#tgl-nvd') 'Settings show the NIST vulnerability check toggle'
+    Assert (-not (Eval-Js "document.getElementById('tgl-nvd').classList.contains('on')")) 'The NIST vulnerability check is off by default'
+    Eval-Js "window.__msgs = []" | Out-Null
+    Invoke-Click '#tgl-nvd'
+    Wait-Js "window.__msgs.indexOf('settings-saved') >= 0"
+    Assert ([bool](Eval-Js "document.getElementById('tgl-nvd').classList.contains('on')")) 'Clicking the NIST toggle switches it on'
+    Eval-Js "document.getElementById('tgl-nvd').classList.remove('on'); window.__msgs = []; send('get-settings', {})" | Out-Null
+    Wait-Js "window.__msgs.indexOf('settings-data') >= 0"
+    Assert ([bool](Eval-Js "document.getElementById('tgl-nvd').classList.contains('on')")) 'The NIST setting survives a settings reload'
+    # The config file is readable only by administrators and SYSTEM.
+    if ($elevated) {
+      Assert ((Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json).NvdLookups -eq $true) 'The NIST setting is saved to the config file'
+    }
+    Save-Shot 'settings-nvd-on'
+    Eval-Js "window.__msgs = []" | Out-Null
+    Invoke-Click '#tgl-nvd'
+    Wait-Js "window.__msgs.indexOf('settings-saved') >= 0"
+    Assert (-not (Eval-Js "document.getElementById('tgl-nvd').classList.contains('on')")) 'Clicking the NIST toggle again switches it off'
+  }
+
+  if ($installer) {
+    $script:appId = $script:registryName = $script:builtVersion = $script:suggestedVersion = ''
+
+    Invoke-Flow 'Build form' {
+      Invoke-Click '.nav-btn[data-go=build]'
+      Select-TestInstaller
+      Assert ((Get-Text '#inspect-name') -eq (Split-Path $installer -Leaf)) 'The picked installer is shown on the build form'
+      Assert ([int](Eval-Js "document.querySelectorAll('#inspect-chips .chip').length") -gt 0) 'Inspection chips are shown'
+      Assert ((Get-Value '#f-displayname') -ne '') 'Display name is filled from the installer'
+      Assert ((Get-Value '#f-registryname') -ne '') 'Registry name is filled from the installer'
+      Assert ((Get-Value '#f-silentargs') -ne '') 'Silent switch is filled from the installer'
+      if (-not (Get-Value '#f-silentargs')) { Write-Field '#f-silentargs' '/S' }
+      $script:appId = Get-Value '#f-appid'
+      $script:registryName = Get-Value '#f-registryname'
+      $script:builtVersion = [string](Eval-Js "window._selectedVersion")
+
+      Invoke-Click '#segMode button[data-val=simple]'
+      Assert (Test-Shown '#detectversion-wrap') 'Simple mode shows the minimum version for detection'
+      Assert (Test-Shown '#scripts-wrap') 'Simple mode shows the scripts section'
+      foreach ($selector in '.tgl[data-val=RemoveOlderVersions]', '#f-prehook', '#f-posthook', '#f-postuninstallhook',
+                            '[data-browse-script=f-prehook]', '[data-browse-script=f-posthook]', '[data-browse-script=f-postuninstallhook]') {
+        Assert (Test-Shown $selector) "Simple mode shows $selector"
+      }
+      Invoke-Click '[data-browse-script=f-posthook]'
+      Wait-Js "document.getElementById('f-posthook').value !== ''" 30
+      Assert ((Get-Value '#f-posthook') -eq $hookScript) 'Browse fills the after-install script path'
+      Save-Shot 'build-form-simple'
+      Write-Field '#f-posthook' ''
+
+      Invoke-Click '#segMode button[data-val=runtime]'
+      Assert (-not (Test-Shown '#detectversion-wrap')) 'Runtime mode hides the minimum version for detection'
+      Assert (-not (Test-Shown '#scripts-wrap')) 'Runtime mode hides the scripts section'
+      Save-Shot 'build-form-runtime'
+    }
+
+    Invoke-Flow 'Build guards' {
+      Wait-Js "!document.querySelector('.tgl[data-val=BundleFolder]').disabled" 60
+      Invoke-Click '.tgl[data-val=BundleFolder]'
+      Test-BuildGuard 'Folder bundling is Simple only' 'Runtime mode with folder bundling'
+      Save-Shot 'guard-bundle-runtime'
+      Invoke-Click '.tgl[data-val=BundleFolder]'
+
+      Invoke-Click '#segMode button[data-val=simple]'
+      Write-Field '#f-detectversion' ''
+      Invoke-Click '.tgl[data-val=RemoveOlderVersions]'
+      Test-BuildGuard 'Minimum version needed' 'Removing older versions without a minimum version'
+      Invoke-Click '.tgl[data-val=RemoveOlderVersions]'
+
+      Write-Field '#f-detectversion' 'latest'
+      Test-BuildGuard 'Minimum version' 'A minimum version without digits'
+      Save-Shot 'guard-minimum-version'
+      Write-Field '#f-detectversion' ''
+    }
+
+    Invoke-Flow 'Simple intunewin build' {
+      Invoke-Click '#segTarget button[data-val=intunewin]'
+      Invoke-Click '#btn-build'
+      Wait-Build 'Simple .intunewin build'
+      $sheet = Get-Text '#done-sheet'
+      foreach ($row in 'Install command', 'Uninstall command', 'Detection', 'Install behaviour', 'EPM elevation rules') {
+        Assert ($sheet -like "*$row*") "Done sheet has a '$row' row"
+      }
+      Save-Shot 'done-simple-intunewin'
+    }
+
+    Invoke-Flow 'Fleet and local test' {
+      $idJs = ConvertTo-Json $script:appId
+      Invoke-Click '.nav-btn[data-go=fleet]'
+      Wait-Js "!!document.querySelector('#fleet-table [data-test=' + JSON.stringify($idJs) + ']')" 30
+      $row = [string](Eval-Js "document.querySelector('#fleet-table [data-test=' + JSON.stringify($idJs) + ']').closest('tr').textContent")
+      Assert ($row -like "*$($script:appId)*" -and (-not $script:builtVersion -or $row -like "*$($script:builtVersion)*")) "Fleet lists $($script:appId) with version $($script:builtVersion)"
+      Save-Shot 'fleet-built-app'
+      Invoke-Click ('#fleet-table [data-test=' + $idJs + ']')
+      Assert (Test-Shown '#test-modal') 'Test locally opens the test modal'
+      Save-Shot 'test-modal'
+      if (-not $elevated) {
+        Write-Host 'Not elevated - skipping the local install test, which runs as SYSTEM.' -ForegroundColor Yellow
+        return
+      }
+      Eval-Js "document.getElementById('test-also-uninstall').checked = true; document.getElementById('test-simulate-system').checked = true" | Out-Null
+      Invoke-Click '#test-modal-start'
+      Wait-Js "/✓ Done|✗ Failed/.test(document.getElementById('test-log').textContent)" 300
+      $testLog = Get-Text '#test-log'
+      $passed = $testLog.Contains("$([char]0x2713) Done")
+      Assert $passed "Local install and uninstall test succeeds$(if (-not $passed) { ': ' + $testLog })"
+      $fixLabel = [string](Eval-Js "(Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return /^Require version .+ or newer$/.test(b.textContent); }) || {}).textContent || ''")
+      Assert ($fixLabel -ne '') 'The test offers a minimum version for detection'
+      Save-Shot 'test-modal-done'
+      if ($fixLabel) {
+        $script:suggestedVersion = $fixLabel -replace '^Require version (.+) or newer$', '$1'
+        Eval-Js "Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return /^Require version /.test(b.textContent); }).click()" | Out-Null
+        Assert ((Test-ScreenOn 'build') -and (Get-Value '#f-detectversion') -eq $script:suggestedVersion) "The suggestion returns to the build form with minimum version $($script:suggestedVersion)"
+      }
+    }
+
+    Invoke-Flow 'Repeat packaging' {
+      Invoke-Click '.nav-btn[data-go=build]'
+      Write-Field '#f-appid' 'placeholder-id'
+      Write-Field '#f-registryname' 'placeholder name'
+      Select-TestInstaller
+      Assert ((Get-Text '#inspect-chips') -like '*packaged before*') "The 'packaged before' chip is shown"
+      Assert ((Get-Value '#f-appid') -eq $script:appId) 'App ID is restored from the last build'
+      Assert ((Get-Value '#f-registryname') -eq $script:registryName) 'Registry name is restored from the last build'
+      if ($script:suggestedVersion) {
+        Assert ((Get-Value '#f-detectversion') -eq $script:suggestedVersion) 'The minimum version from the test survives picking the installer again'
+      }
+      Save-Shot 'repeat-packaging'
+    }
+
+    Invoke-Flow 'PSADT v4 build' {
+      Invoke-Click '#segMode button[data-val=simple]'
+      Invoke-Click '#segTarget button[data-val=psadt]'
+      Invoke-Click '#segPsadtVersion button[data-val=v4]'
+      Invoke-Click '#btn-build'
+      Wait-Build 'PSADT v4 build'
+      Assert ((Get-Text '#done-sheet') -like '*PSADT package*') 'Done sheet names the PSADT target'
+      Save-Shot 'done-psadt-v4'
+    }
+
+    Invoke-Flow 'Pre-deploy block' {
+      # An earlier build signed by someone else makes this installer's signature a red finding.
+      $memory = Get-Content -LiteralPath $memoryFile -Raw -Encoding UTF8 | ConvertFrom-Json
+      $entry = $memory.($script:appId)
+      if (-not $entry) { throw "app-memory.json has no entry for $($script:appId)" }
+      $entry.builds = @($entry.builds) + [pscustomobject]@{
+        version = $script:builtVersion; at = (Get-Date).ToString('o'); signed = 'Valid'; signer = 'CN=Someone Else, O=Other'
+      }
+      $memory | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $memoryFile -Encoding UTF8
+
+      Invoke-Click '.nav-btn[data-go=build]'
+      Select-TestInstaller
+      Invoke-Click '#segMode button[data-val=simple]'
+      Invoke-Click '#segTarget button[data-val=intunewin]'
+      Invoke-Click '#btn-build'
+      Wait-Js "document.getElementById('screen-done').classList.contains('on') || document.getElementById('progress-error').style.display === 'block'" 300
+      Assert ((Get-Text '#progress-error-title') -eq 'Build stopped by pre-deploy checks') 'A changed signer stops the build'
+      Assert (Test-Shown '#preflight-override') "The stopped build offers 'Build anyway'"
+      Save-Shot 'predeploy-blocked'
+      Invoke-Click '#preflight-override'
+      Wait-Build "'Build anyway'"
+      Assert ((Get-Text '#done-sheet') -like '*Check overridden*') "Done sheet has a 'Check overridden' row"
+      Save-Shot 'done-check-overridden'
+    }
+  }
+
+  $unexpected = [string](Eval-Js "window.__errors.filter(function (m) { return m !== 'Invalid application message.'; }).join(' | ')")
+  Assert ($unexpected -eq '') "no unexpected error messages reached the page$(if ($unexpected) { ': ' + $unexpected })"
 
   Eval-Js "send('minimize-window', {})" | Out-Null
   Start-Sleep -Milliseconds 500
@@ -190,6 +480,8 @@ window.__log = [];
   $env:LOCALAPPDATA = $originalLocalAppData
   $env:APPUPDATER_NO_ELEVATE = $originalNoElevate
   $env:APPUPDATER_DEBUG_PORT = $originalDebugPort
+  $env:APPUPDATER_TEST_INSTALLER = $originalTestInstaller
+  $env:APPUPDATER_TEST_SCRIPT = $originalTestScript
 }
 
 if (Test-Path $logFile) {
@@ -204,6 +496,7 @@ if (Test-Path $logFile) {
   if ($newText -match '\[FATAL\]|\[ERROR\]') { Write-Host ($newText -split "`n" | Where-Object { $_ -match '\[FATAL\]|\[ERROR\]' } | Out-String) }
 }
 
+Write-Host "Screenshots: $shotDir"
 Write-Host ""
 if ($script:fails.Count -gt 0) {
   Write-Host "$($script:fails.Count) check(s) FAILED" -ForegroundColor Red
@@ -212,4 +505,4 @@ if ($script:fails.Count -gt 0) {
 Write-Host "All checks passed" -ForegroundColor Green
 exit 0
 
-# Not covered: native file dialogs, async package builds, OS-level window state.
+# Not covered: OS-level window state; file dialogs are answered by the APPUPDATER_TEST_* seams.
