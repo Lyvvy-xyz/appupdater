@@ -352,6 +352,31 @@ try {
   Assert ((Find-KnownApp -WingetId 'Vendor.Tool').appId -eq 'Tool' -and -not (Find-KnownApp -Name 'Other' -Publisher 'Vendor')) 'Known apps match by winget package or name, not by publisher alone'
   foreach ($n in 1..22) { Save-AppMemoryBuild -FormData @{ AppID = 'Tool'; Version = "2.$n"; Identity = @{} } }
   Assert (@((Get-AppMemory)['Tool'].builds).Count -eq 20 -and (Find-KnownApp -WingetId 'Vendor.Tool').lastVersion -eq '2.22') 'App memory keeps the last 20 builds and the identity keys'
+  $signed = @{ version = '2.0'; signed = 'Valid'; signer = 'CN="Vendor, Inc.", O="Vendor, Inc.", C=US' }
+  $codes = { param($f) @($f | ForEach-Object { "$($_.level):$($_.code)" }) -join ',' }
+  $pf = Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'NotSigned' }
+  Assert ((& $codes $pf) -eq 'red:signature-missing') "An unsigned installer of a previously signed app is blocked: $(& $codes $pf)"
+  $pf = Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'Valid'; signer = 'CN=Someone Else, O=Other' }
+  Assert ((& $codes $pf) -eq 'red:signer-changed') "A different signer is blocked: $(& $codes $pf)"
+  $pf = Get-PreflightFindings -FormData @{ Version = '2.1' } -History @($signed) -Installer @{ sha256 = 'A'; status = 'Valid'; signer = 'CN="Vendor, Inc.", O="Vendor, Inc.", L=Renewed' }
+  Assert ($pf.Count -eq 0) "A renewed certificate from the same signer passes: $(& $codes $pf)"
+  $pf = Get-PreflightFindings -FormData @{ Version = '2.1' } -Installer @{ status = 'HashMismatch' }
+  Assert ((& $codes $pf) -eq 'red:signature-broken') 'An installer changed after signing is blocked'
+  $winget = @{ Id = 'Vendor.Tool'; Version = '2.1'; Match = 'name'; VersionMatch = $true; Latest = '2.3'; Files = @(@{ File = 'tool-2.1.exe'; Sha256 = 'GOOD' }) }
+  $pf = Get-PreflightFindings -FormData @{ Version = '2.1'; InstallerPath = (Join-Path $root 'tool-2.1.exe'); Winget = $winget } -Installer @{ sha256 = 'BAD'; status = 'Valid'; signer = 'CN=V' }
+  Assert ((& $codes $pf) -eq 'red:winget-hash,amber:newer-available') "A file whose hash differs from winget's listing for that version is blocked: $(& $codes $pf)"
+  $pf = Get-PreflightFindings -FormData @{ Version = '2.1'; InstallerPath = (Join-Path $root 'renamed.exe'); Winget = $winget } -Installer @{ sha256 = 'BAD'; status = 'Valid'; signer = 'CN=V' }
+  Assert ((& $codes $pf) -eq 'amber:newer-available') 'A differently named file is not compared with the listing'
+  $pf = Get-PreflightFindings -FormData @{ Version = '2.0' } -History @(@{ version = '2.0'; deployOutcome = 'failed' }) -Installer @{ status = 'NotSigned' }
+  Assert ((& $codes $pf) -eq 'amber:unsigned,amber:version-not-newer,amber:last-deploy-failed') "History findings warn without blocking: $(& $codes $pf)"
+  $script:SessionStartedAt = (Get-Date).AddMinutes(5)
+  Set-DeployStatus -AppID 'Tool' -AppName 'Tool' -Target 'intunewin' -OutputDir 'out'
+  Save-AppMemoryBuild -FormData @{ AppID = 'Tool'; Version = '2.23'; Identity = @{} }
+  Set-DeployStatus -AppID 'Tool' -MarkDeployed
+  Assert (@((Get-FleetPayload -Config $config).feedbackDue | Where-Object id -eq 'Tool').Count -eq 1) 'Apps deployed before this launch are asked about'
+  Set-DeployOutcome -AppID 'Tool' -Outcome 'failed'
+  Assert (@((Get-FleetPayload -Config $config).feedbackDue | Where-Object id -eq 'Tool').Count -eq 0 -and (Find-KnownApp -WingetId 'Vendor.Tool') -and
+          @((Get-AppMemory)['Tool'].builds)[-1].deployOutcome -eq 'failed') 'A deployment outcome is recorded once'
   $zipForm.EntryExe = ''
   Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $zipForm -Profile @{} } 'A zip without a program is refused'
 
@@ -378,6 +403,7 @@ Installers:
 - Architecture: x86
   InstallerSha256: 0000
 - Architecture: x64
+  InstallerUrl: https://example.invalid/downloads/vendor%20app-1.0.0.exe
   InstallerSha256: $wingetSha
   AppsAndFeaturesEntries:
   - DisplayName: 'Vendor App ''One'''
@@ -404,6 +430,7 @@ Installers:
   $exact = Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -Publisher 'Vendor Inc.' -Version '1.0.0' -IndexPath $wingetIndex -GetManifest $fetch
   Assert ($exact.Id -eq 'Vendor.App' -and $exact.Version -eq '1.0.0' -and $exact.Match -eq 'hash' -and $exact.InstallerType -eq 'inno' -and $exact.Scope -eq 'machine') 'winget matches an older version by file hash'
   Assert ($exact.SilentArgs -eq '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /MERGETASKS=!runcode' -and $exact.ArpName -eq "Vendor App 'One'") 'winget switches add Custom to the family default and carry the ARP name'
+  Assert ($exact.Latest -eq '2.0.0' -and @($exact.Files).Count -eq 1 -and $exact.Files[0].File -eq 'vendor app-1.0.0.exe' -and $exact.Files[0].Sha256 -eq $wingetSha.ToUpperInvariant()) "winget results carry the catalogue's newest version and its file hashes: $($exact.Latest)"
   $newer = Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -Publisher 'Vendor' -Version '9.9' -IndexPath $wingetIndex -GetManifest $fetch
   Assert ($newer.Id -eq 'Vendor.App' -and $newer.Version -eq '2.0.0' -and $newer.Match -eq 'name' -and $newer.SilentArgs -eq '--silent' -and $newer.Scope -eq 'user') 'Channel variants fall back to the main package newest manifest'
   $wingetMsi = Join-Path $root 'other.msi'

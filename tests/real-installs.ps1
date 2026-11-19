@@ -83,6 +83,12 @@ function Get-Installer([string]$From, [string]$Label) {
   $index = Update-WingetIndex -CacheDir $WingetCacheDir
   $winget = Find-WingetInstaller -InstallerPath $path -ProductCode $inspection.ProductCode -Name $inspection.DisplayName `
     -Publisher $inspection.Publisher -Version $inspection.Version -IndexPath $index
+  # Pre-deploy checks against the real vendor file: a red finding on a genuine installer is a false alarm.
+  $sig = Get-AuthenticodeSignature -LiteralPath $path
+  $fingerprint = @{ sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash; status = [string]$sig.Status; signer = $(if ($sig.SignerCertificate) { $sig.SignerCertificate.Subject }) }
+  $findings = @(Get-PreflightFindings -FormData @{ Version = $inspection.Version; InstallerPath = $path; Winget = $winget } -Installer $fingerprint)
+  Write-Host "[$Label] signature $($fingerprint.status) $(Get-SignerName $fingerprint.signer); pre-deploy findings: $(if ($findings.Count) { @($findings | ForEach-Object { "$($_.level) $($_.code)" }) -join ', ' } else { 'none' })"
+  if (@($findings | Where-Object level -eq 'red').Count) { throw "Pre-deploy checks blocked a genuine installer: $(@($findings.message) -join ' ')" }
   $app = @{
     Path = $path; Inspection = $inspection; AppId = ($Label -replace '[^A-Za-z0-9._-]', '')
     Silent = $(if ($winget -and $winget.SilentArgs) { $winget.SilentArgs } else { $inspection.SilentArgs })
