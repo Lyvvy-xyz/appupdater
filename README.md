@@ -68,6 +68,18 @@ Each build produces three output files ready for Intune:
 <td><strong>PSADT v3 &amp; v4 export</strong> for close-apps prompts</td>
 <td><strong>HMAC-signed sessions</strong>, rate-limited login</td>
 </tr>
+<tr>
+<td><strong>EXE, MSI, MSIX and portable ZIP</strong> installers, with switches from the winget catalogue</td>
+<td><strong>Remembers each app</strong>: a newer installer brings back the last build's settings</td>
+</tr>
+<tr>
+<td><strong>Pre-deploy checks</strong>: signature, winget hash, CISA and optional NIST NVD</td>
+<td><strong>Local test</strong> that installs, detects and uninstalls as Intune would</td>
+</tr>
+<tr>
+<td><strong>Version-aware detection</strong>, so older copies are upgraded</td>
+<td><strong>EPM rule data</strong> and <strong>winget-pkgs contributions</strong> from a tested package</td>
+</tr>
 </table>
 
 ### Operating Modes
@@ -246,8 +258,9 @@ Keyboard: <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> with a visible focus 
 
 ### Phase 1 — Pick Your Installer
 
-- Click the drop zone in **Package builder** to browse for an `.exe` or `.msi`
-- MSI and EXE formats are both supported; type is detected automatically
+- Click the drop zone in **Package builder** to browse for an `.exe`, `.msi`, `.msix`/`.appx` (and bundles) or a portable `.zip`
+- The installer family (NSIS, Inno, WiX/Burn, InstallShield, Squirrel, Advanced Installer, InstallAware, 7-Zip SFX and more) is detected from the file; unknown installers ask for their silent switch instead of guessing
+- An installer of an app packaged before is recognised by its MSI upgrade code, winget package or name and publisher, and the last build's settings are filled in again
 
 ### Phase 2 — Auto-Detection
 
@@ -255,11 +268,11 @@ AppUpdater inspects the installer and pre-fills every field. All fields are edit
 
 | Field | How it's determined |
 |---|---|
-| **App ID** | Derived from filename — alphanumeric + `. _ -`, max 64 chars, must start with letter or digit |
+| **App ID** | Derived from the product name without versions or architectures, so the next version keeps the same ID |
 | **Display Name** | Read from file description metadata |
-| **Silent Args** | Detected from installer type — MSI always gets `/qn /norestart` |
-| **Registry Display Name** | Queried from the Windows uninstall registry |
-| **Processes to Kill** | Executable names found alongside the installer |
+| **Silent Args** | From the winget catalogue when it lists the installer, otherwise from the installer family — MSI always gets `/qn /norestart` |
+| **Registry Display Name** | From the winget catalogue or the installer; a local test suggests the name the app really registers |
+| **Processes to Kill** | Executable names found alongside the installer; shell and system processes are never closed |
 
 ### Phase 3 — App Form
 
@@ -296,6 +309,15 @@ AppUpdater inspects the installer and pre-fills every field. All fields are edit
 | Expected Publisher | Authenticode signer CN — verified on every device download |
 | SHA-256 Hash | 64 hex chars. Enables hash check before install. Offline packages only |
 
+**Simple packages**
+
+| Field | Notes |
+|---|---|
+| Minimum version for detection | Older copies count as not installed, so Intune upgrades them. A local test reads the version the app registers and offers it |
+| Bundle the whole folder | Ships every file next to the installer; `{pkg}` in the silent switch stands for that folder |
+| Remove older versions first | For apps that install side by side, such as Java. Needs the minimum version |
+| Scripts | Before-install, after-install and after-uninstall PowerShell scripts for configuration the installer cannot do |
+
 **Package Type**
 
 | Type | Behaviour |
@@ -318,6 +340,26 @@ Choose how to deliver the package after building:
 
 > [!NOTE]
 > `IntuneWinAppUtil.exe` is downloaded from `https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool` on first use, verified against Microsoft's Authenticode certificate, then reused from the script directory. **No manual download required.**
+
+### Pre-deploy Checks
+
+Before every build the installer is checked. Red findings stop the build until you choose **Build anyway**; amber findings are shown with the finished package.
+
+| Level | Finding |
+|---|---|
+| Red | The signature does not match the file, a previously signed app arrives unsigned, the signer changed, or the file's SHA-256 differs from winget's listing for that version |
+| Amber | Unsigned installer, version not newer than the last package, newer version in winget, last deployment reported as failed, CISA known-exploited product, NIST NVD CVEs for the exact version (opt-in in Settings) |
+
+### Local Test and Follow-ups
+
+**Test locally** in Fleet installs, detects and uninstalls the package on this machine as SYSTEM, or as the user for per-user installers, and reports the Add/Remove Programs entries it created. From there AppUpdater can:
+
+- Suggest the registry name the app really registers, and for Runtime packages the name the agent looks for
+- Offer the registered version as the minimum version for detection
+- Add the installed program and its updaters to `EPM-rules.csv` (SHA-256, signer certificate) for Intune Endpoint Privilege Management rules
+- Contribute what it verified to [winget-pkgs](https://github.com/microsoft/winget-pkgs) as a pull request from your GitHub account, through Microsoft's `wingetcreate`
+
+On the next launch, apps marked deployed ask whether they installed correctly; a "no" becomes a warning on the next package of that app.
 
 ### Phase 5 — Manifest Update
 
@@ -750,6 +792,8 @@ Console output on the build machine uses consistent prefixes:
 
 ## Testing
 
+`tests/reliability.ps1` runs the regression suite under PowerShell 7 and Windows PowerShell 5.1. The **real-installs** workflow downloads real vendor installers (listed in `tests/apps.json`), packages them and installs, detects and uninstalls each one as SYSTEM on a clean Windows runner. Every push covers each app as a Simple package plus upgrade, per-user, Java, dependency, printer, PSADT and Runtime scenarios; the weekly run also packages every app as PSADT v3, PSADT v4 and Runtime.
+
 `click-test.ps1` smoke-tests the real app: it launches `host.ps1` with a Chrome DevTools Protocol port open, uses the page's own JS to open the Fleet, Client profiles, History and Worker screens, checks that each one asks the PowerShell side for its data, then closes the window and confirms the app exits.
 
 ```powershell
@@ -771,6 +815,8 @@ It doesn't need admin rights. When it isn't elevated, it sets `APPUPDATER_NO_ELE
 - **Windows-only** — depends on WPF, NTFS ACLs, DPAPI, and Windows Credential Manager; not portable to other platforms
 - **Cloud requires internet** — the offline build path is fully functional, but dashboard, telemetry, and manifest sync are unavailable without connectivity
 - **Generated scripts are not Authenticode-signed** — NTFS ACL enforcement is the only code integrity control on the deployment share
+- **Vulnerability data is advisory** — CISA does not list affected versions and NVD's product data has gaps, so a clean result does not prove a version is safe
+- **Removing older versions** runs only MSI removals and the vendor's own quiet uninstall command; other uninstallers are left in place
 
 ---
 
