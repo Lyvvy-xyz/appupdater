@@ -1,7 +1,7 @@
 <#
 Smoke-tests host.ps1 over the Chrome DevTools Protocol; UI Automation can't see inside WebView2.
 Usage: .\click-test.ps1 [-HostPath <path to host.ps1>] [-Port 9333] [-InstallerPath <real installer>]
-Without an installer the build, local-test and repeat-packaging flows are skipped.
+Without an installer the 7-Zip build flows are skipped; the printer, zip and MSIX flows use fixtures of their own.
 Screenshots go to $env:CLICK_TEST_SHOTS, or a folder under the test root.
 #>
 param(
@@ -30,6 +30,7 @@ $originalProgramData = $env:ProgramData
 $originalLocalAppData = $env:LOCALAPPDATA
 $originalTestInstaller = $env:APPUPDATER_TEST_INSTALLER
 $originalTestScript = $env:APPUPDATER_TEST_SCRIPT
+$originalTestImage = $env:APPUPDATER_TEST_IMAGE
 $proc = $ws = $null
 $redirect = @{}
 try {
@@ -65,8 +66,32 @@ $script:shotCount = 0
 $hookScript = Join-Path $testRoot 'hook.ps1'
 Set-Content -LiteralPath $hookScript -Value '# Intentionally empty.' -Encoding UTF8
 $env:APPUPDATER_TEST_SCRIPT = $hookScript
+
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem, System.Drawing
+$fixtureDir = Join-Path $testRoot 'fixtures'
+New-Item -ItemType Directory -Path $fixtureDir -Force | Out-Null
+$logoFile = Join-Path $fixtureDir 'logo.png'
+$bmp = New-Object Drawing.Bitmap 64, 64
+try {
+  $g = [Drawing.Graphics]::FromImage($bmp); $g.Clear([Drawing.Color]::SteelBlue); $g.Dispose()
+  $bmp.Save($logoFile, [Drawing.Imaging.ImageFormat]::Png)
+} finally { $bmp.Dispose() }
+$env:APPUPDATER_TEST_IMAGE = $logoFile
+$portableZip = Join-Path $fixtureDir 'portable-tool.zip'
+$zip = [IO.Compression.ZipFile]::Open($portableZip, 'Create')
+try { [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, (Join-Path $env:SystemRoot 'System32\notepad.exe'), 'Tool/tool.exe') | Out-Null }
+finally { $zip.Dispose() }
+$msixFile = Join-Path $fixtureDir 'Vendor.ClickTest.msix'
+$zip = [IO.Compression.ZipFile]::Open($msixFile, 'Create')
+try {
+  $w = New-Object IO.StreamWriter ($zip.CreateEntry('AppxManifest.xml').Open())
+  try { $w.Write('<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"><Identity Name="Vendor.ClickTest" Version="1.2.3.0" Publisher="CN=Vendor"/><Properties><DisplayName>Click Test</DisplayName><PublisherDisplayName>Vendor</PublisherDisplayName></Properties></Package>') }
+  finally { $w.Dispose() }
+} finally { $zip.Dispose() }
+
 $installer = $null
-$env:APPUPDATER_TEST_INSTALLER = ''
+# Any existing file switches the installer seam on; the page can then name the file it wants.
+$env:APPUPDATER_TEST_INSTALLER = $portableZip
 if ($InstallerPath -and (Test-Path -LiteralPath $InstallerPath -PathType Leaf)) {
   # A folder of its own keeps "Bundle the whole folder" available and small.
   $installerDir = Join-Path $testRoot 'installer'
@@ -75,10 +100,12 @@ if ($InstallerPath -and (Test-Path -LiteralPath $InstallerPath -PathType Leaf)) 
   Copy-Item -LiteralPath $InstallerPath -Destination $installer
   $env:APPUPDATER_TEST_INSTALLER = $installer
 } else {
-  $skipNote = "No installer at '$InstallerPath' - skipping the build, local test and repeat-packaging flows."
+  $skipNote = "No installer at '$InstallerPath' - skipping the 7-Zip build, local test and repeat-packaging flows."
   Write-Host $skipNote -ForegroundColor Yellow
   if ($env:GITHUB_ACTIONS) { Write-Host "::notice::$skipNote" }
 }
+# The engine keeps the winget catalogue at a fixed path, outside the test ProgramData.
+$wingetIndex = 'C:\ProgramData\AppUpdater\winget\index.db'
 
 $logStartLen = 0
 if (Test-Path $logFile) { $logStartLen = (Get-Item $logFile).Length }
@@ -191,9 +218,32 @@ $proc = Start-Process -FilePath 'powershell.exe' `
     }
   }
 
-  function Select-TestInstaller {
+  function Send-Input([string]$Selector) { Eval-Js "document.querySelector('$Selector').dispatchEvent(new Event('input'))" | Out-Null }
+  function Select-Option([string]$Selector, [string]$Value) {
+    Eval-Js "(function () { const el = document.querySelector('$Selector'); el.value = $(ConvertTo-Json $Value); el.dispatchEvent(new Event('change')); })()" | Out-Null
+  }
+  function Test-On([string]$Selector) { return [bool](Eval-Js "document.querySelector('$Selector').classList.contains('on')") }
+  function Set-Toggle([string]$Selector, [bool]$On) {
+    if ((Test-On $Selector) -ne $On) {
+      Eval-Js "window.__msgs = []" | Out-Null
+      Invoke-Click $Selector
+      Wait-Js "window.__msgs.indexOf('settings-saved') >= 0"
+    }
+    Assert ((Test-On $Selector) -eq $On) "$Selector is $(if ($On) { 'on' } else { 'off' })"
+  }
+  function Write-Notice([string]$Text) {
+    Write-Host $Text -ForegroundColor Yellow
+    if ($env:GITHUB_ACTIONS) { Write-Host "::notice::$Text" }
+  }
+
+  # Picking an installer fills only empty identity fields, so another app needs them cleared first.
+  function Clear-AppFields { foreach ($f in '#f-appid', '#f-displayname', '#f-registryname', '#f-download-url') { Write-Field $f '' } }
+
+  # Without a path the drop zone is clicked and the seam answers with its default file.
+  function Select-TestInstaller([string]$Path) {
     Eval-Js "window.__msgs = []" | Out-Null
-    Invoke-Click '#drop'
+    if ($Path) { Eval-Js "send('browse-installer', { testPath: $(ConvertTo-Json $Path) })" | Out-Null }
+    else { Invoke-Click '#drop' }
     Wait-Js "window.__msgs.indexOf('browse-installer-result') >= 0" 120
     # The folder count and winget lookup arrive separately and enable the bundle toggle.
     Wait-Js "window.__msgs.indexOf('installer-winget-result') >= 0" 120
@@ -284,6 +334,41 @@ window.__errors = [];
     Invoke-Click '#tgl-nvd'
     Wait-Js "window.__msgs.indexOf('settings-saved') >= 0"
     Assert (-not (Eval-Js "document.getElementById('tgl-nvd').classList.contains('on')")) 'Clicking the NIST toggle again switches it off'
+  }
+
+  Invoke-Flow 'Cloudflare connect' {
+    # The connect wizard is a native WPF window, so UI Automation finds and closes it.
+    Invoke-Click '.nav-btn[data-go=worker]'
+    Wait-Js "document.getElementById('btn-worker-connect').getClientRects().length > 0"
+    $label = Get-Text '#btn-worker-connect'
+    Invoke-Click '#btn-worker-connect'
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+    $byProcess = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
+    $byTitle = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty, 'Worker Options')
+    $bySub = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty, 'Choose an action')
+    $dialog = $null
+    for ($i = 0; $i -lt 60 -and -not $dialog; $i++) {
+      Start-Sleep -Milliseconds 250
+      foreach ($w in [Windows.Automation.AutomationElement]::RootElement.FindAll('Children', $byProcess)) {
+        if ($w.FindFirst('Descendants', $byTitle)) { $dialog = $w }
+      }
+    }
+    Assert ([bool]$dialog) "'$label' opens the Worker Options window"
+    if (-not $dialog) { return }
+    Assert ([bool]$dialog.FindFirst('Descendants', $bySub)) "The Worker Options window shows 'Choose an action'"
+    try {
+      $r = $dialog.Current.BoundingRectangle
+      $bmp = New-Object Drawing.Bitmap ([int]$r.Width), ([int]$r.Height)
+      try {
+        $g = [Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen([int]$r.X, [int]$r.Y, 0, 0, $bmp.Size); $g.Dispose()
+        $script:shotCount++
+        $bmp.Save((Join-Path $shotDir ('{0:D2}-cloudflare-connect.png' -f $script:shotCount)), [Drawing.Imaging.ImageFormat]::Png)
+      } finally { $bmp.Dispose() }
+    } catch { Write-Host "Screenshot 'cloudflare-connect' failed: $($_.Exception.Message)" -ForegroundColor Yellow }
+    $dialog.GetCurrentPattern([Windows.Automation.WindowPattern]::Pattern).Close()
+    Wait-Js "document.getElementById('btn-worker-connect').textContent === $(ConvertTo-Json $label) && !document.getElementById('btn-worker-connect').disabled" 30
+    Assert ($proc -and -not $proc.HasExited) 'Closing the Worker Options window leaves the app running'
+    Save-Shot 'worker-after-connect-cancel'
   }
 
   if ($installer) {
@@ -405,6 +490,129 @@ window.__errors = [];
       Save-Shot 'done-psadt-v4' '#done-sheet'
     }
 
+    # A finished build resets the installer, so every build below picks it again; that also restores the last build's settings.
+    Invoke-Flow 'PSADT v3 build' {
+      Invoke-Click '.nav-btn[data-go=build]'
+      Select-TestInstaller
+      Invoke-Click '#segMode button[data-val=simple]'
+      Invoke-Click '#segTarget button[data-val=psadt]'
+      Invoke-Click '#segPsadtVersion button[data-val=v3]'
+      Invoke-Click '#btn-build'
+      Wait-Build 'PSADT v3 build'
+      $sheet = Get-Text '#done-sheet'
+      Assert ($sheet -like '*PSADT package*' -and $sheet -like '*Deploy-Application.ps1*') 'Done sheet names the PSADT v3 target'
+      Save-Shot 'done-psadt-v3' '#done-sheet'
+    }
+
+    Invoke-Flow 'Runtime build' {
+      Invoke-Click '.nav-btn[data-go=build]'
+      Select-TestInstaller
+      Invoke-Click '#segMode button[data-val=runtime]'
+      Invoke-Click '#segTarget button[data-val=intunewin]'
+      Write-Field '#f-download-url' 'https://www.7-zip.org/a/7z2408-x64.exe'
+      Invoke-Click '#btn-build'
+      Wait-Build 'Runtime .intunewin build'
+      $sheet = Get-Text '#done-sheet'
+      Assert ($sheet -like '*AppUpdater Runtime*') 'Done sheet names the Runtime type'
+      Assert ($sheet -like '*As a dependency*Detection confirms the AppUpdater agent*') "Done sheet has the Runtime 'As a dependency' row"
+      Save-Shot 'done-runtime' '#done-sheet'
+    }
+
+    Invoke-Flow 'Client profile' {
+      $profileName = 'Click Test Client'
+      Invoke-Click '.nav-btn[data-go=profiles]'
+      Invoke-Click '#new-profile-card'
+      Write-Field '#pf-name' $profileName; Send-Input '#pf-name'
+      Write-Field '#pf-orgname' 'Click Test Org'; Send-Input '#pf-orgname'
+      Invoke-Click '#pf-logo-browse'
+      Wait-Js "document.getElementById('pf-logo').value !== ''" 30
+      Assert ((Get-Value '#pf-logo') -eq $logoFile) 'Browse fills the profile logo path'
+      Eval-Js "document.getElementById('toasts').innerHTML = ''" | Out-Null
+      Invoke-Click '#pf-save'
+      Wait-Js "!!document.querySelector('#profiles-strip [data-edit-profile=`"$profileName`"]')"
+      Assert (Test-Toast 'Profile saved') "Saving shows the 'Profile saved' toast"
+      Assert ([bool](Eval-Js "Array.from(document.querySelectorAll('#f-profile option')).some(function (o) { return o.value === '$profileName'; })")) 'The saved profile is offered on the build form'
+      Save-Shot 'profiles-saved'
+
+      Invoke-Click '.nav-btn[data-go=build]'
+      Select-TestInstaller
+      Select-Option '#f-profile' $profileName
+      Invoke-Click '#segMode button[data-val=simple]'
+      Invoke-Click '#segTarget button[data-val=psadt]'
+      Invoke-Click '#segPsadtVersion button[data-val=v4]'
+      Assert ((Get-Text '#build-summary') -like '*Click Test Org branding*') 'The build summary names the profile organisation'
+      if (Test-Shown '#bp-disclosure') {
+        Invoke-Click '#bp-disclosure'
+        Save-Shot 'build-branding-preview' '#bp-panel'
+      }
+      Invoke-Click '#btn-build'
+      Wait-Build 'PSADT v4 build with a client profile'
+      Assert ((Get-Text '#done-sheet') -like '*PSADT package*') 'Done sheet names the PSADT target'
+      Save-Shot 'done-psadt-v4-profile' '#done-sheet'
+    }
+
+    Invoke-Flow 'Online lookups and NIST check' {
+      Invoke-Click '.nav-btn[data-go=worker]'
+      Set-Toggle '#tgl-release-check' $true
+      Set-Toggle '#tgl-nvd' $true
+      Save-Shot 'settings-online-lookups-on'
+      Invoke-Click '.nav-btn[data-go=build]'
+      Select-TestInstaller
+      Select-Option '#f-profile' ''
+      Invoke-Click '#segMode button[data-val=simple]'
+      Invoke-Click '#segTarget button[data-val=intunewin]'
+      Invoke-Click '#btn-build'
+      Wait-Build 'Simple build with online lookups'
+      # Either row proves the setting reached the build: NIST answered, or it was unreachable.
+      $nvdRow = [string](Eval-Js "Array.from(document.querySelectorAll('#done-sheet .srow')).map(function (r) { return r.querySelector('.sk').textContent + ': ' + r.querySelector('.sv').textContent; }).filter(function (t) { return /^Check: .*NVD/.test(t); }).join(' | ')")
+      Assert ($nvdRow -ne '') "Done sheet has an NVD check row$(if ($nvdRow) { ': ' + $nvdRow })"
+      Save-Shot 'done-nvd-check' '#done-sheet'
+    }
+
+    Invoke-Flow 'winget contribution' {
+      if (-not $elevated) { Write-Notice 'Not elevated - skipping the winget contribution, which needs a local test as SYSTEM.'; return }
+      $waited = [Diagnostics.Stopwatch]::StartNew()
+      while (-not (Test-Path -LiteralPath $wingetIndex) -and $waited.Elapsed.TotalMinutes -lt 5) { Start-Sleep -Seconds 5 }
+      if (-not (Test-Path -LiteralPath $wingetIndex)) { Write-Notice 'The winget catalogue did not download within 5 minutes - skipping the winget contribution flow.'; return }
+
+      Invoke-Click '.nav-btn[data-go=build]'
+      Select-TestInstaller
+      $wingetId = [string](Eval-Js "(window._identity && window._identity.wingetId) || ''")
+      Assert ($wingetId -ne '') "The winget catalogue matches the installer$(if ($wingetId) { ': ' + $wingetId } else { ': ' + (Get-Text '#inspect-chips') })"
+      if (-not $wingetId) { return }
+      Select-Option '#f-profile' ''
+      Invoke-Click '#segMode button[data-val=simple]'
+      Invoke-Click '#segTarget button[data-val=intunewin]'
+      Invoke-Click '#btn-build'
+      Wait-Build 'Simple build matched in winget'
+
+      $idJs = ConvertTo-Json $script:appId
+      Invoke-Click '.nav-btn[data-go=fleet]'
+      Wait-Js "!!document.querySelector('#fleet-table [data-test=' + JSON.stringify($idJs) + ']')" 30
+      Invoke-Click ('#fleet-table [data-test=' + $idJs + ']')
+      Eval-Js "document.getElementById('test-also-uninstall').checked = true; document.getElementById('test-simulate-system').checked = true" | Out-Null
+      Invoke-Click '#test-modal-start'
+      Wait-Js "/\u2713 Done|\u2717 Failed/.test(document.getElementById('test-log').textContent)" 300
+      $contributeJs = "Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return b.textContent === 'Contribute what this test verified to winget'; })"
+      $offered = [bool](Eval-Js "!!$contributeJs")
+      Assert $offered "The passed test offers to contribute to winget$(if (-not $offered) { ': ' + (Get-Text '#test-log') })"
+      if (-not $offered) { return }
+      Eval-Js "window.__msgs = []; $contributeJs.click()" | Out-Null
+      Wait-Js "window.__msgs.indexOf('winget-prepared') >= 0" 120
+      # The submit button is never clicked: it would open a real pull request.
+      $prepared = [string](Eval-Js "document.getElementById('winget-submit') ? 'preview' : (/winget already has/.test(document.getElementById('test-log').textContent) ? 'nothing to add' : '')")
+      $log = Get-Text '#test-log'
+      Assert ($prepared -ne '') "The winget contribution shows a pull request preview or says winget has the data: $(if ($prepared) { $prepared } else { $log.Substring([Math]::Max(0, $log.Length - 300)) })"
+      Save-Shot 'winget-contribution' '#test-log'
+      Invoke-Click '#test-modal-close'
+    }
+
+    Invoke-Flow 'Online lookups off' {
+      Invoke-Click '.nav-btn[data-go=worker]'
+      Set-Toggle '#tgl-nvd' $false
+      Set-Toggle '#tgl-release-check' $false
+    }
+
     Invoke-Flow 'Pre-deploy block' {
       # An earlier build signed by someone else makes this installer's signature a red finding.
       $memory = Get-Content -LiteralPath $memoryFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -429,6 +637,62 @@ window.__errors = [];
       Assert ((Get-Text '#done-sheet') -like '*Check overridden*') "Done sheet has a 'Check overridden' row"
       Save-Shot 'done-check-overridden' '#done-sheet'
     }
+  }
+
+  Invoke-Flow 'Printer package' {
+    $driver = $null
+    try { $driver = Get-PrinterDriver -Name 'Microsoft Print To PDF' -ErrorAction Stop } catch {}
+    if (-not $driver) { Write-Notice "The inbox 'Microsoft Print To PDF' driver is missing - skipping the printer flow."; return }
+    Invoke-Click '.nav-btn[data-go=build]'
+    Invoke-Click '#segKind button[data-val=printer]'
+    Assert ((Test-Shown '#printer-source-card') -and -not (Test-Shown '#app-source-card')) 'Printer kind swaps the installer card for the printer card'
+    Clear-AppFields
+    Write-Field '#f-printername' 'Click Test Printer'; Send-Input '#f-printername'
+    Write-Field '#f-drivername' $driver.Name
+    Write-Field '#f-driversourcepath' (Split-Path -Parent $driver.InfPath)
+    Write-Field '#f-driverinf' (Split-Path -Leaf $driver.InfPath)
+    Write-Field '#f-porthost' '127.0.0.1'
+    Write-Field '#f-portnumber' '9100'
+    Write-Field '#f-printerlocation' 'CI rack'
+    Invoke-Click '#segMode button[data-val=runtime]'
+    Invoke-Click '#segTarget button[data-val=intunewin]'
+    Save-Shot 'build-form-printer' '#printer-source-card'
+    Invoke-Click '#btn-build'
+    Wait-Build 'Printer package build'
+    Assert ((Get-Text '#done-sheet') -like '*As a dependency*Detection confirms the AppUpdater agent*') "Done sheet has the printer 'As a dependency' row"
+    Save-Shot 'done-printer' '#done-sheet'
+  }
+
+  Invoke-Flow 'Portable zip' {
+    Invoke-Click '.nav-btn[data-go=build]'
+    Invoke-Click '#segKind button[data-val=app]'
+    Clear-AppFields
+    Select-TestInstaller $portableZip
+    Assert ((Get-Text '#inspect-chips') -like '*portable app: Tool\tool.exe*') "The zip shows the 'portable app' chip"
+    Invoke-Click '#segMode button[data-val=simple]'
+    Invoke-Click '#segTarget button[data-val=psadt]'
+    Test-BuildGuard 'Simple .intunewin only' 'A zip with the PSADT target'
+    Save-Shot 'guard-zip-psadt' -KeepToasts
+    Invoke-Click '#segTarget button[data-val=intunewin]'
+    Assert (-not (Test-Shown '#scripts-wrap')) 'A zip hides the scripts section'
+    Invoke-Click '#btn-build'
+    Wait-Build 'Portable zip build'
+    Save-Shot 'done-portable-zip' '#done-sheet'
+  }
+
+  Invoke-Flow 'MSIX package' {
+    Invoke-Click '.nav-btn[data-go=build]'
+    Clear-AppFields
+    Select-TestInstaller $msixFile
+    Assert ((Get-Text '#inspect-chips') -like '*MSIX*provisioned for every user*') 'The MSIX shows its provisioning chip'
+    Invoke-Click '#segMode button[data-val=simple]'
+    Invoke-Click '#segTarget button[data-val=intunewin]'
+    Assert (-not (Test-Shown '#detectversion-wrap')) 'MSIX hides the minimum version for detection'
+    Assert (-not (Test-Shown '#scripts-wrap')) 'MSIX hides the scripts section'
+    Save-Shot 'build-form-msix'
+    Invoke-Click '#btn-build'
+    Wait-Build 'MSIX build'
+    Save-Shot 'done-msix' '#done-sheet'
   }
 
   $unexpected = [string](Eval-Js "window.__errors.filter(function (m) { return m !== 'Invalid application message.'; }).join(' | ')")
@@ -486,6 +750,7 @@ window.__errors = [];
   $env:APPUPDATER_DEBUG_PORT = $originalDebugPort
   $env:APPUPDATER_TEST_INSTALLER = $originalTestInstaller
   $env:APPUPDATER_TEST_SCRIPT = $originalTestScript
+  $env:APPUPDATER_TEST_IMAGE = $originalTestImage
 }
 
 if (Test-Path $logFile) {
@@ -509,4 +774,5 @@ if ($script:fails.Count -gt 0) {
 Write-Host "All checks passed" -ForegroundColor Green
 exit 0
 
-# Not covered: OS-level window state; file dialogs are answered by the APPUPDATER_TEST_* seams.
+# Not covered: OS-level window state; the Cloudflare setup past its first window; submitting to winget.
+# File dialogs are answered by the APPUPDATER_TEST_* seams.

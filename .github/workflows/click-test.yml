@@ -32,8 +32,8 @@ jobs:
           if ($found) { exit 1 }
   windows:
     runs-on: windows-2022
-    # The click test builds three packages and installs one as SYSTEM.
-    timeout-minutes: 45
+    # The click test builds about a dozen packages, installs 7-Zip twice as SYSTEM and waits for the winget catalogue.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v5
 

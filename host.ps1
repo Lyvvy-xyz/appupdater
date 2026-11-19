@@ -3353,10 +3353,11 @@ try {
       switch ($msg.action) {
             'browse-installer' {
               # APPUPDATER_TEST_INSTALLER stands in for the file dialog, which CDP cannot drive.
+              # Only while it is set may the page name another file, so one test run can pick several.
               $pickedPath = $null
-              if ($env:APPUPDATER_TEST_INSTALLER -and (Test-Path -LiteralPath $env:APPUPDATER_TEST_INSTALLER -PathType Leaf)) {
-                $pickedPath = $env:APPUPDATER_TEST_INSTALLER
-              } else {
+              $testPick = if ($env:APPUPDATER_TEST_INSTALLER) { @([string]$msg.payload.testPath, $env:APPUPDATER_TEST_INSTALLER) } else { @() }
+              foreach ($candidate in $testPick) { if (-not $pickedPath -and $candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) { $pickedPath = $candidate } }
+              if (-not $pickedPath) {
                 $ofd = New-Object Microsoft.Win32.OpenFileDialog
                 $ofd.Filter = 'Installers and packages (*.exe;*.msi;*.msix;*.msixbundle;*.appx;*.appxbundle;*.zip)|*.exe;*.msi;*.msix;*.msixbundle;*.appx;*.appxbundle;*.zip|All files (*.*)|*.*'
                 if ($ofd.ShowDialog($window)) { $pickedPath = $ofd.FileName }
@@ -3545,10 +3546,16 @@ $_result.needsToken = -not $run.PrUrl -and $run.Output -match '(?i)token|unautho
               Send-ToPage $wv 'profiles-data' @{ profiles = $pd.Profiles; lastUsed = $pd.LastUsed }
             }
             'browse-image' {
-              $ifd = New-Object Microsoft.Win32.OpenFileDialog
-              $ifd.Filter = 'Images (*.png;*.jpg;*.jpeg;*.svg)|*.png;*.jpg;*.jpeg;*.svg|All files (*.*)|*.*'
-              if ($ifd.ShowDialog($window)) {
-                Send-ToPage $wv 'browse-image-result' @{ ok = $true; field = $msg.payload.field; path = $ifd.FileName; dataUrl = (Get-ImageDataUrl -Path $ifd.FileName) }
+              $pickedPath = $null
+              if ($env:APPUPDATER_TEST_IMAGE -and (Test-Path -LiteralPath $env:APPUPDATER_TEST_IMAGE -PathType Leaf)) {
+                $pickedPath = $env:APPUPDATER_TEST_IMAGE
+              } else {
+                $ifd = New-Object Microsoft.Win32.OpenFileDialog
+                $ifd.Filter = 'Images (*.png;*.jpg;*.jpeg;*.svg)|*.png;*.jpg;*.jpeg;*.svg|All files (*.*)|*.*'
+                if ($ifd.ShowDialog($window)) { $pickedPath = $ifd.FileName }
+              }
+              if ($pickedPath) {
+                Send-ToPage $wv 'browse-image-result' @{ ok = $true; field = $msg.payload.field; path = $pickedPath; dataUrl = (Get-ImageDataUrl -Path $pickedPath) }
               } else {
                 Send-ToPage $wv 'browse-image-result' @{ ok = $false; field = $msg.payload.field }
               }
