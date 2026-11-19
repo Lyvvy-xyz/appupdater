@@ -150,8 +150,12 @@ $proc = Start-Process -FilePath 'powershell.exe' `
     throw "Timed out waiting for browser condition: $Expression"
   }
 
-  function Save-Shot([string]$Name) {
+  function Save-Shot([string]$Name, [string]$ScrollTo, [switch]$KeepToasts) {
     try {
+      # Screens animate in, and earlier toasts would cover the content.
+      if ($ScrollTo) { Eval-Js "(function () { const el = document.querySelector('$ScrollTo'); if (el) el.scrollIntoView({ block: 'center' }); })()" | Out-Null }
+      if (-not $KeepToasts) { Eval-Js "document.getElementById('toasts').innerHTML = ''" | Out-Null }
+      Start-Sleep -Milliseconds 900
       $shot = Send-Cdp 'Page.captureScreenshot' @{ format = 'png' }
       $script:shotCount++
       [IO.File]::WriteAllBytes((Join-Path $shotDir ('{0:D2}-{1}.png' -f $script:shotCount, $Name)), [Convert]::FromBase64String($shot.result.data))
@@ -229,7 +233,7 @@ window.__errors = [];
   Invoke-Flow 'Deploy feedback card' {
     Wait-Js "document.getElementById('deploy-feedback').style.display === 'block'" 30
     Assert ((Get-Text '#deploy-feedback-list') -like '*Feedback Sample*1.2.3*') 'Home asks about the app deployed before this launch'
-    Save-Shot 'home-deploy-feedback'
+    Save-Shot 'home-deploy-feedback' '#deploy-feedback'
     Invoke-Click "#deploy-feedback-list [data-feedback=$feedbackId][data-outcome=ok]"
     Assert (-not (Test-Shown '#deploy-feedback')) 'Answering Yes hides the deploy feedback card'
     $outcome = $null
@@ -321,7 +325,7 @@ window.__errors = [];
       Wait-Js "!document.querySelector('.tgl[data-val=BundleFolder]').disabled" 60
       Invoke-Click '.tgl[data-val=BundleFolder]'
       Test-BuildGuard 'Folder bundling is Simple only' 'Runtime mode with folder bundling'
-      Save-Shot 'guard-bundle-runtime'
+      Save-Shot 'guard-bundle-runtime' -KeepToasts
       Invoke-Click '.tgl[data-val=BundleFolder]'
 
       Invoke-Click '#segMode button[data-val=simple]'
@@ -332,7 +336,7 @@ window.__errors = [];
 
       Write-Field '#f-detectversion' 'latest'
       Test-BuildGuard 'Minimum version' 'A minimum version without digits'
-      Save-Shot 'guard-minimum-version'
+      Save-Shot 'guard-minimum-version' -KeepToasts
       Write-Field '#f-detectversion' ''
     }
 
@@ -344,7 +348,7 @@ window.__errors = [];
       foreach ($row in 'Install command', 'Uninstall command', 'Detection', 'Install behaviour', 'EPM elevation rules') {
         Assert ($sheet -like "*$row*") "Done sheet has a '$row' row"
       }
-      Save-Shot 'done-simple-intunewin'
+      Save-Shot 'done-simple-intunewin' '#done-sheet'
     }
 
     Invoke-Flow 'Fleet and local test' {
@@ -398,7 +402,7 @@ window.__errors = [];
       Invoke-Click '#btn-build'
       Wait-Build 'PSADT v4 build'
       Assert ((Get-Text '#done-sheet') -like '*PSADT package*') 'Done sheet names the PSADT target'
-      Save-Shot 'done-psadt-v4'
+      Save-Shot 'done-psadt-v4' '#done-sheet'
     }
 
     Invoke-Flow 'Pre-deploy block' {
@@ -423,7 +427,7 @@ window.__errors = [];
       Invoke-Click '#preflight-override'
       Wait-Build "'Build anyway'"
       Assert ((Get-Text '#done-sheet') -like '*Check overridden*') "Done sheet has a 'Check overridden' row"
-      Save-Shot 'done-check-overridden'
+      Save-Shot 'done-check-overridden' '#done-sheet'
     }
   }
 
