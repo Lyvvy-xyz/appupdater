@@ -197,6 +197,17 @@ try {
   Assert ((Find-ARPEntry -Target "$([char]0x5FAE)$([char]0x4FE1)").UninstallString -eq 'y') 'Registry names in non-Latin scripts match'
   Assert ($null -eq (Find-ARPEntry -Target 'Other App')) 'An entry whose name has no letters or digits matches nothing'
   Remove-Item Function:\Get-ItemProperty
+  Assert ((Test-MinimumVersion '8.6.9' '8.6.9.0') -and (Test-MinimumVersion '1, 0, 0, 3' '1.0.0.2') -and -not (Test-MinimumVersion '1.9.9' '2.0') -and (Test-MinimumVersion 'latest' '2.0')) 'Minimum versions pad missing parts and let unreadable versions through'
+  $versioned = $awkward.Clone(); $versioned.RegistryName = 'Versioned App'; $versioned.DetectVersion = ' 2.0 '
+  $versionedDetect = Get-Content (Join-Path (Invoke-HeadlessPackageBuild -Config $config -FormData $versioned -Profile @{}).OutputDir 'detect.ps1') -Raw
+  $runDetect = [scriptblock]::Create(($versionedDetect -replace '\bexit (\d)', 'return $1'))
+  function Get-ItemProperty { [pscustomobject]@{ DisplayName = 'Versioned App'; DisplayVersion = $script:installedVersion; UninstallString = 'x' } }
+  $script:installedVersion = '1.9.4'; $older = (& $runDetect)[-1]
+  $script:installedVersion = '2.0.0.0'; $current = (& $runDetect)[-1]
+  Remove-Item Function:\Get-ItemProperty
+  Assert ($older -eq 1 -and $current -eq 0) "Detection with a minimum version treats older copies as not installed (older $older, current $current)"
+  $versioned.DetectVersion = 'latest'
+  Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $versioned -Profile @{} } 'A minimum version that is not a number is refused'
   $configPath = Join-Path $root 'config.json'
   Write-AtomicText -Path $configPath -Text '{"OrgName":"First"}'
   Write-AtomicText -Path $configPath -Text '{"OrgName":"Second"}'
@@ -323,6 +334,7 @@ try {
   $zipInstall = Get-Content (Join-Path $zipBuild.OutputDir 'install.ps1') -Raw
   Assert ($script:packagedErrors.Count -eq 0 -and $zipInstall.Contains("'Tool\tool.exe'") -and $zipInstall.Contains("DisplayName = 'Tool O''Pro'") -and
           $zipInstall.Contains('Programs\Tool Pro.lnk') -and $script:packagedUninstall.Contains('AppUpdater-Example')) "Portable zips install, register and uninstall themselves: $($script:packagedErrors -join '; ')"
+  Assert ((Get-Content (Join-Path $zipBuild.OutputDir 'detect.ps1') -Raw).Contains("`$minimum = '2.0'")) 'Portable zips require the version they register'
   $zipForm.EntryExe = ''
   Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $zipForm -Profile @{} } 'A zip without a program is refused'
 

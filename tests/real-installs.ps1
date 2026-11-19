@@ -122,7 +122,7 @@ function Invoke-LocalTest([string]$OutputDir, [string]$AppId, [string]$Target, [
     $powershell.EndInvoke($handle) | Out-Null
   } finally { $powershell.Dispose(); $runspace.Dispose() }
   if ($done.Count -ne 1) { return @{ Ok = $false; Suggestion = '' } }
-  return @{ Ok = [bool]$done[0].ok; Suggestion = [string]$done[0].suggestedRegistryName }
+  return @{ Ok = [bool]$done[0].ok; Suggestion = [string]$done[0].suggestedRegistryName; Version = [string]$done[0].suggestedDetectVersion }
 }
 
 function Test-Package($App, [hashtable]$Overrides = @{}, [bool]$Uninstall = $true, [hashtable]$Brand = @{}) {
@@ -234,6 +234,12 @@ try {
       $app = Get-Installer $Url $Name
       $summary.Type = "$($app.Inspection.InstallerType)$(if ($app.PerUser) { ' (per-user)' })"; $summary.Winget = $app.Winget; $summary.Switch = $app.Silent; $summary.Registry = $app.Registry
       $outcome = Test-Package $app
+      if ($outcome.Ok -and $outcome.Version) {
+        # Take the version the test read, as an admin would, and check detection accepts the app with it required.
+        Write-Host "=== Rebuilding with minimum version $($outcome.Version)"
+        $summary.Detail += "minimum version $($outcome.Version). "
+        $outcome = Test-Package $app @{ DetectVersion = $outcome.Version }
+      }
       if ($outcome.Ok) { $summary.Result = $(if ($outcome.Learned) { 'PASS (learned name)' } else { 'PASS' }); $exitCode = 0 }
     }
   }
