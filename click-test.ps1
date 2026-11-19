@@ -316,6 +316,8 @@ window.__errors = [];
   Invoke-Flow 'NIST vulnerability check setting' {
     Invoke-Click '.nav-btn[data-go=worker]'
     Wait-Js "window.__msgs.indexOf('settings-data') >= 0"
+    Assert (-not (Test-Shown '#tgl-nvd')) 'The NIST check is hidden while online lookups are off'
+    Eval-Js "document.getElementById('nvd-row').style.display = 'flex'" | Out-Null
     Assert (Test-Shown '#tgl-nvd') 'Settings show the NIST vulnerability check toggle'
     Assert (-not (Eval-Js "document.getElementById('tgl-nvd').classList.contains('on')")) 'The NIST vulnerability check is off by default'
     Eval-Js "window.__msgs = []" | Out-Null
@@ -389,7 +391,9 @@ window.__errors = [];
 
       Invoke-Click '#segMode button[data-val=simple]'
       Assert (Test-Shown '#detectversion-wrap') 'Simple mode shows the minimum version for detection'
-      Assert (Test-Shown '#scripts-wrap') 'Simple mode shows the scripts section'
+      Assert (-not (Test-Shown '#scripts-wrap')) 'Advanced options start collapsed'
+      Invoke-Click '#advanced > summary'
+      Assert (Test-Shown '#scripts-wrap') 'Simple mode shows the scripts section under Advanced'
       foreach ($selector in '.tgl[data-val=RemoveOlderVersions]', '#f-prehook', '#f-posthook', '#f-postuninstallhook',
                             '[data-browse-script=f-prehook]', '[data-browse-script=f-posthook]', '[data-browse-script=f-postuninstallhook]') {
         Assert (Test-Shown $selector) "Simple mode shows $selector"
@@ -456,12 +460,12 @@ window.__errors = [];
       $testLog = Get-Text '#test-log'
       $passed = $testLog.Contains("$([char]0x2713) Done")
       Assert $passed "Local install and uninstall test succeeds$(if (-not $passed) { ': ' + $testLog })"
-      $fixLabel = [string](Eval-Js "(Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return /^Require version .+ or newer$/.test(b.textContent); }) || {}).textContent || ''")
+      $fixLabel = [string](Eval-Js "(Array.from(document.querySelectorAll('#test-modal button')).find(function (b) { return /^Require version .+ or newer$/.test(b.textContent); }) || {}).textContent || ''")
       Assert ($fixLabel -ne '') 'The test offers a minimum version for detection'
       Save-Shot 'test-modal-done'
       if ($fixLabel) {
         $script:suggestedVersion = $fixLabel -replace '^Require version (.+) or newer$', '$1'
-        Eval-Js "Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return /^Require version /.test(b.textContent); }).click()" | Out-Null
+        Eval-Js "Array.from(document.querySelectorAll('#test-modal button')).find(function (b) { return /^Require version /.test(b.textContent); }).click()" | Out-Null
         Assert ((Test-ScreenOn 'build') -and (Get-Value '#f-detectversion') -eq $script:suggestedVersion) "The suggestion returns to the build form with minimum version $($script:suggestedVersion)"
       }
     }
@@ -564,9 +568,9 @@ window.__errors = [];
       Invoke-Click '#btn-build'
       Wait-Build 'Simple build with online lookups'
       # Either row proves the setting reached the build: NIST answered, or it was unreachable.
-      $nvdRow = [string](Eval-Js "Array.from(document.querySelectorAll('#done-sheet .srow')).map(function (r) { return r.querySelector('.sk').textContent + ': ' + r.querySelector('.sv').textContent; }).filter(function (t) { return /^Check: .*NVD/.test(t); }).join(' | ')")
-      Assert ($nvdRow -ne '') "Done sheet has an NVD check row$(if ($nvdRow) { ': ' + $nvdRow })"
-      Save-Shot 'done-nvd-check' '#done-sheet'
+      $nvdRow = [string](Eval-Js "Array.from(document.querySelectorAll('#done-findings-list li')).map(function (li) { return li.textContent; }).filter(function (t) { return /NVD/.test(t); }).join(' | ')")
+      Assert ($nvdRow -ne '') "The done screen lists an NVD finding$(if ($nvdRow) { ': ' + $nvdRow })"
+      Save-Shot 'done-nvd-check' '#done-findings'
     }
 
     Invoke-Flow 'winget contribution' {
@@ -593,17 +597,17 @@ window.__errors = [];
       Eval-Js "document.getElementById('test-also-uninstall').checked = true; document.getElementById('test-simulate-system').checked = true" | Out-Null
       Invoke-Click '#test-modal-start'
       Wait-Js "/\u2713 Done|\u2717 Failed/.test(document.getElementById('test-log').textContent)" 300
-      $contributeJs = "Array.from(document.querySelectorAll('#test-log button')).find(function (b) { return b.textContent === 'Contribute what this test verified to winget'; })"
+      $contributeJs = "Array.from(document.querySelectorAll('#test-modal button')).find(function (b) { return b.textContent === 'Contribute what this test verified to winget'; })"
       $offered = [bool](Eval-Js "!!$contributeJs")
       Assert $offered "The passed test offers to contribute to winget$(if (-not $offered) { ': ' + (Get-Text '#test-log') })"
       if (-not $offered) { return }
       Eval-Js "window.__msgs = []; $contributeJs.click()" | Out-Null
       Wait-Js "window.__msgs.indexOf('winget-prepared') >= 0" 120
       # The submit button is never clicked: it would open a real pull request.
-      $prepared = [string](Eval-Js "document.getElementById('winget-submit') ? 'preview' : (/winget already has/.test(document.getElementById('test-log').textContent) ? 'nothing to add' : '')")
+      $prepared = [string](Eval-Js "document.getElementById('winget-submit') ? 'preview' : (/winget already has/.test(document.getElementById('test-summary').textContent) ? 'nothing to add' : '')")
       $log = Get-Text '#test-log'
       Assert ($prepared -ne '') "The winget contribution shows a pull request preview or says winget has the data: $(if ($prepared) { $prepared } else { $log.Substring([Math]::Max(0, $log.Length - 300)) })"
-      Save-Shot 'winget-contribution' '#test-log'
+      Save-Shot 'winget-contribution' '#test-summary'
       Invoke-Click '#test-modal-close'
     }
 
@@ -634,7 +638,7 @@ window.__errors = [];
       Save-Shot 'predeploy-blocked'
       Invoke-Click '#preflight-override'
       Wait-Build "'Build anyway'"
-      Assert ((Get-Text '#done-sheet') -like '*Check overridden*') "Done sheet has a 'Check overridden' row"
+      Assert ((Get-Text '#done-findings') -like '*Built anyway*') 'The done screen lists the overridden findings'
       Save-Shot 'done-check-overridden' '#done-sheet'
     }
   }

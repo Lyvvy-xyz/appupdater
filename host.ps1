@@ -176,6 +176,35 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 @keyframes chipin{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
 .chip i{width:6px;height:6px;border-radius:50%;background:var(--signal)}
 .chip.g i{background:var(--ok)} .chip.w i{background:var(--warn)}
+.chip.has-detail{cursor:pointer} .chip.has-detail:hover,.chip.has-detail:focus-visible{border-color:var(--signal);color:var(--ink);outline:none}
+.chip-pop{position:fixed;z-index:60;max-width:330px;padding:10px 12px;border-radius:var(--r-sm);background:var(--panel);border:1px solid var(--edge);
+  box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12px;line-height:1.5;color:var(--ink)}
+.chip-pop .btn{margin-top:8px}
+.done-findings{margin-top:20px;text-align:left;padding:12px 16px;border-radius:var(--r-sm);background:var(--warn-tint-bg);border:1px solid var(--warn-tint-bd);font-size:12.5px}
+.done-findings ul{margin:6px 0 0;padding-left:18px;line-height:1.55} .done-findings li.red{color:var(--bad)}
+.tglrow.sub{margin-left:22px;padding-left:12px;border-left:2px solid var(--edge)}
+.feedback-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px}
+.feedback-banner .fb-item{display:flex;align-items:center;gap:6px}
+.test-summary{margin:0 22px 12px;padding:12px 14px;border-radius:var(--r-sm);border:1px solid var(--edge);background:var(--panel-2)}
+.test-summary.ok{border-color:rgba(74,222,155,.35)} .test-summary.bad{border-color:rgba(255,107,107,.4)}
+#test-result{font-size:13px;font-weight:600} .test-summary.ok #test-result{color:var(--ok)} .test-summary.bad #test-result{color:var(--bad)}
+.test-fixes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px} .test-fixes:empty{display:none}
+.test-fixes>div{flex-basis:100%}
+.test-log-wrap{margin:0 22px;flex:1;min-height:0;display:flex;flex-direction:column}
+.test-log-wrap>summary{cursor:pointer;font-size:11.5px;color:var(--dim);margin-bottom:6px}
+.known-banner{display:flex;align-items:center;gap:10px;margin-top:10px;padding:8px 10px;border-radius:var(--r-sm);font-size:12px;
+  background:rgba(74,222,155,.08);border:1px solid rgba(74,222,155,.3)}
+.known-banner.warn{background:var(--warn-tint-bg);border-color:var(--warn-tint-bd)}
+.known-banner span{flex:1;min-width:0}
+.build-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;align-items:start;padding-bottom:8px}
+.build-col{display:grid;gap:14px;min-width:0}
+.detect-line{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12.5px}
+.detect-line #detect-text{font-family:var(--font-m);color:var(--ink)}
+details.advanced>summary{list-style:none;cursor:pointer}
+details.advanced>summary::-webkit-details-marker{display:none}
+details.advanced>summary .card-t::after{content:'\25B8';margin-left:8px;color:var(--dim);display:inline-block;transition:transform .2s var(--ease)}
+details.advanced[open]>summary .card-t::after{transform:rotate(90deg)}
+.adv-count{font-family:var(--font-m);font-size:10.5px;color:var(--signal);margin-left:6px}
 
 .tgl{position:relative;width:36px;height:20px;border-radius:20px;background:var(--panel-2);border:1px solid var(--edge);transition:all .2s var(--ease);flex-shrink:0}
 .tgl::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--dim);transition:all .22s var(--ease)}
@@ -394,6 +423,11 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             </div>
           </div>
 
+          <div class="card feedback-banner" id="deploy-feedback" style="display:none">
+            <b>Did these install correctly on devices?</b>
+            <div id="deploy-feedback-list" style="display:flex;gap:14px;flex-wrap:wrap"></div>
+          </div>
+
           <div class="card rise build-cta" id="home-build-cta" style="cursor:pointer" data-go="build" role="button" tabindex="0">
             <div class="card-b" style="display:flex;align-items:center;gap:18px;padding:22px 24px">
               <div style="width:58px;height:58px;border-radius:14px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 30px rgba(94,162,255,.45)">
@@ -418,10 +452,6 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                 <p class="hint" style="margin:0">Nothing yet - build, deploy, or remove an app to see activity here.</p>
               </div>
             </div>
-            <div class="card" id="deploy-feedback" style="display:none;margin-bottom:16px">
-              <div class="card-h"><div class="eyebrow">since last time</div><div class="card-t">Did these install correctly on devices?</div></div>
-              <div class="card-b" style="padding-top:10px" id="deploy-feedback-list"></div>
-            </div>
             <div class="card">
               <div class="card-h" style="display:flex;align-items:baseline;justify-content:space-between">
                 <div><div class="eyebrow">fleet</div><div class="card-t">Tracked in local manifest</div></div>
@@ -437,9 +467,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 
       <!-- ========== BUILDER ========== -->
       <section class="screen" data-screen="build" id="screen-build">
-        <div style="max-width:980px;margin:0 auto;padding-bottom:8px">
-          <div style="display:grid;grid-template-columns:1fr 1.15fr;gap:12px;align-items:start">
-            <div style="display:grid;gap:12px">
+        <div class="build-grid">
+            <div class="build-col">
               <div class="card rise">
                 <div class="card-h" style="padding-top:11px"><div class="eyebrow">00 &middot; kind</div><div class="card-t">What are you packaging?</div></div>
                 <div class="card-b" style="padding-top:12px;padding-bottom:14px">
@@ -470,14 +499,11 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                       <button class="btn ghost" style="padding:5px 9px;font-size:11px" id="reDrop">Change</button>
                     </div>
                     <div class="chips" id="inspect-chips"></div>
-                    <label class="lbl" for="f-silentargs" style="margin-top:10px">Silent install switch</label>
-                    <input class="field mono" id="f-silentargs" placeholder="e.g. /S or /quiet /norestart">
-                    <div class="hint">Pre-filled for recognised installers. <span class="mono">{pkg}</span> is replaced with the installer's folder, e.g. <span class="mono">/s /f1"{pkg}\setup.iss"</span> (Simple packages only).</div>
-                    <div class="tglrow"><div><b>Bundle the whole folder</b><small id="bundle-hint">Include every file next to the installer (Simple packages only)</small></div><button class="tgl" data-val="BundleFolder"></button></div>
+                    <div class="known-banner" id="known-banner" hidden>
+                      <span id="known-text"></span>
+                      <button type="button" class="btn ghost sm" id="known-undo">Undo</button>
+                    </div>
                   </div>
-                  <label class="lbl" for="f-download-url" style="margin-top:10px">Runtime installer URL</label>
-                  <input class="field" id="f-download-url" type="url" placeholder="https://vendor.example/installer.exe">
-                  <div class="hint">Required for Runtime packages so devices can download the installer. Simple packages bundle the selected file.</div>
                 </div>
               </div>
 
@@ -542,7 +568,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                   <div class="hint">Detection checks the printer actually exists with this driver and port, not just that it once ran.</div>
                 </div>
               </div>
-
+            </div>
+            <div class="build-col">
               <div class="card rise">
                 <div class="card-h" style="padding-top:11px"><div class="eyebrow">identity</div><div class="card-t">How Intune sees it</div></div>
                 <div class="card-b" style="padding-top:12px;padding-bottom:14px">
@@ -552,32 +579,14 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                     <div><label class="lbl">App ID</label><input class="field mono" id="f-appid"></div>
                     <div><label class="lbl">Registry display name</label><input class="field mono" id="f-registryname"></div>
                   </div>
-                  <div class="hint">Registry name must match Add/Remove Programs exactly — used for detection.</div>
-                  <div id="detectversion-wrap" style="margin-top:10px"><label class="lbl">Minimum version for detection</label><input class="field mono" id="f-detectversion" placeholder="any version">
-                  <div class="hint">Older copies count as not installed, so Intune upgrades them. A local test reads the version the app registers.</div></div>
-                </div>
-              </div>
-
-              <div class="card rise">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">behaviour</div><div class="card-t">On the endpoint</div></div>
-                <div class="card-b" style="padding-top:10px;padding-bottom:12px">
-                  <div class="tglrow"><div><b>Close blocking apps</b><small id="close-apps-hint">Detected process to close on install</small></div><button class="tgl on" data-val="closeAppsOn"></button></div>
-                  <div class="tglrow"><div><b>Allow deferral</b><small>Users may postpone 3 times</small></div><button class="tgl on" data-val="allowDefer"></button></div>
-                  <div id="scripts-wrap">
-                    <div class="tglrow"><div><b>Remove older versions first</b><small>For apps that install side by side, such as Java. Needs the minimum version above.</small></div><button class="tgl" data-val="RemoveOlderVersions"></button></div>
-                    <label class="lbl" style="margin-top:8px">Scripts (PowerShell, run as the install account)</label>
-                    <div class="hint" style="margin-top:0">Configuration the installer cannot do: settings files, environment variables, disabling an updater.</div>
-                    <div style="display:grid;gap:6px;margin-top:6px">
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-prehook" placeholder="Before install - optional"><button class="btn sm" data-browse-script="f-prehook">Browse</button></div>
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-posthook" placeholder="After install - optional"><button class="btn sm" data-browse-script="f-posthook">Browse</button></div>
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-postuninstallhook" placeholder="After uninstall - optional"><button class="btn sm" data-browse-script="f-postuninstallhook">Browse</button></div>
-                    </div>
+                  <div class="hint">Must match Add/Remove Programs exactly; a local test suggests the right name.</div>
+                  <div class="detect-line" id="detectversion-wrap">
+                    <span class="lbl" style="margin:0">Detection</span>
+                    <span id="detect-text">any version</span>
+                    <button type="button" class="btn ghost sm" id="detect-change">Change</button>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div style="display:grid;gap:12px">
               <div class="card rise">
                 <div class="card-h" style="padding-top:11px"><div class="eyebrow">package type</div><div class="card-t">Wrap &amp; behaviour</div></div>
                 <div class="card-b" style="padding-top:12px;padding-bottom:14px">
@@ -691,9 +700,47 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                   </div>
                 </div>
               </div>
-
             </div>
-          </div>
+
+            <div class="build-col">
+              <div class="card rise" id="endpoint-card">
+                <div class="card-h" style="padding-top:11px"><div class="eyebrow">on the endpoint</div><div class="card-t">Install behaviour</div></div>
+                <div class="card-b" style="padding-top:10px;padding-bottom:12px">
+                  <div id="runtime-url-wrap">
+                    <label class="lbl" for="f-download-url">Installer download URL</label>
+                    <input class="field" id="f-download-url" type="url" placeholder="https://vendor.example/installer.exe">
+                    <div class="hint">Devices download the installer from here when an update is due.</div>
+                  </div>
+                  <div class="tglrow" id="close-apps-row"><div><b>Close blocking apps</b><small id="close-apps-hint">Detected process to close on install</small></div><button class="tgl on" data-val="closeAppsOn"></button></div>
+                  <div class="tglrow" id="defer-row"><div><b>Allow deferral</b><small>Users may postpone 3 times; turn off when this app is a dependency</small></div><button class="tgl on" data-val="allowDefer"></button></div>
+                </div>
+              </div>
+
+              <details class="card rise advanced" id="advanced">
+                <summary class="card-h"><div class="eyebrow">optional</div><div class="card-t">Advanced <span class="adv-count" id="adv-count"></span></div></summary>
+                <div class="card-b" style="padding-top:6px;padding-bottom:14px">
+                  <label class="lbl" for="f-silentargs">Silent install switch</label>
+                  <input class="field mono" id="f-silentargs" placeholder="e.g. /S or /quiet /norestart">
+                  <div class="hint"><span class="mono">{pkg}</span> stands for the installer's folder, e.g. <span class="mono">/s /f1"{pkg}\setup.iss"</span></div>
+                  <div class="tglrow"><div><b>Bundle the whole folder</b><small id="bundle-hint">Include every file next to the installer</small></div><button class="tgl" data-val="BundleFolder"></button></div>
+                  <div id="detectversion-field">
+                    <label class="lbl" for="f-detectversion" style="margin-top:10px">Minimum version for detection</label>
+                    <input class="field mono" id="f-detectversion" placeholder="any version">
+                    <div class="hint">Older copies count as not installed, so Intune upgrades them.</div>
+                  </div>
+                  <div id="scripts-wrap">
+                    <div class="tglrow"><div><b>Remove older versions first</b><small>For apps that install side by side, such as Java</small></div><button class="tgl" data-val="RemoveOlderVersions"></button></div>
+                    <label class="lbl" style="margin-top:10px">Scripts</label>
+                    <div class="hint" style="margin-top:0">PowerShell, run as the install account, for what the installer cannot set.</div>
+                    <div style="display:grid;gap:6px;margin-top:6px">
+                      <div style="display:flex;gap:6px"><input class="field mono" id="f-prehook" placeholder="Before install"><button class="btn sm" data-browse-script="f-prehook">Browse</button></div>
+                      <div style="display:flex;gap:6px"><input class="field mono" id="f-posthook" placeholder="After install"><button class="btn sm" data-browse-script="f-posthook">Browse</button></div>
+                      <div style="display:flex;gap:6px"><input class="field mono" id="f-postuninstallhook" placeholder="After uninstall"><button class="btn sm" data-browse-script="f-postuninstallhook">Browse</button></div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
         </div>
       </section>
 
@@ -710,7 +757,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             <div id="progress-error-msg" style="font-size:12.5px;color:var(--dim);margin-top:4px;line-height:1.5"></div>
             <button class="btn ghost sm" id="progress-error-back" style="margin-top:10px">Back to Build</button>
           </div>
-          <div style="display:grid;grid-template-columns:260px 1fr;gap:16px" class="rise">
+          <div style="display:grid;grid-template-columns:260px 1fr;gap:16px" class="rise" id="progress-body">
             <div class="card"><div class="card-b" style="padding-top:12px" id="step-list"></div></div>
             <div class="log" id="log"></div>
           </div>
@@ -719,13 +766,14 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 
       <!-- ========== DONE ========== -->
       <section class="screen" data-screen="done" id="screen-done">
-        <div style="max-width:640px;margin:0 auto;text-align:center;padding-top:24px">
+        <div style="max-width:1000px;margin:0 auto;text-align:center;padding-top:24px">
           <div class="done-ring rise">
             <svg viewBox="0 0 76 76"><circle class="rg" cx="38" cy="38" r="34"/><circle class="rp" cx="38" cy="38" r="34"/></svg>
             <div class="chk"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
           </div>
           <h2 class="rise" style="font-family:var(--font-d);font-weight:600;font-size:22px">Package ready</h2>
           <p class="rise" style="color:var(--dim);font-size:12.5px;margin-top:4px" id="done-path">&nbsp;</p>
+          <div class="done-findings rise" id="done-findings" hidden><b id="done-findings-title"></b><ul id="done-findings-list"></ul></div>
           <div class="sheet rise" style="margin-top:22px;text-align:left" id="done-sheet"></div>
           <div class="rise" style="display:flex;gap:10px;justify-content:center;margin-top:22px">
             <button class="btn" data-go="fleet">View fleet</button>
@@ -757,7 +805,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
              scripts (or PSADT's own test invocation) on this machine, no
              Intune needed. Separate from "Preview". -->
         <div id="test-modal" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:90;align-items:center;justify-content:center">
-          <div class="card" style="width:560px;max-height:80vh;display:flex;flex-direction:column;padding:0">
+          <div class="card" style="width:min(980px,92vw);max-height:90vh;display:flex;flex-direction:column;padding:0">
             <div style="padding:18px 22px 0"><div class="eyebrow">local sanity check</div><div class="card-t" id="test-modal-title" style="margin-top:4px">Test locally</div></div>
             <div style="padding:12px 22px">
               <p class="hint" style="margin:0 0 10px">Decrypts the real <b>.intunewin</b> file if one exists and tests that (not just loose scripts) - it will actually install (and optionally uninstall) the app on <b style="color:var(--warn)">this machine</b>. No Intune required.</p>
@@ -768,7 +816,14 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                 <input type="checkbox" id="test-also-uninstall"> Also test uninstall afterwards
               </label>
             </div>
-            <div class="log" id="test-log" style="margin:0 22px;flex:1;min-height:180px;max-height:320px"></div>
+            <div class="test-summary" id="test-summary" hidden>
+              <div id="test-result"></div>
+              <div class="test-fixes" id="test-fixes"></div>
+            </div>
+            <details class="test-log-wrap" id="test-log-wrap" open>
+              <summary>Log</summary>
+              <div class="log" id="test-log" style="min-height:180px;max-height:52vh"></div>
+            </details>
             <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px">
               <button class="btn" id="test-modal-close">Close</button>
               <button class="btn primary" id="test-modal-start">Start test</button>
@@ -828,8 +883,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             </div>
 
             <div style="padding:0 22px">
-              <div class="tglrow"><div><b>Online lookups</b><small>New releases on GitHub, installer switches from Microsoft's winget catalogue and CISA's list of actively exploited vulnerabilities. Off = no outbound call is ever made. Recommended off for air-gapped machines.</small></div><button class="tgl on" id="tgl-release-check"></button></div>
-              <div class="tglrow"><div><b>NIST vulnerability check</b><small>Before each build, asks NIST's National Vulnerability Database which CVEs affect the exact version being packaged. Sends the app's name and version to NIST. Warnings only; needs online lookups.</small></div><button class="tgl" id="tgl-nvd"></button></div>
+              <div class="tglrow"><div><b>Online lookups</b><small>New releases, installer details from winget and CISA's list of exploited vulnerabilities. Off means no outbound calls.</small></div><button class="tgl on" id="tgl-release-check"></button></div>
+              <div class="tglrow sub" id="nvd-row"><div><b>Also check NIST for CVEs</b><small>Asks NIST which CVEs affect the exact version being packaged. Sends the app's name and version.</small></div><button class="tgl" id="tgl-nvd"></button></div>
               <div class="tglrow"><div><b>Show Cloudflare connection promo</b><small>The "Not connected to Cloudflare" card on Home and the fleet empty-state tip. Off if you dismissed it, or if you're offline-only by design.</small></div><button class="tgl on" id="tgl-cf-advert"></button></div>
               <div class="tglrow"><div><b>Show getting-started checklist</b><small>The "A few things to try" card on Home. Off if you dismissed it or it's not needed anymore.</small></div><button class="tgl on" id="tgl-getting-started"></button></div>
             </div>
@@ -1101,6 +1156,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
   </div>
 </div>
 <div class="toasts" id="toasts"></div>
+<div class="chip-pop" id="chip-pop" hidden role="dialog" aria-live="polite"><div id="chip-pop-text"></div><button type="button" class="btn sm" id="chip-pop-link" hidden>Open</button></div>
 
 <div id="tour-overlay">
   <div id="tour-spot"></div>
@@ -1460,9 +1516,22 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
   }
 
   function updateSummary() {
-    // Runtime detection checks the agent, and MSIX detection reads the package version itself.
-    $('#detectversion-wrap').style.display = form.Mode === 'simple' && window._installerType !== 'MSIX' ? 'block' : 'none';
+    // Only what applies to this mode and target is shown. Runtime detection checks the agent, and MSIX detection reads the
+    // package version itself.
+    const simpleApp = form.Mode === 'simple' && window._installerType !== 'MSIX';
+    $('#detectversion-wrap').style.display = simpleApp ? 'flex' : 'none';
+    $('#detectversion-field').style.display = simpleApp ? 'block' : 'none';
     $('#scripts-wrap').style.display = form.Mode === 'simple' && !['MSIX', 'Zip'].includes(window._installerType) ? 'block' : 'none';
+    const psadt = form.SimplePkgTarget === 'psadt', runtime = form.Mode === 'runtime';
+    $('#runtime-url-wrap').style.display = runtime ? 'block' : 'none';
+    $('#close-apps-row').style.display = psadt || runtime ? 'flex' : 'none';
+    $('#defer-row').style.display = psadt ? 'flex' : 'none';
+    $('#endpoint-card').style.display = psadt || runtime ? 'block' : 'none';
+    const minVersion = $('#f-detectversion').value.trim();
+    $('#detect-text').textContent = minVersion ? `${minVersion} or newer` : 'any version';
+    const advancedSet = [!!$('#f-detectversion').value.trim(), !!form.BundleFolder, !!form.RemoveOlderVersions,
+      ...['f-prehook', 'f-posthook', 'f-postuninstallhook'].map(id => !!$('#' + id).value.trim())].filter(Boolean).length;
+    $('#adv-count').textContent = advancedSet ? `${advancedSet} set` : '';
     const mode = form.Mode === 'runtime' ? 'AppUpdater Runtime' : 'Simple Package';
     const target = form.SimplePkgTarget === 'intunewin' ? '.intunewin' : 'PSADT package';
     const org = resolveBuildOrgName();
@@ -1496,7 +1565,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     } else if (!inspected) {
       toast('No installer', 'Drop or browse to an installer first'); return;
     } else if (!$('#f-silentargs').value.trim() && !/\.(msi|msix|msixbundle|appx|appxbundle|zip)$/i.test(window._selectedInstaller || '')) {
-      toast('Silent switch needed', 'AppUpdater does not recognise this installer. Enter its silent install switch first.', true); return;
+      $('#advanced').open = true; $('#f-silentargs').focus();
+      toast('Silent switch needed', 'AppUpdater does not recognise this installer. Enter its silent install switch under Advanced.', true); return;
     }
     if (form.Kind !== 'printer') {
       const simpleOnly = form.Mode !== 'simple';
@@ -1518,6 +1588,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     $('#progress-title').textContent = $('#f-displayname').value || $('#f-printername').value || 'Package';
     $('#step-list').innerHTML = '';
     $('#progress-error').style.display = 'none';
+    $('#progress-body').style.display = 'grid';
     const payload = {
       AppID: $('#f-appid').value,
       DisplayName: $('#f-displayname').value,
@@ -1587,14 +1658,16 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             $('#inspect-ext').textContent = ext;
             $('#inspect-name').textContent = base;
             $('#inspect-sub').textContent = payload.detected ? payload.detected.summary || '' : 'Inspecting…';
-            $('#inspect-chips').innerHTML = (payload.detected && payload.detected.chips || []).map(c =>
-              `<span class="chip ${escapeHtml(c.tone||'')}"><i></i>${escapeHtml(c.label)}</span>`).join('');
+            $('#inspect-chips').innerHTML = (payload.detected && payload.detected.chips || []).map(chipHtml).join('');
+            $('#known-banner').hidden = true;
             if (!$('#f-appid').value) $('#f-appid').value = (payload.detected && payload.detected.appId) || stem.replace(/[^A-Za-z0-9._-]/g, '');
             if (!$('#f-displayname').value) $('#f-displayname').value = (payload.detected && payload.detected.displayName) || stem;
             const registryWasEmpty = !$('#f-registryname').value;
             if (registryWasEmpty) $('#f-registryname').value = (payload.detected && payload.detected.registryName) || $('#f-displayname').value;
             $('#f-silentargs').value = (payload.detected && payload.detected.silentArgs) || '';
             window._autoSilentArgs = $('#f-silentargs').value;
+            // Advanced opens by itself only when it needs an answer: an installer without a known silent switch.
+            $('#advanced').open = !$('#f-silentargs').value && !/\.(msi|msix|msixbundle|appx|appxbundle|zip)$/i.test(payload.path);
             window._entryExe = (payload.detected && payload.detected.entryExe) || '';
             window._perUser = !!(payload.detected && payload.detected.installerType === 'Squirrel');
             // null never equals a field value, so a name the user typed is never replaced later.
@@ -1619,7 +1692,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             renderPipe(0, 2);
             updateSummary();
             if (det.known) applyKnownApp(det.known);
-            else toast('Installer inspected', payload.detected ? 'Details pre-filled from the installer' : 'Fill in the identity fields to continue');
+            else if (!payload.detected) toast('Installer picked', 'Fill in the identity fields to continue');
           }
           break;
         case 'installer-winget-result': {
@@ -1639,15 +1712,17 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             window._wingetMatch = { Id: m.Id, Version: m.Version, Match: m.Match, VersionMatch: !!m.VersionMatch, Latest: m.Latest || '', Files: m.Files || [] };
             if (m.SilentArgs && $('#f-silentargs').value === window._autoSilentArgs) $('#f-silentargs').value = window._autoSilentArgs = m.SilentArgs;
             if (m.ArpName && window._installerType !== 'MSIX' && $('#f-registryname').value === window._autoRegistryName) { $('#f-registryname').value = window._autoRegistryName = m.ArpName; updateSummary(); }
-            const how = m.Match === 'hash' ? 'exact file' : m.Match === 'productcode' ? 'same product code' : (m.VersionMatch ? 'same version' : 'newer catalogue version');
-            chips.push({ label: `winget ${m.Id} ${m.Version} (${how})`, tone: m.Match === 'name' ? '' : 'g' });
-            if (m.Scope === 'user') { window._perUser = true; chips.push({ label: 'winget lists this installer as per-user', tone: 'w' }); }
-            if (!m.SilentArgs && !$('#f-silentargs').value) chips.push({ label: 'winget has no silent switch for this installer either', tone: 'w' });
+            const how = m.Match === 'hash' ? 'the exact file' : m.Match === 'productcode' ? 'the same product code' : (m.VersionMatch ? 'name and version' : 'name; its newest version is listed');
+            const repoPath = `manifests/${m.Id.charAt(0).toLowerCase()}/${m.Id.split('.').join('/')}`;
+            chips.push({ label: 'winget', tone: m.Match === 'name' ? '' : 'g', detail: `Matched ${m.Id} ${m.Version} in Microsoft's winget catalogue by ${how}. Its silent switch and registry name are used where you have not changed them.`, link: `https://github.com/microsoft/winget-pkgs/tree/master/${repoPath}`, linkLabel: 'Open in winget-pkgs' });
+            if (m.Scope === 'user') { window._perUser = true; chips.push({ label: 'Per-user', tone: 'w', detail: 'winget lists this installer as per-user. Deploy it in Intune with install behaviour User.' }); }
+            if (!m.SilentArgs && !$('#f-silentargs').value) chips.push({ label: 'No silent switch', tone: 'w', detail: 'Neither the installer nor winget gives a silent switch. Enter one under Advanced before building.' });
           } else if (payload.note) {
-            chips.push({ label: payload.note });
+            const off = /lookups are off/.test(payload.note);
+            chips.push({ label: off ? 'winget off' : /downloading/.test(payload.note) ? 'winget loading' : /not in the winget/.test(payload.note) ? 'Not in winget' : 'winget error',
+                         detail: payload.note.charAt(0).toUpperCase() + payload.note.slice(1) + '.', link: off ? 'settings' : '', linkLabel: off ? 'Open settings' : '' });
           }
-          $('#inspect-chips').insertAdjacentHTML('beforeend', chips.map(c =>
-            `<span class="chip ${escapeHtml(c.tone || '')}"><i></i>${escapeHtml(c.label)}</span>`).join(''));
+          $('#inspect-chips').insertAdjacentHTML('beforeend', chips.map(chipHtml).join(''));
           if (bundleOk && window._knownBundle) setToggle('BundleFolder', true);
           if (payload.known) applyKnownApp(payload.known);
           break;
@@ -1702,29 +1777,29 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           break;
         }
         case 'winget-prepared': {
-          if (!payload.ok || payload.nothing) { logTestLine(payload.message || 'Nothing to contribute.', payload.ok ? 'in' : 'wr'); break; }
-          logTestLine(payload.summary, 'ac');
+          if (!payload.ok || payload.nothing) { noteInFixes(payload.message || 'Nothing to contribute.', payload.ok ? 'in' : 'wr'); break; }
+          noteInFixes(payload.summary, 'ac');
           const box = document.createElement('div');
           box.style.cssText = 'margin:8px 0;padding:10px;border:1px solid var(--edge);border-radius:var(--r-sm)';
           box.innerHTML = `<pre style="white-space:pre-wrap;font-size:11px;margin:0 0 8px">${escapeHtml(payload.preview)}</pre>
             <div class="hint" style="margin:0 0 6px">Submitted as a pull request to microsoft/winget-pkgs from your GitHub account, where Microsoft's checks and reviewers take over. A GitHub token with public_repo scope is needed once; wingetcreate keeps it, AppUpdater does not.</div>
             <div style="display:flex;gap:6px"><input class="field mono" type="password" id="winget-token" placeholder="GitHub token - only the first time"><button class="btn primary sm" id="winget-submit">Submit pull request</button></div>`;
-          appendToTestLog(box);
+          appendToTestFixes(box);
           $('#winget-submit').addEventListener('click', () => {
             $('#winget-submit').disabled = true;
-            logTestLine('Submitting with wingetcreate...', 'ac');
+            noteInFixes('Submitting with wingetcreate...', 'ac');
             send('winget-submit', { id: payload.id, token: $('#winget-token').value.trim() });
             $('#winget-token').value = '';
           });
           break;
         }
         case 'winget-submitted': {
-          logTestLine(payload.message || (payload.ok ? 'Submitted.' : 'Submission failed.'), payload.ok ? 'ok' : 'wr');
+          noteInFixes(payload.message || (payload.ok ? 'Submitted.' : 'Submission failed.'), payload.ok ? 'ok' : 'wr');
           if (payload.prUrl) {
             const open = document.createElement('button');
             open.className = 'btn primary sm'; open.textContent = 'Open the pull request';
             open.addEventListener('click', () => send('open-pr', { url: payload.prUrl }));
-            appendToTestLog(open);
+            appendToTestFixes(open);
           } else if (payload.needsToken && $('#winget-submit')) { $('#winget-submit').disabled = false; }
           break;
         }
@@ -1733,7 +1808,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           break;
         case 'preflight-blocked': {
           const list = (payload.findings || []).map(f => `<li style="margin:4px 0;color:${f.level === 'red' ? 'var(--bad)' : 'var(--warn)'}">${escapeHtml(f.message)}</li>`).join('');
-          $('#step-list').innerHTML = `<div class="phase doing"><span class="pi"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Pre-deploy checks &middot; stopped</div>`;
+          // Nothing was built, so the step list and log would only repeat the findings.
+          $('#progress-body').style.display = 'none';
           $('#progress-error-title').textContent = 'Build stopped by pre-deploy checks';
           $('#progress-error-msg').innerHTML = `<div>Pre-deploy checks found a problem with this installer. Check where it came from before deploying it.</div><ul style="margin:8px 0 0 18px;padding:0">${list}</ul>
             <button class="btn danger sm" id="preflight-override" style="margin-top:10px">Build anyway</button>`;
@@ -1741,6 +1817,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           $('#preflight-override').addEventListener('click', () => {
             if (!window._lastBuildPayload) return;
             $('#progress-error').style.display = 'none';
+            $('#progress-body').style.display = 'grid';
             send('build-package', Object.assign({}, window._lastBuildPayload, { OverrideRed: true }));
           });
           break;
@@ -1836,6 +1913,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           document.body.classList.toggle('colorblind-safe', !!payload.colorblindSafe);
           $('#tgl-release-check').classList.toggle('on', !!payload.releaseCheckEnabled);
           $('#tgl-nvd').classList.toggle('on', !!payload.nvdEnabled);
+          $('#nvd-row').style.display = payload.releaseCheckEnabled ? 'flex' : 'none';
           $('#tgl-cf-advert').classList.toggle('on', payload.showCloudflareAdvert !== false);
           window._showCfAdvert = payload.showCloudflareAdvert !== false;
           $('#tgl-getting-started').classList.toggle('on', payload.showGettingStarted !== false);
@@ -1873,7 +1951,17 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           break;
         case 'test-log':
           if (payload.line) logTestLine(payload.line);
-          if (payload.done) logTestLine(payload.ok ? '\u2713 Done' : '\u2717 Failed', payload.ok ? 'ok' : 'wr');
+          if (payload.line && /^ERROR:/.test(payload.line)) window._lastTestError = payload.line.replace(/^ERROR:\s*/, '');
+          if (payload.done) {
+            logTestLine(payload.ok ? '\u2713 Done' : '\u2717 Failed', payload.ok ? 'ok' : 'wr');
+            // The outcome and what to do about it come first; the log stays one click away.
+            $('#test-result').textContent = payload.ok
+              ? `Passed: installed and detected${$('#test-also-uninstall').checked ? ', then uninstalled' : ''}.`
+              : `Failed${window._lastTestError ? ': ' + window._lastTestError : '. See the log for the step that failed.'}`;
+            $('#test-summary').className = 'test-summary ' + (payload.ok ? 'ok' : 'bad');
+            $('#test-summary').hidden = false;
+            $('#test-log-wrap').open = !payload.ok;
+          }
           if (payload.done && payload.suggestedRegistryName) {
             addTestFix(`Use "${payload.suggestedRegistryName}" as the registry name`, () => {
               $('#f-registryname').value = payload.suggestedRegistryName;
@@ -1885,8 +1973,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             const contribute = document.createElement('button');
             contribute.className = 'btn sm';
             contribute.textContent = 'Contribute what this test verified to winget';
-            contribute.addEventListener('click', () => { contribute.disabled = true; logTestLine('Checking what winget is missing...', 'ac'); send('winget-prepare', { id: currentTestId }); });
-            appendToTestLog(contribute);
+            contribute.addEventListener('click', () => { contribute.disabled = true; noteInFixes('Checking what winget is missing...', 'ac'); send('winget-prepare', { id: currentTestId }); });
+            appendToTestFixes(contribute);
           }
           if (payload.done && payload.suggestedDetectVersion) {
             addTestFix(`Require version ${payload.suggestedDetectVersion} or newer`, () => {
@@ -1904,10 +1992,10 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     // Asked once per launch; "Later" asks again next time.
     window._feedbackAnswered = window._feedbackAnswered || new Set();
     const items = (Array.isArray(due) ? due : []).filter(d => !window._feedbackAnswered.has(d.id));
-    $('#deploy-feedback').style.display = items.length ? 'block' : 'none';
+    $('#deploy-feedback').style.display = items.length ? 'flex' : 'none';
     $('#deploy-feedback-list').innerHTML = items.map(d => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
-        <span style="flex:1"><b style="font-weight:600">${escapeHtml(d.name)}</b> <span class="mono">${escapeHtml(d.version || '')}</span></span>
+      <div class="fb-item">
+        <span>${escapeHtml(d.name)} <span class="mono">${escapeHtml(d.version || '')}</span></span>
         <button class="btn sm" data-feedback="${escapeHtml(d.id)}" data-outcome="ok">Yes</button>
         <button class="btn sm danger" data-feedback="${escapeHtml(d.id)}" data-outcome="failed">No</button>
         <button class="btn ghost sm" data-feedback="${escapeHtml(d.id)}" data-outcome="later">Later</button>
@@ -1919,6 +2007,56 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       renderDeployFeedback(items);
     }));
   }
+  $('#known-undo').addEventListener('click', undoKnownApp);
+  $('#detect-change').addEventListener('click', () => { $('#advanced').open = true; $('#f-detectversion').focus(); });
+  ['f-detectversion', 'f-prehook', 'f-posthook', 'f-postuninstallhook'].forEach(id => $('#' + id).addEventListener('input', updateSummary));
+  $('#chip-pop-link').addEventListener('click', () => {
+    const link = $('#chip-pop-link').dataset.link;
+    $('#chip-pop').hidden = true;
+    if (link === 'settings') goTo('worker'); else if (link) send('open-link', { url: link });
+  });
+  function undoKnownApp() {
+    // Puts back what the installer's own inspection filled in before the remembered settings replaced it.
+    const b = window._beforeKnown;
+    if (!b) return;
+    for (const id of knownFields) $('#' + id).value = b.fields[id];
+    pickSeg('segMode', b.form.Mode); pickSeg('segTarget', b.form.SimplePkgTarget); pickSeg('segPsadtVersion', b.form.PSADTVersion);
+    form.ProcessesToKill = b.form.ProcessesToKill;
+    setToggle('closeAppsOn', b.form.closeAppsOn); setToggle('allowDefer', b.form.allowDefer); setToggle('RemoveOlderVersions', b.form.RemoveOlderVersions);
+    const prof = $('#f-profile');
+    if (prof.value !== b.profile) { prof.value = b.profile; prof.dispatchEvent(new Event('change')); }
+    window._autoRegistryName = b.autoRegistryName; window._autoSilentArgs = b.autoSilentArgs;
+    $('#known-banner').hidden = true;
+    updateSummary();
+  }
+  function chipHtml(c) {
+    const detail = c.detail ? ` data-detail="${escapeHtml(c.detail)}" data-link="${escapeHtml(c.link || '')}" data-link-label="${escapeHtml(c.linkLabel || '')}" tabindex="0" role="button"` : '';
+    return `<span class="chip ${escapeHtml(c.tone || '')}${c.detail ? ' has-detail' : ''}"${detail}><i></i>${escapeHtml(c.label)}</span>`;
+  }
+  function showChipDetail(chip) {
+    const pop = $('#chip-pop');
+    if (pop.dataset.for === chip.textContent && !pop.hidden) { pop.hidden = true; return; }
+    pop.dataset.for = chip.textContent;
+    $('#chip-pop-text').textContent = chip.dataset.detail;
+    const link = $('#chip-pop-link');
+    link.hidden = !chip.dataset.link;
+    link.textContent = chip.dataset.linkLabel || 'Open';
+    link.dataset.link = chip.dataset.link;
+    const r = chip.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 340)) + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
+    pop.hidden = false;
+  }
+  document.addEventListener('click', e => {
+    const chip = e.target.closest('.chip.has-detail');
+    if (chip) { showChipDetail(chip); return; }
+    if (!e.target.closest('#chip-pop')) $('#chip-pop').hidden = true;
+  });
+  document.addEventListener('keydown', e => {
+    const chip = e.target.closest && e.target.closest('.chip.has-detail');
+    if (chip && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); showChipDetail(chip); }
+    if (e.key === 'Escape') $('#chip-pop').hidden = true;
+  });
   function setToggle(key, on) {
     form[key] = !!on;
     const t = document.querySelector(`.tgl[data-val="${key}"]`);
@@ -1928,10 +2066,15 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     const b = val && document.querySelector(`#${id} button[data-val="${val}"]`);
     if (b && !b.classList.contains('on')) b.click();
   }
+  const knownFields = ['f-appid', 'f-displayname', 'f-registryname', 'f-silentargs', 'f-download-url', 'f-detectversion', 'f-prehook', 'f-posthook', 'f-postuninstallhook'];
   function applyKnownApp(k) {
     // Restores the settings of the last build of this app, once per picked installer.
     if (!k || window._knownAppliedFor === window._selectedInstaller) return;
     window._knownAppliedFor = window._selectedInstaller;
+    window._beforeKnown = { fields: Object.fromEntries(knownFields.map(id => [id, $('#' + id).value])),
+                            form: { Mode: form.Mode, SimplePkgTarget: form.SimplePkgTarget, PSADTVersion: form.PSADTVersion, ProcessesToKill: form.ProcessesToKill,
+                                    closeAppsOn: form.closeAppsOn, allowDefer: form.allowDefer, RemoveOlderVersions: !!form.RemoveOlderVersions },
+                            profile: $('#f-profile').value, autoRegistryName: window._autoRegistryName, autoSilentArgs: window._autoSilentArgs };
     const s = k.settings || {};
     $('#f-appid').value = k.appId;
     if (s.DisplayName) $('#f-displayname').value = s.DisplayName;
@@ -1954,6 +2097,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     setToggle('closeAppsOn', !!s.ProcessesToKill || !form.ProcessesToKill);
     setToggle('allowDefer', s.AllowDefer !== false);
     window._knownBundle = !!s.BundleFolder;
+    if (s.RemoveOlderVersions || s.PreInstallHookPath || s.PostInstallHookPath || s.PostUninstallHookPath || s.BundleFolder) $('#advanced').open = true;
     setToggle('RemoveOlderVersions', !!s.RemoveOlderVersions);
     for (const [field, key] of [['f-prehook', 'PreInstallHookPath'], ['f-posthook', 'PostInstallHookPath'], ['f-postuninstallhook', 'PostUninstallHookPath']]) {
       if (s[key]) $('#' + field).value = s[key];
@@ -1964,12 +2108,11 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       $('#f-detectversion').value = window._selectedVersion;
     }
     const when = k.lastBuiltAt ? new Date(k.lastBuiltAt).toLocaleDateString() : '';
-    const chips = [{ label: `packaged before${k.lastVersion ? ': ' + k.lastVersion : ''}${when ? ' on ' + when : ''} - settings restored`, tone: 'g' }];
-    if (k.lastVersion && k.lastVersion === window._selectedVersion) chips.push({ label: 'same version as the last package', tone: 'w' });
-    $('#inspect-chips').insertAdjacentHTML('beforeend', chips.map(c =>
-      `<span class="chip ${escapeHtml(c.tone)}"><i></i>${escapeHtml(c.label)}</span>`).join(''));
+    const same = k.lastVersion && k.lastVersion === window._selectedVersion;
+    $('#known-text').textContent = `Packaged before${k.lastVersion ? ' as ' + k.lastVersion : ''}${when ? ' on ' + when : ''}. Its settings are filled in${same ? ' - this is the same version' : ''}.`;
+    $('#known-banner').classList.toggle('warn', !!same);
+    $('#known-banner').hidden = false;
     updateSummary();
-    toast('Known app', `Settings from the last ${k.appId} build are filled in. Check them, then build.`);
   }
 
   function addTestFix(label, apply) {
@@ -1989,7 +2132,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       apply();
       updateSummary();
     });
-    appendToTestLog(fix);
+    appendToTestFixes(fix);
   }
 
   function renderProfiles(profiles, lastUsed) {
@@ -2142,7 +2285,12 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     document.body.classList.toggle('colorblind-safe', $('#tgl-colorblind').classList.contains('on'));
     saveSettingsNow(); flashSaved();
   });
-  $('#tgl-release-check').addEventListener('click', function(){ $('#tgl-release-check').classList.toggle('on'); saveSettingsNow(); flashSaved(); });
+  $('#tgl-release-check').addEventListener('click', function(){
+    $('#tgl-release-check').classList.toggle('on');
+    // The NIST check runs only with online lookups on.
+    $('#nvd-row').style.display = $('#tgl-release-check').classList.contains('on') ? 'flex' : 'none';
+    saveSettingsNow(); flashSaved();
+  });
   $('#tgl-nvd').addEventListener('click', function(){ $('#tgl-nvd').classList.toggle('on'); saveSettingsNow(); flashSaved(); });
   $('#tgl-cf-advert').addEventListener('click', function(){
     $('#tgl-cf-advert').classList.toggle('on');
@@ -2214,11 +2362,13 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                 ['Detection', 'Custom script: detect.ps1'],
                 ['As a dependency', form.allowDefer ? 'Turn off "Allow deferral": a deferred dependency blocks the app that needs it' : 'Ready - deferral is off']);
     }
-    for (const f of (payload.findings || [])) {
-      rows.push([f.level === 'red' ? 'Check overridden' : 'Check', f.message, true]);
-    }
+    // Pre-deploy findings show once, above the settings to copy into Intune.
+    const findings = payload.findings || [];
+    $('#done-findings').hidden = !findings.length;
+    $('#done-findings-title').textContent = findings.some(f => f.level === 'red') ? 'Built anyway, despite:' : 'Check before deploying:';
+    $('#done-findings-list').innerHTML = findings.map(f => `<li class="${f.level === 'red' ? 'red' : ''}">${escapeHtml(f.message)}</li>`).join('');
     if (form.Kind !== 'printer' && form.Mode === 'simple') {
-      rows.push(['EPM elevation rules', 'EPM-rules.csv in the output folder: installer hash and signer certificate; a local test adds the installed program and its updaters']);
+      rows.push(['EPM elevation rules', 'EPM-rules.csv in the output folder']);
     }
     if (form.Kind === 'printer' || form.Mode === 'runtime') {
       rows.push(['As a dependency', 'Detection confirms the AppUpdater agent; its first update runs during install, so the app or printer is normally in place before Intune moves on']);
@@ -2645,6 +2795,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     const app = lastFleet.find(a => a.id === id);
     $('#test-modal-title').textContent = 'Test locally' + (app ? ' - ' + app.name : '');
     $('#test-log').innerHTML = '';
+    $('#test-summary').hidden = true; $('#test-fixes').innerHTML = ''; $('#test-log-wrap').open = true;
     $('#test-also-uninstall').checked = false;
     $('#test-modal').style.display = 'flex';
   }
@@ -2654,13 +2805,19 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
   });
   $('#test-modal-start').addEventListener('click', () => {
     $('#test-log').innerHTML = '';
+    $('#test-summary').hidden = true; $('#test-fixes').innerHTML = ''; $('#test-log-wrap').open = true; window._lastTestError = '';
     logTestLine('Starting...', 'ac');
     send('test-locally', { id: currentTestId, alsoUninstall: $('#test-also-uninstall').checked, simulateSystem: $('#test-simulate-system').checked });
   });
-  function appendToTestLog(el) {
-    const log = $('#test-log');
-    log.appendChild(el);
-    log.scrollTop = log.scrollHeight;
+  function appendToTestFixes(el) { $('#test-fixes').appendChild(el); }
+  function noteInFixes(text, cls) {
+    // Follow-up steps report under the test result, where their buttons are.
+    const note = document.createElement('div');
+    note.className = 'hint';
+    if (cls === 'wr') note.style.color = 'var(--warn)';
+    if (cls === 'ok') note.style.color = 'var(--ok)';
+    note.textContent = text;
+    $('#test-fixes').appendChild(note);
   }
   function logTestLine(text, cls) {
     const log = $('#test-log');
@@ -3285,8 +3442,11 @@ function Get-WingetLatestVersion {
 $window = New-Object System.Windows.Window
 $window.Title           = 'AppUpdater'
 $workArea = [System.Windows.SystemParameters]::WorkArea
-$window.Width           = [Math]::Min(1280, $workArea.Width - 40)
-$window.Height          = [Math]::Min(800, $workArea.Height - 40)
+# Most of the screen, so the builder's three columns fit without scrolling.
+$window.Width           = [Math]::Min(1760, [Math]::Max(1100, $workArea.Width * 0.9))
+$window.Height          = [Math]::Min(1080, [Math]::Max(720, $workArea.Height * 0.9))
+$window.Width           = [Math]::Min($window.Width, $workArea.Width)
+$window.Height          = [Math]::Min($window.Height, $workArea.Height)
 $window.MinWidth        = 860
 $window.MinHeight       = 640
 $window.WindowStyle     = 'None'
@@ -3364,16 +3524,16 @@ try {
               }
               if ($pickedPath) {
                 $d = Invoke-InstallerInspector -InstallerPath $pickedPath
+                # Tags stay a word or two; the explanation opens when the tag is clicked.
+                $names = @{ InnoSetup = 'Inno Setup'; WiXBurn = 'WiX Burn'; '7ZipSFX' = '7-Zip SFX'; AdvancedInstaller = 'Advanced Installer'; SetupFactory = 'Setup Factory' }
                 $chips = @()
-                if ($d.InstallerType -eq 'Unknown') { $chips += @{ label = 'unrecognised installer - enter its silent switch'; tone = 'w' } }
-                elseif ($d.InstallerType) { $chips += @{ label = $d.InstallerType; tone = 'g' } }
-                if ($d.InstallerType -eq 'InstallShield') { $chips += @{ label = 'InstallScript setups need a recorded setup.iss'; tone = 'w' } }
-                if ($d.InstallerType -eq 'Squirrel') { $chips += @{ label = 'per-user installer'; tone = 'w' } }
-                if ($d.InstallerType -eq 'Zip') { $chips += $(if ($d.EntryExe) { @{ label = "portable app: $($d.EntryExe)"; tone = 'g' } } else { @{ label = 'no program found in this zip'; tone = 'w' } }) }
-                if ($d.InstallerType -eq 'MSIX') { $chips += @{ label = 'provisioned for every user at their next sign-in' } }
-                if ($d.InstallerType -eq '7ZipSFX') { $chips += @{ label = 'self-extractor: the switch goes to the installer inside - confirm with a local test'; tone = 'w' } }
-                if ($d.Version) { $chips += @{ label = "version $($d.Version)" } }
-                if ($d.Publisher) { $chips += @{ label = $d.Publisher; tone = 'g' } }
+                if ($d.InstallerType -eq 'Unknown') { $chips += @{ label = 'Unknown installer'; tone = 'w'; detail = 'AppUpdater does not recognise this installer, so it cannot guess a silent switch. Enter one under Advanced (check the vendor documentation or run the installer with /?).' } }
+                elseif ($d.InstallerType) { $chips += @{ label = $(if ($names[$d.InstallerType]) { $names[$d.InstallerType] } else { $d.InstallerType }); tone = 'g'; detail = "Installer family detected from the file. The silent switch under Advanced is filled in for it: $($d.SilentArgs)" } }
+                if ($d.InstallerType -eq 'InstallShield') { $chips += @{ label = 'Needs setup.iss'; tone = 'w'; detail = 'InstallScript setups only run silently with a recorded response file. Record one with setup.exe /r, put it next to the installer, turn on "Bundle the whole folder" and use /s /f1"{pkg}\setup.iss".' } }
+                if ($d.InstallerType -eq 'Squirrel') { $chips += @{ label = 'Per-user'; tone = 'w'; detail = 'This installer only installs for the signed-in user. Deploy it in Intune with install behaviour User; as SYSTEM it only reaches the SYSTEM profile.' } }
+                if ($d.InstallerType -eq 'Zip') { $chips += $(if ($d.EntryExe) { @{ label = 'Portable app'; tone = 'g'; detail = "The zip is unpacked to Program Files with a Start menu shortcut to $($d.EntryExe), and registered in Add/Remove Programs so detection and uninstall work." } } else { @{ label = 'No program found'; tone = 'w'; detail = 'The zip holds no executable that looks like the main program, so it cannot be packaged.' } }) }
+                if ($d.InstallerType -eq 'MSIX') { $chips += @{ label = 'All users'; detail = 'MSIX packages are provisioned for every user; existing users get the app at their next sign-in.' } }
+                if ($d.InstallerType -eq '7ZipSFX') { $chips += @{ label = 'Check switch'; tone = 'w'; detail = 'This is a self-extracting archive: the silent switch goes to the installer inside it. Confirm it with a local test before deploying.' } }
                 $detected = @{
                   summary = (@($d.Version, $d.Publisher) | Where-Object { $_ }) -join ' - '
                   appId = $d.AppID; displayName = $d.DisplayName; registryName = $d.RegistryName
@@ -3496,6 +3656,10 @@ $_result.message = if ($run.PrUrl) { 'Pull request opened.' } elseif ($run.Outpu
 $_result.needsToken = -not $run.PrUrl -and $run.Output -match '(?i)token|unauthori|credential'
 '@
               }
+            }
+            'open-link' {
+              # Only the pages tags point to; anything else from the page is ignored.
+              if ([string]$msg.payload.url -match '^https://github\.com/microsoft/winget-pkgs/(tree|pull)/[A-Za-z0-9./_-]+$') { Start-Process ([string]$msg.payload.url) }
             }
             'open-pr' {
               if ([string]$msg.payload.url -match '^https://github\.com/microsoft/winget-pkgs/pull/\d+$') { Start-Process ([string]$msg.payload.url) }
