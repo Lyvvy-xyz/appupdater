@@ -61,10 +61,23 @@ $worker = (Get-Item Function:\Start-LocalTestJob).ScriptBlock.Ast.Find({ param($
 
 function Get-Installer([string]$From, [string]$Label) {
   $download = Join-Path $root "$Label.download"
-  # Vendor mirrors fail now and then (502s, refused connections); that is not a packaging result.
+  # Vendor mirrors fail now and then (502s, refused connections) and old versions get removed; neither is a packaging
+  # result. A fresh download is preferred; the copy cached by an earlier run is the fallback.
+  $cached = if ($env:INSTALLER_CACHE) {
+    $key = [BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($From))).Replace('-', '').Substring(0, 16)
+    Join-Path $env:INSTALLER_CACHE "$Label-$key"
+  }
   for ($try = 1; ; $try++) {
-    try { Invoke-WebRequest -Uri $From -OutFile $download -UseBasicParsing -UserAgent 'Mozilla/5.0' -TimeoutSec 900; break }
-    catch { if ($try -ge 4) { throw }; Write-Host "Download attempt $try failed: $($_.Exception.Message)"; Start-Sleep -Seconds (30 * $try) }
+    try {
+      Invoke-WebRequest -Uri $From -OutFile $download -UseBasicParsing -UserAgent 'Mozilla/5.0' -TimeoutSec 900
+      if ($cached) { [IO.Directory]::CreateDirectory($env:INSTALLER_CACHE) | Out-Null; Copy-Item -LiteralPath $download -Destination $cached -Force }
+      break
+    } catch {
+      Write-Host "Download attempt $try failed: $($_.Exception.Message)"
+      if ($try -lt 4) { Start-Sleep -Seconds (30 * $try); continue }
+      if ($cached -and (Test-Path -LiteralPath $cached)) { Write-Host "Using the copy cached by an earlier run"; Copy-Item -LiteralPath $cached -Destination $download -Force; break }
+      throw
+    }
   }
   $magic = [byte[]]::new(8)
   $stream = [IO.File]::OpenRead($download)
@@ -109,14 +122,14 @@ function New-AppForm($App, [hashtable]$Overrides = @{}) {
   return $form
 }
 
-function Invoke-LocalTest([string]$OutputDir, [string]$AppId, [string]$Target, [bool]$Uninstall, [bool]$AsSystem) {
+function Invoke-LocalTest([string]$OutputDir, [string]$AppId, [string]$Target, [bool]$Uninstall, [bool]$AsSystem, [hashtable]$RunAs = $null) {
   $log = [Collections.Queue]::Synchronized([Collections.Queue]::new())
   $done = [Collections.ArrayList]::Synchronized([Collections.ArrayList]::new())
   $runspace = [runspacefactory]::CreateRunspace()
   $powershell = [powershell]::Create()
   try {
     $runspace.Open()
-    $variables = @{ _tq = $log; _td = $done; _out = $OutputDir; _appId = $AppId; _target = $Target; _alsoUninstall = $Uninstall; _simulateSystem = $AsSystem; _epmFn = "function Write-EpmRules {`n$((Get-Item Function:\Write-EpmRules).ScriptBlock)`n}" }
+    $variables = @{ _tq = $log; _td = $done; _out = $OutputDir; _appId = $AppId; _target = $Target; _alsoUninstall = $Uninstall; _simulateSystem = $AsSystem; _runAs = $RunAs; _epmFn = "function Write-EpmRules {`n$((Get-Item Function:\Write-EpmRules).ScriptBlock)`n}" }
     foreach ($key in $variables.Keys) { $runspace.SessionStateProxy.SetVariable($key, $variables[$key]) }
     $powershell.Runspace = $runspace
     [void]$powershell.AddScript($worker.Substring(1, $worker.Length - 2))
@@ -131,14 +144,14 @@ function Invoke-LocalTest([string]$OutputDir, [string]$AppId, [string]$Target, [
   return @{ Ok = [bool]$done[0].ok; Suggestion = [string]$done[0].suggestedRegistryName; Version = [string]$done[0].suggestedDetectVersion }
 }
 
-function Test-Package($App, [hashtable]$Overrides = @{}, [bool]$Uninstall = $true, [hashtable]$Brand = @{}) {
+function Test-Package($App, [hashtable]$Overrides = @{}, [bool]$Uninstall = $true, [hashtable]$Brand = @{}, [hashtable]$RunAs = $null) {
   # Learns the registry name the way an admin does in the app: take the suggestion, rebuild, test again.
   $registry = $App.Registry
   for ($attempt = 1; $attempt -le 2; $attempt++) {
     $form = New-AppForm $App ($Overrides + @{ RegistryName = $registry })
     $build = Invoke-HeadlessPackageBuild -Config $config -FormData $form -Profile $Brand
     $target = if ($form.SimplePkgTarget -eq 'psadt') { "psadt-$($form.PSADTVersion)" } else { 'intunewin' }
-    $outcome = Invoke-LocalTest $build.OutputDir $App.AppId $target $Uninstall (-not $App.PerUser)
+    $outcome = Invoke-LocalTest $build.OutputDir $App.AppId $target $Uninstall (-not $App.PerUser -and -not $RunAs) $RunAs
     $outcome.Build = $build; $outcome.Learned = ($attempt -eq 2)
     if ($outcome.Ok -or -not $outcome.Suggestion) { return $outcome }
     Write-Host "Rebuilding with the suggested registry name '$($outcome.Suggestion)'"
@@ -235,6 +248,41 @@ try {
       Write-Host "Dependency still installed after the dependent app was removed: $([bool]$stillThere)"
       if ($first.Ok -and $second.Ok -and $stillThere) { $summary.Result = 'PASS'; $exitCode = 0 }
       elseif (-not $stillThere) { $summary.Detail += 'Removing the dependent app removed the dependency. ' }
+    }
+    'upgrade' {
+      # An older copy is installed; the package must not count it as installed, and must upgrade it.
+      $old = Get-Installer $DependentUrl "$Name-old"
+      $app = Get-Installer $Url $Name
+      $summary.Type = $app.Inspection.InstallerType; $summary.Winget = $app.Winget; $summary.Switch = $app.Silent; $summary.Registry = $app.Registry
+      $oldRun = Start-Process -FilePath $old.Path -ArgumentList $old.Silent -Wait -PassThru
+      $oldEntry = Find-ARPEntry -Target $old.Registry
+      Write-Host "Older copy installed (exit $($oldRun.ExitCode)): $($oldEntry.DisplayName) $($oldEntry.DisplayVersion)"
+      $build = Invoke-HeadlessPackageBuild -Config $config -FormData (New-AppForm $app @{ DetectVersion = $app.Inspection.Version }) -Profile @{}
+      $before = (Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $build.OutputDir 'detect.ps1')`"" -Wait -PassThru -NoNewWindow).ExitCode
+      Write-Host "Detection with the older copy installed: exit $before (1 means not installed, so Intune upgrades it)"
+      $outcome = Invoke-LocalTest $build.OutputDir $app.AppId 'intunewin' $true $true
+      if ($before -ne 1) { $summary.Detail += 'The older copy counted as installed. ' }
+      if ($oldEntry -and $before -eq 1 -and $outcome.Ok) { $summary.Result = 'PASS'; $exitCode = 0 }
+    }
+    'user' {
+      # Intune's User install behaviour: install, detect and uninstall as a standard user, not as an administrator.
+      $app = Get-Installer $Url $Name
+      $summary.Type = "$($app.Inspection.InstallerType) (per-user)"; $summary.Winget = $app.Winget; $summary.Switch = $app.Silent; $summary.Registry = $app.Registry
+      $password = 'Ci-' + [guid]::NewGuid().ToString('N').Substring(0, 20) + '!a1'
+      New-LocalUser -Name 'ciuser' -Password (ConvertTo-SecureString $password -AsPlainText -Force) -PasswordNeverExpires | Out-Null
+      # Scheduled tasks need "log on as a batch job", which Windows Server gives only to administrators by default.
+      $sid = (Get-LocalUser -Name 'ciuser').SID.Value
+      $exported = Join-Path $root 'rights.inf'
+      secedit /export /cfg $exported /areas USER_RIGHTS | Out-Null
+      $current = @(Get-Content -LiteralPath $exported | Where-Object { $_ -like 'SeBatchLogonRight*' }) | Select-Object -First 1
+      $right = if ($current) { "$current,*$sid" } else { "SeBatchLogonRight = *$sid" }
+      $policy = Join-Path $root 'batch.inf'
+      Set-Content -LiteralPath $policy -Encoding Unicode -Value @('[Unicode]', 'Unicode=yes', '[Version]', 'signature="$CHICAGO$"', 'Revision=1', '[Privilege Rights]', $right)
+      secedit /configure /db (Join-Path $root 'batch.sdb') /cfg $policy /areas USER_RIGHTS | Out-Null
+      Write-Host "ciuser can run scheduled tasks: secedit exit $LASTEXITCODE"
+      $App.PerUser = $true
+      $outcome = Test-Package $app @{ PerUser = $true } $true @{} @{ User = "$env:COMPUTERNAME\ciuser"; Password = $password }
+      if ($outcome.Ok) { $summary.Result = $(if ($outcome.Learned) { 'PASS (learned name)' } else { 'PASS' }); $exitCode = 0 }
     }
     'java' {
       # An older JRE is already installed; the new package sets MSI features, runs scripts and removes the older copy.
