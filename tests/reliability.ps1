@@ -58,6 +58,9 @@ try {
   $DeployStatusFile = Join-Path $root 'deploy-status.json'
   $DeployHistoryFile = Join-Path $root 'deploy-history.json'
   $DeployHistoryMaxEvents = 500
+  $AppMemoryFile = Join-Path $root 'app-memory.json'
+  $AppMemoryMaxBuilds = 20
+  $AppMemorySettingKeys = @('AppID','DisplayName','RegistryName','SilentArgs','Mode','SimplePkgTarget','PSADTVersion','ProfileName','ProcessesToKill','AllowDefer','BundleFolder','PerUser','DownloadURL')
   Set-DeployStatus -AppID 'Example' -AppName "O'Brien & Sons" -Target 'intunewin' -OutputDir 'example'
   Set-DeployStatus -AppID 'Example' -MarkDeployed
   $store = Get-DeployStatusStore
@@ -244,8 +247,8 @@ try {
     $closing.Mode = $mode
     $script:packagedErrors = @()
     $closingBuild = Invoke-HeadlessPackageBuild -Config $config -FormData $closing -Profile @{}
-    $v3 = Get-Content (@($closingBuild.OutputDirs) -match 'v3$' | ForEach-Object { Join-Path $_ 'Deploy-Application.ps1' }) -Raw
-    $v4 = Get-Content (@($closingBuild.OutputDirs) -match 'v4$' | ForEach-Object { Join-Path $_ 'Deploy-Application.ps1' }) -Raw
+    $v3 = Get-Content (@($closingBuild.OutputDirs) -match 'PSADT-v3' | ForEach-Object { Join-Path $_ 'Deploy-Application.ps1' }) -Raw
+    $v4 = Get-Content (@($closingBuild.OutputDirs) -match 'PSADT-v4' | ForEach-Object { Join-Path $_ 'Deploy-Application.ps1' }) -Raw
     Assert ($v4.Contains("-CloseProcesses @('notepad', 'o''app')") -and $v3.Contains("-CloseApps 'notepad,o''app'")) "PSADT $mode packages pass each process to close separately"
     Assert ($v3 -notmatch 'explorer|svchost' -and $v4 -notmatch 'explorer|svchost') "PSADT $mode packages never close shell or system processes"
     Assert ($v3 -notmatch '-AllowDefer' -and $v4 -notmatch '-AllowDefer' -and $script:packagedErrors.Count -eq 0) "PSADT $mode packages honour Allow deferral being off"
@@ -335,6 +338,20 @@ try {
   Assert ($script:packagedErrors.Count -eq 0 -and $zipInstall.Contains("'Tool\tool.exe'") -and $zipInstall.Contains("DisplayName = 'Tool O''Pro'") -and
           $zipInstall.Contains('Programs\Tool Pro.lnk') -and $script:packagedUninstall.Contains('AppUpdater-Example')) "Portable zips install, register and uninstall themselves: $($script:packagedErrors -join '; ')"
   Assert ((Get-Content (Join-Path $zipBuild.OutputDir 'detect.ps1') -Raw).Contains("`$minimum = '2.0'")) 'Portable zips require the version they register'
+  $epm = @(Import-Csv -LiteralPath (Join-Path $zipBuild.OutputDir 'EPM-rules.csv'))
+  Assert ($epm.Count -eq 1 -and $epm[0].Role -eq 'installer' -and $epm[0].SHA256 -eq (Get-FileHash -LiteralPath $portable -Algorithm SHA256).Hash -and $epm[0].SuggestedRule -eq 'File hash') 'Simple builds export the installer hash for EPM elevation rules'
+  Assert ($zipBuild.OutputDir -like '*-Simple-2.0') 'Simple output folders carry the version, so the previous package is kept'
+  $versionedExe = Join-Path $root 'Tool 2.4.1 (x64).exe'
+  [IO.File]::WriteAllText($versionedExe, 'MZ fixture')
+  Assert ((Invoke-InstallerInspector -InstallerPath $versionedExe).AppID -eq 'Tool') 'App IDs leave out versions and architectures'
+  Save-AppMemoryBuild -FormData @{ AppID = 'Tool'; DisplayName = 'Tool'; RegistryName = 'Tool App'; SilentArgs = '/S'; Mode = 'simple'; SimplePkgTarget = 'psadt'
+    Version = '2.4.1'; DetectVersion = '2.4.1'; Identity = @{ name = 'Tool 2.4.1'; publisher = 'Vendor Inc.'; installerVersion = '2.4.1'; wingetId = 'Vendor.Tool' } } -Installer @{ sha256 = 'AB' } -OutputDir 'out'
+  $known = Find-KnownApp -Name 'Tool 2.5.0 (x64)' -Publisher 'Vendor'
+  Assert ($known.appId -eq 'Tool' -and $known.settings.RegistryName -eq 'Tool App' -and $known.settings.SimplePkgTarget -eq 'psadt' -and
+          $known.lastVersion -eq '2.4.1' -and $known.lastDetectVersion -eq $known.lastInstallerVersion) 'A newer installer of a packaged app brings back its settings'
+  Assert ((Find-KnownApp -WingetId 'Vendor.Tool').appId -eq 'Tool' -and -not (Find-KnownApp -Name 'Other' -Publisher 'Vendor')) 'Known apps match by winget package or name, not by publisher alone'
+  foreach ($n in 1..22) { Save-AppMemoryBuild -FormData @{ AppID = 'Tool'; Version = "2.$n"; Identity = @{} } }
+  Assert (@((Get-AppMemory)['Tool'].builds).Count -eq 20 -and (Find-KnownApp -WingetId 'Vendor.Tool').lastVersion -eq '2.22') 'App memory keeps the last 20 builds and the identity keys'
   $zipForm.EntryExe = ''
   Assert-Throws { Invoke-HeadlessPackageBuild -Config $config -FormData $zipForm -Profile @{} } 'A zip without a program is refused'
 

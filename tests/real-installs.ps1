@@ -110,7 +110,7 @@ function Invoke-LocalTest([string]$OutputDir, [string]$AppId, [string]$Target, [
   $powershell = [powershell]::Create()
   try {
     $runspace.Open()
-    $variables = @{ _tq = $log; _td = $done; _out = $OutputDir; _appId = $AppId; _target = $Target; _alsoUninstall = $Uninstall; _simulateSystem = $AsSystem }
+    $variables = @{ _tq = $log; _td = $done; _out = $OutputDir; _appId = $AppId; _target = $Target; _alsoUninstall = $Uninstall; _simulateSystem = $AsSystem; _epmFn = "function Write-EpmRules {`n$((Get-Item Function:\Write-EpmRules).ScriptBlock)`n}" }
     foreach ($key in $variables.Keys) { $runspace.SessionStateProxy.SetVariable($key, $variables[$key]) }
     $powershell.Runspace = $runspace
     [void]$powershell.AddScript($worker.Substring(1, $worker.Length - 2))
@@ -240,6 +240,9 @@ try {
         $summary.Detail += "minimum version $($outcome.Version). "
         $outcome = Test-Package $app @{ DetectVersion = $outcome.Version }
       }
+      $epm = @(Import-Csv -LiteralPath (Join-Path $outcome.Build.OutputDir 'EPM-rules.csv') -ErrorAction SilentlyContinue)
+      $epm | ForEach-Object { Write-Host "EPM: $($_.Role) $($_.FileName) $($_.SHA256) [$($_.SuggestedRule)] $($_.Signer)" }
+      if (-not @($epm | Where-Object Role -eq 'installer').Count) { $summary.Detail += 'EPM-rules.csv has no installer row. '; $outcome.Ok = $false }
       if ($outcome.Ok) { $summary.Result = $(if ($outcome.Learned) { 'PASS (learned name)' } else { 'PASS' }); $exitCode = 0 }
     }
   }
