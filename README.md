@@ -4,7 +4,7 @@
 
 **Zero-infrastructure Intune Win32 packaging for Windows IT admins**
 
-Builds deployment-ready packages from any `.exe` or `.msi` installer — and optionally connects to a Cloudflare Worker it deploys itself, giving you a live web dashboard, per-device telemetry, and TOTP-protected authentication.
+Builds deployment-ready packages from `.exe`, `.msi`, `.msix` and portable `.zip` installers, remembers each app so the next version packages in seconds, checks every installer before it ships — and optionally connects to a Cloudflare Worker it deploys itself, giving you a live web dashboard, per-device telemetry, and TOTP-protected authentication.
 
 <br/>
 
@@ -98,16 +98,16 @@ Each build produces three output files ready for Intune:
 
 ## See it in action
 
-**Building a package** — pick an installer, AppUpdater reads its publisher, version, silent switches and blocking process, then generates the deploy script, detect script, manifest entry and `.intunewin` in one pass:
+**Building a package** — pick an installer and AppUpdater reads its publisher, version, silent switches and blocking process; build, test it locally, take the suggested minimum version, recognise the app on its next installer, and see a pre-deploy check stop a build whose signer changed:
 
-![Building a Firefox package end to end](assets/build.gif)
+![Building, testing and re-packaging 7-Zip](assets/build.gif)
 
-**Getting around** — Home dashboard, App fleet (built / deployed / update-available status per app), History, and Client profiles with a live PSADT branding preview:
+**Getting around** — Package builder, Home with the deployment feedback card, App fleet, History, Client profiles, Worker & settings and Accessibility:
 
-![Navigating the Home, Fleet, History and Client profiles screens](assets/tour.gif)
+![Navigating the builder, Home, Fleet, History, Client profiles, settings and accessibility screens](assets/tour.gif)
 
 > [!NOTE]
-> These recordings are the real `host.ps1` interface rendered headlessly, with the PowerShell side replaced by a stub that returns sample data (Firefox, VLC, 7-Zip, Notepad++). Paths, timings and sizes shown are illustrative.
+> These frames are screenshots of the real app taken by the click-test on a clean Windows runner: it packages and locally tests the real 7-Zip installer. The paths are the runner's temporary test folders.
 
 ---
 
@@ -125,6 +125,10 @@ Getting one third-party app into Intune as a Win32 app normally means stitching 
 | **Updates** | Repeat everything for every new version | Runtime mode: devices self-update from the manifest — no repackaging |
 | **Visibility** | Intune portal only, delayed reporting | Local fleet + history, optional live Cloudflare dashboard |
 | **Per-client branding (MSPs)** | Copy and edit toolkit folders per client | Client profiles applied at build time |
+| **Next version of the same app** | Start again from the vendor docs | The new installer is recognised and the last build's settings come back |
+| **Is this installer genuine?** | Check the signature by hand, if at all | Signature compared with earlier packages and the file hash with winget's listing; a mismatch stops the build |
+| **Does the package really work?** | Upload, assign, wait, check a test device | **Test locally** installs, detects and uninstalls as SYSTEM and suggests the right registry name and minimum version |
+| **Older copies on devices** | Detection by name passes, so old versions stay | Detection can require a minimum version, so Intune upgrades them |
 
 **Compared with the other common alternatives:**
 
@@ -213,11 +217,12 @@ flowchart TD
     E --> J[Worker & settings]
 
     F --> K{Kind}
-    K -->|App| L[Pick .exe / .msi → auto-inspect]
+    K -->|App| L[Pick .exe / .msi / .msix / .zip → auto-inspect · winget lookup · known app restored]
     K -->|Printer| M[Pick driver from library · name · port]
     L --> N[Identity · behaviour · profile]
     M --> N
-    N --> O{Package type}
+    N --> PC[Pre-deploy checks · red stops the build]
+    PC --> O{Package type}
     O -->|AppUpdater Runtime| P[Self-updating agent + scheduled task]
     O -->|Simple Package| Q{Target}
     Q -->|.intunewin| R[IntuneWinAppUtil wrap]
@@ -241,12 +246,12 @@ A borderless window with a left sidebar. Every screen is part of the same page, 
 
 | Screen | What it's for |
 |---|---|
-| **Home** | Fleet stats (total / deployed / updates / pending), recent activity, getting-started checklist, shortcut to build |
+| **Home** | Fleet stats (total / deployed / updates / pending), recent activity, getting-started checklist, shortcut to build, and a card asking whether apps deployed since the last launch installed correctly |
 | **Package builder** | Drop or browse an installer (or switch to **Printer**), review auto-detected identity, choose Runtime vs Simple and `.intunewin` vs PSADT, live v3/v4 branding preview, **Build** |
-| **App fleet** | Every app in the manifest with version, target and status badge; filter, bulk-select, **Test locally**, **Mark deployed**, **Rebuild**, **Remove** |
+| **App fleet** | Every app in the manifest with version, target, status badge and a note when winget has a newer version; filter, bulk-select, **Test locally** (with suggested fixes and a winget-pkgs contribution), **Mark deployed**, **Rebuild**, **Remove** |
 | **Client profiles** | Named branding sets (org name, logo, banner, default target) applied per build — handy for MSPs |
 | **History** | Timeline of every build, deploy and removal |
-| **Worker & settings** | Connect / disconnect Cloudflare, open the status dashboard, Worker options, default org name, recovery bundle export/import, release check |
+| **Worker & settings** | Connect / disconnect Cloudflare, open the status dashboard, Worker options, default org name, recovery bundle export/import, online lookups (release check, winget, CISA) and the opt-in NIST vulnerability check |
 | **Accessibility** | Reduce motion, high contrast, colour-blind safe palette (Okabe-Ito + shape cues) |
 | **Docs & help** | Replay the guided tour, reset onboarding |
 

@@ -38,6 +38,25 @@ class ReleaseTests(unittest.TestCase):
         self.run_release()
         self.assertEqual([c[1] for c in self.calls[1:]], ["create", "download", "edit"])
 
+    def test_new_release_lists_its_changes(self):
+        self.calls = []
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "host.ps1"
+            source.write_bytes(b"host")
+
+            def fake_gh(*args):
+                self.calls.append(args)
+                if args[0] == "api":
+                    return json.dumps([[]])
+                if args[1] == "download":
+                    (Path(args[-1]) / "AppUpdater.ps1").write_bytes(source.read_bytes())
+                return ""
+
+            with patch.object(release, "gh", fake_gh):
+                release.publish("v1", "abc", "owner/repo", source, "- Fix one thing")
+        create = next(c for c in self.calls if c[:2] == ("release", "create"))
+        self.assertIn("## Changes\n- Fix one thing", create[create.index("--notes") + 1])
+
     def test_matching_draft_is_resumed(self):
         self.run_release({"tag_name": "v1", "draft": True, "target_commitish": "abc"})
         self.assertEqual([c[1] for c in self.calls[1:]], ["upload", "download", "edit"])

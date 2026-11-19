@@ -12,7 +12,18 @@ def gh(*args):
     return subprocess.check_output(["gh", *args], text=True)
 
 
-def publish(tag, commit, repo, source):
+def changes_since_last_release():
+    """Commit subjects since the previous release tag; commits go straight to main, so there are no pull requests to list."""
+    try:
+        previous = subprocess.check_output(["git", "describe", "--tags", "--abbrev=0", "HEAD^"], text=True,
+                                           stderr=subprocess.DEVNULL).strip()
+    except subprocess.CalledProcessError:
+        return ""
+    subjects = subprocess.check_output(["git", "log", "--format=%s", f"{previous}..HEAD"], text=True).splitlines()
+    return "\n".join(f"- {s}" for s in subjects if s and not s.startswith("Release "))
+
+
+def publish(tag, commit, repo, source, changes=""):
     # Listing must succeed: an authentication/network failure is not "missing".
     pages = json.loads(gh("api", f"repos/{repo}/releases?per_page=100", "--paginate", "--slurp"))
     existing = next((r for page in pages for r in page if r["tag_name"] == tag), None)
@@ -32,7 +43,8 @@ def publish(tag, commit, repo, source):
             gh("release", "create", tag, str(asset), "--draft", "--target", commit,
                "--title", f"AppUpdater {tag}", "--generate-notes",
                "--notes", f"Download AppUpdater.ps1 and run it in Windows PowerShell 5.1 as admin.\n\n"
-                          f"Always-latest link: https://github.com/{repo}/releases/latest/download/AppUpdater.ps1")
+                          f"Always-latest link: https://github.com/{repo}/releases/latest/download/AppUpdater.ps1"
+                          + (f"\n\n## Changes\n{changes}" if changes else ""))
         downloaded = Path(directory) / "downloaded"
         downloaded.mkdir()
         gh("release", "download", tag, "--pattern", "AppUpdater.ps1", "--dir", str(downloaded))
@@ -44,4 +56,4 @@ def publish(tag, commit, repo, source):
 
 if __name__ == "__main__":
     version = subprocess.check_output(["python3", ".github/check-version.py"], text=True).strip()
-    publish(f"v{version}", os.environ["GITHUB_SHA"], os.environ["GITHUB_REPOSITORY"], Path("host.ps1"))
+    publish(f"v{version}", os.environ["GITHUB_SHA"], os.environ["GITHUB_REPOSITORY"], Path("host.ps1"), changes_since_last_release())
