@@ -273,6 +273,7 @@ try {
     $closingBuild = Invoke-HeadlessPackageBuild -Config $config -FormData $closing -Profile @{}
     $v3 = Get-Content (@($closingBuild.OutputDirs) -match 'PSADT-v3' | ForEach-Object { Join-Path $_ 'Deploy-Application.ps1' }) -Raw
     $v4 = Get-Content (@($closingBuild.OutputDirs) -match 'PSADT-v4' | ForEach-Object { Join-Path $_ 'Deploy-Application.ps1' }) -Raw
+    Assert (-not $v4.Contains('''-File'',"`"')) "PSADT v4 $mode packages pass script paths without extra quotes"
     Assert ($v4.Contains("-CloseProcesses @('notepad', 'o''app')") -and $v3.Contains("-CloseApps 'notepad,o''app'")) "PSADT $mode packages pass each process to close separately"
     Assert ($v3 -notmatch 'explorer|svchost' -and $v4 -notmatch 'explorer|svchost') "PSADT $mode packages never close shell or system processes"
     Assert ($v3 -notmatch '-AllowDefer' -and $v4 -notmatch '-AllowDefer' -and $script:packagedErrors.Count -eq 0) "PSADT $mode packages honour Allow deferral being off"
