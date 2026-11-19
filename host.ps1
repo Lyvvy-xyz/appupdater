@@ -1733,6 +1733,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           break;
         case 'preflight-blocked': {
           const list = (payload.findings || []).map(f => `<li style="margin:4px 0;color:${f.level === 'red' ? 'var(--bad)' : 'var(--warn)'}">${escapeHtml(f.message)}</li>`).join('');
+          $('#step-list').innerHTML = `<div class="phase doing"><span class="pi"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Pre-deploy checks &middot; stopped</div>`;
           $('#progress-error-title').textContent = 'Build stopped by pre-deploy checks';
           $('#progress-error-msg').innerHTML = `<div>Pre-deploy checks found a problem with this installer. Check where it came from before deploying it.</div><ul style="margin:8px 0 0 18px;padding:0">${list}</ul>
             <button class="btn danger sm" id="preflight-override" style="margin-top:10px">Build anyway</button>`;
