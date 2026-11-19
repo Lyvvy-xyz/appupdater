@@ -472,6 +472,24 @@ Installers:
   $exact = Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -Publisher 'Vendor Inc.' -Version '1.0.0' -IndexPath $wingetIndex -GetManifest $fetch
   Assert ($exact.Id -eq 'Vendor.App' -and $exact.Version -eq '1.0.0' -and $exact.Match -eq 'hash' -and $exact.InstallerType -eq 'inno' -and $exact.Scope -eq 'machine') 'winget matches an older version by file hash'
   Assert ($exact.SilentArgs -eq '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /MERGETASKS=!runcode' -and $exact.ArpName -eq "Vendor App 'One'") 'winget switches add Custom to the family default and carry the ARP name'
+  $registered = @{ DisplayName = "Vendor App 'One' 1.0"; DisplayVersion = '1.0.0.5'; Publisher = 'Vendor Inc.'; ProductCode = 'VendorApp_is1' }
+  Assert ($null -eq (Get-WingetContribution -Id 'Vendor.App' -Version '1.0.0' -Sha256 $wingetSha -Registered $registered -IndexPath $wingetIndex -GetManifest $fetch)) 'Nothing is offered to winget when its entry already describes the app'
+  $bare = { param($Path) $wingetManifests[$Path] -replace "(?m)^  AppsAndFeaturesEntries:\r?\n  - DisplayName: .*\r?\n", '' }.GetNewClosure()
+  $offer = Get-WingetContribution -Id 'Vendor.App' -Version '1.0.0' -Sha256 $wingetSha -Registered $registered -IndexPath $wingetIndex -GetManifest $bare
+  Assert ($offer.Kind -eq 'arp-data' -and $offer.Path -eq 'manifests/v/Vendor/App/1.0.0') "A tested file winget lists without uninstall data is offered: $($offer.Kind) $($offer.Path)"
+  Assert ($null -eq (Get-WingetContribution -Id 'Vendor.App' -Version '1.0.0' -Sha256 ('F' * 64) -Registered $registered -IndexPath $wingetIndex -GetManifest $bare)) 'A file winget does not list is never described as winget''s'
+  $newer = Get-WingetContribution -Id 'Vendor.App' -Version '3.1' -Sha256 'AA' -Registered $registered -DownloadUrl 'https://vendor.example/app-3.1.exe' -IndexPath $wingetIndex -GetManifest $bare
+  Assert ($newer.Kind -eq 'new-version' -and ((New-WingetSubmission -Contribution $newer -OutDir $root).Arguments -join ' ') -eq 'update Vendor.App --version 3.1 --urls https://vendor.example/app-3.1.exe --submit --no-open') 'A newer version with a public URL is offered as a wingetcreate update'
+  $repoInstaller = "# Created with komac`nPackageIdentifier: Vendor.App`nPackageVersion: 1.0.0`nInstallers:`n- Architecture: x86`n  InstallerSha256: 0000`n- Architecture: x64`n  InstallerUrl: https://example.invalid/app.exe`n  InstallerSha256: $wingetSha`n  InstallModes:`n  - silent`nManifestType: installer`nManifestVersion: 1.6.0`n"
+  $repo = @{
+    'https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/v/Vendor/App/1.0.0' = '[{"type":"file","name":"Vendor.App.installer.yaml","download_url":"raw/installer"},{"type":"file","name":"Vendor.App.yaml","download_url":"raw/version"}]'
+    'raw/installer' = $repoInstaller; 'raw/version' = "PackageIdentifier: Vendor.App`nManifestType: version`n" }
+  $submission = New-WingetSubmission -Contribution $offer -OutDir $root -GetText { param($Url) $repo[$Url] }.GetNewClosure()
+  $edited = ConvertFrom-SimpleYaml ([IO.File]::ReadAllText((Join-Path $submission.Folder 'Vendor.App.installer.yaml')))
+  $x64 = $edited.Installers[1]
+  Assert ($edited.Installers.Count -eq 2 -and -not $edited.Installers[0].AppsAndFeaturesEntries -and $x64.AppsAndFeaturesEntries[0].DisplayName -eq "Vendor App 'One' 1.0" -and
+          $x64.AppsAndFeaturesEntries[0].ProductCode -eq 'VendorApp_is1' -and $x64.InstallModes[0] -eq 'silent' -and $edited.ManifestVersion -eq '1.6.0' -and
+          (Test-Path (Join-Path $submission.Folder 'Vendor.App.yaml')) -and $submission.Arguments[0] -eq 'submit') 'The winget manifest gains uninstall data on the tested installer only, with the rest unchanged'
   Assert ($exact.Latest -eq '2.0.0' -and @($exact.Files).Count -eq 1 -and $exact.Files[0].File -eq 'vendor app-1.0.0.exe' -and $exact.Files[0].Sha256 -eq $wingetSha.ToUpperInvariant()) "winget results carry the catalogue's newest version and its file hashes: $($exact.Latest)"
   $newer = Find-WingetInstaller -InstallerPath $wingetFile -Name 'Vendor App' -Publisher 'Vendor' -Version '9.9' -IndexPath $wingetIndex -GetManifest $fetch
   Assert ($newer.Id -eq 'Vendor.App' -and $newer.Version -eq '2.0.0' -and $newer.Match -eq 'name' -and $newer.SilentArgs -eq '--silent' -and $newer.Scope -eq 'user') 'Channel variants fall back to the main package newest manifest'
