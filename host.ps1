@@ -10,23 +10,24 @@ $__UiHtml = @'
 <meta charset="UTF-8">
 <title>AppUpdater</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --void:#07070F; --panel:#0D0E1A; --panel-2:#111327;
-  --edge:#1C1E33; --edge-hi:#2A2D4A;
-  --ink:#E4E6F2; --dim:#6C6F8E; --faint:#3D4060;
-  --signal:#5EA2FF; --signal-2:#8B7CFF;
-  --ok:#4ADE9B; --warn:#FFB454; --bad:#FF6B6B;
+  --void:#0D0E10; --panel:#131417; --panel-2:#191B1F;
+  --edge:#24262B; --edge-hi:#31343A;
+  --ink:#ECEAE4; --dim:#A3A19A; --faint:#8A8881; --rule:#1B1D21;
+  --signal:#5468FF; --signal-2:#8FA0FF; --select:#1F2440;
+  --ok:#4CC38A; --warn:#E5A93A; --bad:#EF5A5A;
+  --code-str:#D6C49A;
   /* Channel values of the accent and status colours, for their translucent tints. */
-  --signal-rgb:94,162,255; --signal-2-rgb:139,124,255; --ok-rgb:74,222,155; --warn-rgb:255,180,84; --bad-rgb:255,90,90;
-  --on-accent:#0A0B14;
+  --signal-rgb:84,104,255; --signal-2-rgb:143,160,255; --ok-rgb:76,195,138; --warn-rgb:229,169,58; --bad-rgb:239,90,90;
+  --on-accent:#FFFFFF;
   --ok-tint-bd:rgba(var(--ok-rgb),.3); --ok-tint-bg:rgba(var(--ok-rgb),.07);
   --warn-tint-bd:rgba(var(--warn-rgb),.3); --warn-tint-bg:rgba(var(--warn-rgb),.07);
-  --grad:linear-gradient(135deg,var(--signal),var(--signal-2));
-  --r:10px; --r-sm:7px;
+  --grad:var(--signal);
+  --r:8px; --r-sm:6px;
   --ease:cubic-bezier(.2,.8,.2,1);
-  --font-d:'Space Grotesk',sans-serif; --font-b:'IBM Plex Sans',sans-serif; --font-m:'IBM Plex Mono',monospace;
+  --font-d:'Geist','Segoe UI',system-ui,sans-serif; --font-b:'Geist','Segoe UI',system-ui,sans-serif; --font-m:'Geist Mono','Cascadia Mono',Consolas,monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
@@ -276,6 +277,94 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 #bp-disclosure.open svg{transform:rotate(90deg)}
 #bp-disclosure.tour-click-sim{animation:tourClickSim .42s var(--ease)}
 @keyframes tourClickSim{0%{box-shadow:0 0 0 0 rgba(var(--signal-rgb),.55)}30%{transform:scale(.96);box-shadow:0 0 0 6px rgba(var(--signal-rgb),.28)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(var(--signal-rgb),0)}}
+
+/* Graphite with one ultramarine accent: actions and the current item only; amber, green and red mean status. */
+body{font-size:13px}
+body::before{display:none}
+.rail{background:var(--panel)}
+.logo{background:var(--ink);box-shadow:none;border-radius:7px}
+.nav-btn{border-radius:7px;position:relative}
+.nav-btn:hover{transform:none}
+.nav-btn.on{background:var(--select);color:var(--ink)}
+.nav-btn.on::before{left:-11px;top:8px;bottom:8px;width:2px;border-radius:0;background:var(--signal)}
+.nav-num{position:absolute;right:3px;bottom:1px;font:500 9px var(--font-m);color:var(--faint)}
+.topbar{height:52px;gap:20px;padding:0 20px}
+.crumb{font-size:13.5px;letter-spacing:-.01em}
+.pdot{width:18px;height:18px;font:500 10px var(--font-m);border-width:1px}
+.plabel{font:11.5px var(--font-m);letter-spacing:0;text-transform:none;color:var(--faint)}
+.pnode.done .plabel,.pnode.live .plabel{color:var(--ink)}
+.pline{width:22px;height:1px}
+.card{box-shadow:none}
+.eyebrow{letter-spacing:.06em}
+.btn{border-radius:6px}
+.btn.primary{background:var(--signal);color:var(--on-accent);box-shadow:none}
+.btn.primary:hover{box-shadow:none;filter:brightness(1.08)}
+.chip,.badge{border-radius:4px}
+.tgl.on{background:var(--signal);border-color:var(--signal)}
+.tgl.on::after{background:#fff}
+.seg .thumb{background:var(--select);border-color:var(--signal)}
+.buildbar{background:var(--panel);backdrop-filter:none;padding:12px 24px}
+kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:var(--dim);padding:0 5px;border:1px solid var(--edge-hi);border-bottom-width:2px;border-radius:4px;background:var(--panel-2)}
+.btn.primary kbd{color:#fff;border-color:rgba(0,0,0,.25);background:rgba(0,0,0,.2);margin-left:8px}
+.statusbar{height:28px;flex-shrink:0;border-top:1px solid var(--edge);display:flex;align-items:center;gap:18px;padding:0 20px;font:11px var(--font-m);color:var(--faint)}
+.statusbar .dot{color:var(--ok)} .statusbar .dot.off{color:var(--faint)} .statusbar .grow{flex:1}
+/* Builder: a dense settings sheet on the left, the live manifest on the right. */
+#screen-build{padding:0}
+.builder{display:grid;grid-template-columns:minmax(560px,700px) minmax(0,1fr);min-height:100%}
+.sheet-col{border-right:1px solid var(--edge);padding:18px 24px 24px;display:flex;flex-direction:column;gap:18px}
+.bsec{display:flex;flex-direction:column}
+.bsec-h{display:flex;align-items:center;gap:10px;margin-bottom:8px;min-height:28px}
+.bsec-n{font:500 11px var(--font-m);color:var(--signal-2)}
+.bsec-t{font-weight:600}
+.bsec-rule{flex:1;height:1px;background:var(--edge)}
+.brow{display:grid;grid-template-columns:150px minmax(0,1fr) 96px;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid var(--rule)}
+.brow:last-child{border-bottom:0}
+.brow>label,.brow>.blbl{color:var(--dim)}
+.brow .field{height:30px;padding:0 10px;font-size:12.5px}
+.bsrc{font:11px var(--font-m);color:var(--faint);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bnote{font-size:12px;color:var(--faint)}
+#screen-build.printer .app-only{display:none}
+.seg-sm button{padding:5px 12px;font-size:12px}
+.linkbtn{background:none;border:0;padding:0;color:var(--signal-2);font:12px var(--font-b);cursor:pointer}
+.linkbtn:hover{text-decoration:underline}
+.filecard{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--edge);border-radius:8px;background:var(--panel)}
+.filecard-ext{width:38px;height:38px;border-radius:6px;border:1px solid var(--edge-hi);display:grid;place-items:center;font:500 10px var(--font-m);color:var(--dim)}
+.filecard-name{font-weight:600}
+.filecard-sub{font-size:11.5px;color:var(--dim)}
+.drop{padding:22px 16px}
+.detect{display:flex;align-items:center;border:1px solid var(--edge-hi);border-radius:6px;overflow:hidden;width:max-content}
+.detect button{height:28px;padding:0 12px;border:0;background:transparent;color:var(--dim);font:12px var(--font-b);cursor:pointer}
+.detect button.on{background:var(--select);color:var(--ink)}
+.detect-ge{padding:0 4px 0 10px;border-left:1px solid var(--edge-hi);color:var(--dim);font-family:var(--font-m)}
+.detect .field{border:0;background:transparent;height:28px;width:130px;padding:0 8px}
+.detect.min .detect-ge,.detect.min .field{background:var(--select);color:var(--ink)}
+.procs{font:12px var(--font-m);display:flex;gap:6px;flex-wrap:wrap}
+.procs .proc{padding:2px 8px;border-radius:4px;background:var(--panel-2);border:1px solid var(--edge)}
+.extras-sum{display:flex;gap:16px;font-size:12px;color:var(--dim)} .extras-sum b{color:var(--ink);font-weight:500}
+.extras{padding:6px 0 10px 162px;border-bottom:1px solid var(--rule)}
+.scripts{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:6px 8px;align-items:center;margin-top:8px}
+.scripts label{color:var(--dim);font-size:12px} .scripts .field{height:28px;font-size:12px}
+.wrap-profile{padding-top:6px}
+.manifest-col{padding:18px 24px 24px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.mhead{display:flex;align-items:baseline;gap:10px} .mhead span{font-size:11.5px;color:var(--faint)}
+.manifest{border:1px solid var(--edge);border-radius:8px;background:var(--panel);padding:12px 0;font-size:12.5px;line-height:1.75;overflow-x:auto}
+.mline{display:grid;grid-template-columns:44px 112px minmax(0,1fr);padding-right:16px}
+.mline .n{color:#4A4C52;text-align:right;padding-right:16px} .mline .k{color:var(--dim)} .mline .v{color:var(--ink);overflow-wrap:anywhere}
+.mline .v.str{color:var(--code-str)} .mline .v.num{color:var(--signal-2)} .mline .v.dim{color:var(--faint)}
+.check{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px;padding:9px 12px;border:1px solid var(--edge);border-radius:7px;background:var(--panel);margin-bottom:6px;font-size:12.5px}
+.check .g{font-size:11px;line-height:1.7} .check.red .g{color:var(--bad)} .check.amber .g{color:var(--warn)} .check.ok .g{color:var(--ok)}
+.check b{font-weight:600} .check span.t{color:var(--dim)}
+#cmdk{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding-top:14vh}
+#cmdk[hidden]{display:none}
+#cmdk .box{width:min(620px,92vw);background:var(--panel);border:1px solid var(--edge-hi);border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden}
+#cmdk input{width:100%;border:0;border-bottom:1px solid var(--edge);background:transparent;color:var(--ink);font:14px var(--font-b);padding:14px 16px;outline:none}
+#cmdk ul{list-style:none;margin:0;padding:6px;max-height:50vh;overflow:auto}
+#cmdk li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;color:var(--dim)}
+#cmdk li .grp{font:10.5px var(--font-m);color:var(--faint);width:64px}
+#cmdk li b{font-weight:500;color:var(--ink);flex:1}
+#cmdk li.sel{background:var(--select)}
+#cmdk .foot{display:flex;gap:14px;padding:8px 14px;border-top:1px solid var(--edge);font:11px var(--font-m);color:var(--faint)}
+.cmd-btn{display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--edge);background:var(--panel);color:var(--dim);font:12px var(--font-b);cursor:pointer;margin-left:auto}
 </style>
 </head>
 <body>
@@ -300,7 +389,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     <div class="topbar" id="drag-region" style="cursor:move">
       <div class="crumb" id="crumb">AppUpdater</div>
       <div class="pipe" id="pipe" style="display:none"></div>
-      <div style="display:flex;align-items:center;gap:4px;margin-left:16px">
+      <button type="button" class="cmd-btn" id="cmd-open">Search or run a command <kbd>Ctrl K</kbd></button>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:12px">
         <button id="win-minimize" title="Minimize" style="width:30px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--dim);background:none;border:none;cursor:pointer">
           <svg viewBox="0 0 12 12" width="11" height="11"><rect x="1" y="5.5" width="10" height="1.2" fill="currentColor"/></svg>
         </button>
@@ -448,53 +538,33 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 
       <!-- ========== BUILDER ========== -->
       <section class="screen" data-screen="build" id="screen-build">
-        <div style="max-width:1240px;margin:0 auto;padding-bottom:8px">
-          <div style="display:grid;grid-template-columns:1fr 1.15fr;gap:12px;align-items:start">
-            <div style="display:grid;gap:12px">
-              <div class="card rise">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">00 &middot; kind</div><div class="card-t">What are you packaging?</div></div>
-                <div class="card-b" style="padding-top:12px;padding-bottom:14px">
-                  <div class="seg" id="segKind">
-                    <div class="thumb"></div>
-                    <button class="on" data-val="app">App</button>
-                    <button data-val="printer">Printer</button>
-                  </div>
-                  <div class="hint" id="kindHint">Standard installer package - drop an exe, msi, msix/appx or portable-app zip below.</div>
-                </div>
+        <div class="builder">
+          <div class="sheet-col">
+            <div class="bsec" id="sec-source">
+              <div class="bsec-h"><span class="bsec-n">01</span><span class="bsec-t">Source</span><span class="bsec-rule"></span>
+                <div class="seg seg-sm" id="segKind"><div class="thumb"></div><button class="on" data-val="app">App</button><button data-val="printer">Printer</button></div>
               </div>
-
-              <div class="card rise" id="app-source-card" data-pipe="0">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">1 &middot; source</div><div class="card-t">Installer</div></div>
-                <div class="card-b" style="padding-top:12px;padding-bottom:14px">
-                  <div class="drop" id="drop">
-                    <div class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
-                    <b>Drop installer here</b>
-                    <span>or click to browse &middot; exe, msi, msix, appx, zip</span>
-                  </div>
-                  <div id="inspect" style="display:none">
-                    <div style="display:flex;align-items:center;gap:12px">
-                      <div style="width:38px;height:38px;border-radius:9px;background:var(--panel-2);border:1px solid var(--edge);display:grid;place-items:center;font-family:var(--font-m);font-size:9px;color:var(--signal)" id="inspect-ext">EXE</div>
-                      <div style="flex:1;min-width:0">
-                        <div style="font-weight:600;font-size:12.5px" id="inspect-name">&nbsp;</div>
-                        <div style="font-family:var(--font-m);font-size:10px;color:var(--faint)" id="inspect-sub">&nbsp;</div>
-                      </div>
-                      <button class="btn ghost" style="padding:5px 9px;font-size:11px" id="reDrop">Change</button>
+              <div class="hint" id="kindHint" hidden></div>
+              <div id="app-source-card">
+                <div class="drop" id="drop">
+                  <div class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
+                  <b>Drop an installer here</b>
+                  <span>or click to browse &middot; exe, msi, msix, appx, zip &middot; <kbd>Ctrl O</kbd></span>
+                </div>
+                <div id="inspect" style="display:none">
+                  <div class="filecard">
+                    <div class="filecard-ext" id="inspect-ext">EXE</div>
+                    <div style="flex:1;min-width:0">
+                      <div class="filecard-name" id="inspect-name">&nbsp;</div>
+                      <div class="filecard-sub mono" id="inspect-sub">&nbsp;</div>
                     </div>
-                    <div class="chips" id="inspect-chips"></div>
-                    <label class="lbl" for="f-silentargs" style="margin-top:10px">Silent install switch</label>
-                    <input class="field mono" id="f-silentargs" placeholder="e.g. /S or /quiet /norestart">
-                    <div class="hint">Pre-filled for recognised installers. <span class="mono">{pkg}</span> is replaced with the installer's folder, e.g. <span class="mono">/s /f1"{pkg}\setup.iss"</span> (Simple packages only).</div>
-                    <div class="tglrow"><div><b>Bundle the whole folder</b><small id="bundle-hint">Include every file next to the installer (Simple packages only)</small></div><button class="tgl" data-val="BundleFolder"></button></div>
+                    <button class="btn sm" id="reDrop">Change</button>
                   </div>
-                  <label class="lbl" for="f-download-url" style="margin-top:10px">Runtime installer URL</label>
-                  <input class="field" id="f-download-url" type="url" placeholder="https://vendor.example/installer.exe">
-                  <div class="hint">Required for Runtime packages so devices can download the installer. Simple packages bundle the selected file.</div>
+                  <div class="chips" id="inspect-chips"></div>
                 </div>
               </div>
+              <div id="printer-source-card" style="display:none">
 
-              <div class="card rise" id="printer-source-card" style="display:none">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">1 &middot; source</div><div class="card-t">Printer &amp; driver</div></div>
-                <div class="card-b" style="padding-top:12px;padding-bottom:14px">
                   <label class="lbl">Printer name</label>
                   <input class="field" id="f-printername" placeholder="Finance-3F-HP4200">
                   <label class="lbl" style="margin-top:10px">Driver</label>
@@ -551,72 +621,60 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                   </div>
                   <div><label class="lbl">Location</label><input class="field" id="f-printerlocation" placeholder="3rd Floor - Finance"></div>
                   <div class="hint">Detection checks the printer actually exists with this driver and port, not just that it once ran.</div>
-                </div>
+                
               </div>
+            </div>
 
-              <div class="card rise">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">2 &middot; identity</div><div class="card-t">How Intune sees it</div></div>
-                <div class="card-b" style="padding-top:12px;padding-bottom:14px">
-                  <label class="lbl">Display name</label>
-                  <input class="field" id="f-displayname">
-                  <div class="row c2" style="margin-top:10px">
-                    <div><label class="lbl">App ID</label><input class="field mono" id="f-appid"></div>
-                    <div><label class="lbl">Registry display name</label><input class="field mono" id="f-registryname"></div>
+            <div class="bsec" id="sec-identity">
+              <div class="bsec-h"><span class="bsec-n">02</span><span class="bsec-t">Identity</span><span class="bsec-rule"></span></div>
+              <div class="brow"><label for="f-displayname">Display name</label><input class="field" id="f-displayname"><span class="bsrc" id="src-displayname"></span></div>
+              <div class="brow"><label for="f-appid">App ID</label><input class="field mono" id="f-appid"><span class="bsrc" id="src-appid"></span></div>
+              <div class="brow app-only"><label for="f-registryname">Registry name</label><input class="field mono" id="f-registryname" title="Must match Add/Remove Programs exactly; a local test suggests the right name"><span class="bsrc" id="src-registry"></span></div>
+              <div class="brow app-only" id="silent-row"><label for="f-silentargs">Silent switch</label><input class="field mono" id="f-silentargs" placeholder="e.g. /S or /quiet /norestart" title="{pkg} stands for the installer's folder, e.g. /s /f1&quot;{pkg}\setup.iss&quot;"><span class="bsrc" id="src-silent"></span></div>
+              <div class="brow" id="detectversion-wrap"><span class="blbl">Detection</span>
+                <div class="detect"><button type="button" id="detect-any">Any version</button><span class="detect-ge">&ge;</span><input class="field mono" id="f-detectversion" placeholder="minimum version" aria-label="Minimum version for detection"></div>
+                <span class="bsrc" id="src-detect"></span></div>
+            </div>
+
+            <div class="bsec" id="sec-configure">
+              <div class="bsec-h"><span class="bsec-n">03</span><span class="bsec-t">Configure</span><span class="bsec-rule"></span>
+                <button type="button" class="linkbtn" id="mode-explainer-toggle">What do these mean?</button>
+              </div>
+              <div id="mode-explainer" style="display:none;margin-bottom:10px;padding:10px;border:1px solid var(--signal);border-radius:var(--r-sm);background:rgba(var(--signal-rgb),.08)">
+                    <div style="font-size:12.5px;line-height:1.6" id="mode-explainer-text"></div>
+                    <button type="button" class="btn ghost sm" id="mode-explainer-dismiss" style="margin-top:8px">Got it, stop guiding me</button>
                   </div>
-                  <div class="hint">Registry name must match Add/Remove Programs exactly — used for detection.</div>
-                  <div id="detectversion-wrap" style="margin-top:10px"><label class="lbl">Minimum version for detection</label><input class="field mono" id="f-detectversion" placeholder="any version">
-                  <div class="hint">Older copies count as not installed, so Intune upgrades them. A local test reads the version the app registers.</div></div>
-                </div>
-              </div>
-
-              <div class="card rise">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">3 &middot; configure</div><div class="card-t">On the endpoint</div></div>
-                <div class="card-b" style="padding-top:10px;padding-bottom:12px">
-                  <div class="tglrow"><div><b>Close blocking apps</b><small id="close-apps-hint">Detected process to close on install</small></div><button class="tgl on" data-val="closeAppsOn"></button></div>
-                  <div class="tglrow"><div><b>Allow deferral</b><small>Users may postpone 3 times</small></div><button class="tgl on" data-val="allowDefer"></button></div>
-                  <div id="scripts-wrap">
-                    <div class="tglrow"><div><b>Remove older versions first</b><small>For apps that install side by side, such as Java. Needs the minimum version above.</small></div><button class="tgl" data-val="RemoveOlderVersions"></button></div>
-                    <label class="lbl" style="margin-top:8px">Scripts (PowerShell, run as the install account)</label>
-                    <div class="hint" style="margin-top:0">Configuration the installer cannot do: settings files, environment variables, disabling an updater.</div>
-                    <div style="display:grid;gap:6px;margin-top:6px">
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-prehook" placeholder="Before install - optional"><button class="btn sm" data-browse-script="f-prehook">Browse</button></div>
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-posthook" placeholder="After install - optional"><button class="btn sm" data-browse-script="f-posthook">Browse</button></div>
-                      <div style="display:flex;gap:6px"><input class="field mono" id="f-postuninstallhook" placeholder="After uninstall - optional"><button class="btn sm" data-browse-script="f-postuninstallhook">Browse</button></div>
-                    </div>
+              <div class="brow"><span class="blbl">Delivery</span>
+                <div class="seg seg-sm" id="segMode"><div class="thumb"></div><button class="on" data-val="runtime">Runtime &middot; self-updating</button><button data-val="simple">Simple</button></div>
+                <span class="bsrc" id="modeHint" hidden></span></div>
+              <div class="brow" id="runtime-url-row"><label for="f-download-url">Download URL</label><input class="field mono" id="f-download-url" type="url" placeholder="https://vendor.example/installer.exe"><span class="bsrc">devices fetch updates</span></div>
+              <div class="brow" id="close-apps-row"><span class="blbl">Close before install</span>
+                <div class="procs" id="close-apps-hint">Detected process to close on install</div>
+                <button class="tgl on" data-val="closeAppsOn" aria-label="Close blocking apps"></button></div>
+              <div class="brow" id="defer-row"><span class="blbl">Let users postpone</span>
+                <span class="bnote">Up to 3 times; turn off when another app depends on this one</span>
+                <button class="tgl on" data-val="allowDefer" aria-label="Allow deferral"></button></div>
+              <div class="brow app-only"><span class="blbl">Extras</span>
+                <div class="extras-sum" id="extras-summary"></div>
+                <button type="button" class="linkbtn" id="extras-toggle">Edit</button></div>
+              <div class="extras" id="extras-panel" hidden>
+                <div class="tglrow"><div><b>Bundle the whole folder</b><small id="bundle-hint">Include every file next to the installer (Simple packages only)</small></div><button class="tgl" data-val="BundleFolder"></button></div>
+                <div id="scripts-wrap">
+                  <div class="tglrow"><div><b>Remove older versions first</b><small>For apps that install side by side, such as Java. Needs a minimum version.</small></div><button class="tgl" data-val="RemoveOlderVersions"></button></div>
+                  <div class="scripts">
+                    <label for="f-prehook">Before install</label><input class="field mono" id="f-prehook" placeholder="script.ps1"><button class="btn sm" data-browse-script="f-prehook">Browse</button>
+                    <label for="f-posthook">After install</label><input class="field mono" id="f-posthook" placeholder="script.ps1"><button class="btn sm" data-browse-script="f-posthook">Browse</button>
+                    <label for="f-postuninstallhook">After uninstall</label><input class="field mono" id="f-postuninstallhook" placeholder="script.ps1"><button class="btn sm" data-browse-script="f-postuninstallhook">Browse</button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div style="display:grid;gap:12px">
-              <div class="card rise">
-                <div class="card-h" style="padding-top:11px"><div class="eyebrow">4 &middot; wrap</div><div class="card-t">Wrap &amp; behaviour</div></div>
-                <div class="card-b" style="padding-top:12px;padding-bottom:14px">
-                  <div id="mode-explainer" style="display:none;margin-bottom:10px;padding:10px;border:1px solid var(--signal);border-radius:var(--r-sm);background:rgba(var(--signal-rgb),.08)">
-                    <div style="font-size:12.5px;line-height:1.6" id="mode-explainer-text"></div>
-                    <button type="button" class="btn ghost sm" id="mode-explainer-dismiss" style="margin-top:8px">Got it, stop guiding me</button>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <label class="lbl" style="margin:0">Package mode</label>
-                    <button type="button" class="btn sm" id="mode-explainer-toggle" style="padding:3px 10px;font-size:11px;color:var(--signal);border:1px solid var(--signal);border-radius:20px;background:rgba(var(--signal-rgb),.1)">&#9432; What's this?</button>
-                  </div>
-                  <div class="seg" id="segMode">
-                    <div class="thumb"></div>
-                    <button class="on" data-val="runtime">AppUpdater Runtime</button>
-                    <button data-val="simple">Simple Package</button>
-                  </div>
-                  <div class="hint" id="modeHint">Installs auto-update task, scripts and desktop shortcut on every device.</div>
-
-                  <div style="margin-top:10px">
-                    <label class="lbl">Output</label>
-                    <div class="seg accent" id="segTarget">
-                      <div class="thumb"></div>
-                      <button class="on" data-val="intunewin">.intunewin</button>
-                      <button data-val="psadt">PSADT package</button>
-                    </div>
-                    <div class="hint" id="targetHint">Package for Intune Win32 app upload.</div>
-                  </div>
-
+            <div class="bsec" id="sec-wrap">
+              <div class="bsec-h"><span class="bsec-n">04</span><span class="bsec-t">Wrap</span><span class="bsec-rule"></span></div>
+              <div class="brow"><span class="blbl">Output</span>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <div class="seg seg-sm accent" id="segTarget"><div class="thumb"></div><button class="on" data-val="intunewin">.intunewin</button><button data-val="psadt">PSADT</button></div>
                   <div style="margin-top:10px;display:none" id="psadt-version-row">
                     <label class="lbl">PSADT version</label>
                     <div class="seg" id="segPsadtVersion">
@@ -627,8 +685,10 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                     </div>
                     <div class="hint">v4 uses the module-based PSAppDeployToolkit with Fluent dialogs; v3 is the classic frontend. "Both" exports each.</div>
                   </div>
-
-                  <label class="lbl" style="margin-top:10px">Client profile</label>
+                </div>
+                <span class="bsrc" id="targetHint" hidden></span></div>
+              <div class="wrap-profile">
+                <label class="lbl" style="margin-top:10px">Client profile</label>
                   <select class="field" id="f-profile"><option value="">Default (uses Settings organisation name)</option></select>
                   <div class="hint" id="profile-hint" style="margin-bottom:6px">Determines the branding used for this build - manage profiles from the nav rail.</div>
                   <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
@@ -650,8 +710,16 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                     </div>
                     <div class="hint" style="margin-top:8px">Applies to this build only - you'll be asked whether to save it back to the profile afterward.</div>
                   </div>
+              </div>
+            </div>
+          </div>
 
-                  <div style="display:none;align-items:center;gap:6px;margin-top:10px" id="bp-header">
+          <aside class="manifest-col" aria-label="Package manifest">
+            <div class="mhead"><b>Manifest</b><span class="mono">what ships to Intune &middot; updates as you type</span></div>
+            <div class="manifest mono" id="manifest"></div>
+            <div class="mhead" style="margin-top:6px"><b>Checks</b><span class="mono" id="checks-state">pick an installer</span></div>
+            <div id="checks-list"></div>
+            <div style="display:none;align-items:center;gap:6px;margin-top:10px" id="bp-header">
                     <button type="button" id="bp-disclosure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg><span class="lbl" style="margin:0" data-version-label>Preview branding</span></button>
                     <div class="seg" id="segBpSwap" style="display:none;transform:scale(.82);transform-origin:left center;margin-left:-6px">
                       <div class="thumb"></div>
@@ -659,7 +727,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
                       <button data-val="v4">v4</button>
                     </div>
                   </div>
-                  <div id="bp-panel" style="display:none;margin-top:8px;padding-top:12px;border-top:1px solid var(--edge)">
+            <div id="bp-panel" style="display:none;margin-top:8px;padding-top:12px;border-top:1px solid var(--edge)">
                     <div class="hint" style="margin-bottom:8px">This is what the real install dialog looks like - logo goes on Fluent (v4) dialogs, banner on Classic (v3) dialogs.</div>
 
                     <!-- v3 Classic: real proportions from the actual PSADT banner (900x125) - white
@@ -700,11 +768,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 
                     <div class="hint" id="bp-no-assets-hint" style="display:none;margin-top:8px">Real PSADT assets aren't cached on this machine yet - build a PSADT package once and this preview will use the actual banner/icon.</div>
                   </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
+          </aside>
         </div>
       </section>
 
@@ -1109,8 +1173,9 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     <div class="buildbar" id="buildbar" style="display:none">
       <div class="summary" id="build-summary">Select an installer to begin.</div>
       <button class="btn ghost" data-go="home">Cancel</button>
-      <button class="btn primary big" id="btn-build" disabled>Build package&ensp;&#8250;</button>
+      <button class="btn primary big" id="btn-build" disabled>Build package<kbd>Ctrl &#8629;</kbd></button>
     </div>
+    <div class="statusbar" id="statusbar"><span id="sb-winget"></span><span id="sb-cisa"></span><span id="sb-nvd"></span><span class="grow"></span><span id="sb-mode"></span><span id="sb-version"></span></div>
   </div>
 </div>
 <div class="toasts" id="toasts"></div>
@@ -1176,21 +1241,30 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     new ResizeObserver(() => place(seg.querySelector('button.on') || btns[0])).observe(seg);
   }
 
-  const pipeLabels = ['Source', 'Identity', 'Configure', 'Wrap', 'Deliver'];
+  function pipeNames() {
+    // The progress bar names the file each step produces.
+    const id = ($('#f-appid') && $('#f-appid').value.trim()) || 'App';
+    const source = form.Kind === 'printer' ? 'printer' : (window._selectedInstaller ? window._selectedInstaller.split(/[\\/]/).pop() : 'installer');
+    const psadt = form.SimplePkgTarget === 'psadt';
+    const detect = form.Kind === 'printer' ? 'Detect-Printer.ps1' : form.Mode === 'runtime' ? `Detect-${id}.ps1` : 'detect.ps1';
+    const install = form.Kind === 'printer' ? 'Install-Printer.ps1' : psadt ? 'Deploy-Application.ps1' : form.Mode === 'runtime' ? `Deploy-${id}.ps1` : 'install.ps1';
+    return [source, detect, install, psadt ? `${id}-PSADT` : `${id}.intunewin`, 'Intune'];
+  }
   function renderPipe(activeIdx, doneUpTo, flowIdx) {
     const pipe = $('#pipe');
     if (activeIdx == null) { pipe.style.display = 'none'; return; }
     pipe.style.display = 'flex';
+    const pipeLabels = pipeNames();
     pipe.innerHTML = pipeLabels.map((label, i) => {
       const st = i < doneUpTo ? 'done' : i === activeIdx ? 'live' : '';
       const flow = flowIdx === i ? ' flow' : '';
       const line = i < pipeLabels.length - 1 ? `<div class="pline${flow}"><i></i></div>` : '';
-      return `<div class="pnode ${st}" data-pipe-step="${i}" role="button" tabindex="0"><div class="pdot">${i + 1}<span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span></div><span class="plabel">${label}</span></div>${line}`;
+      return `<div class="pnode ${st}" data-pipe-step="${i}" role="button" tabindex="0"><div class="pdot">${i + 1}<span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span></div><span class="plabel">${escapeHtml(label)}</span></div>${line}`;
     }).join('');
   }
 
   // On the builder the progress bar is the way through the form: it shows which steps are complete and jumps to a step.
-  const pipeCards = () => [form.Kind === 'printer' ? '#printer-source-card' : '#app-source-card', '#f-displayname', '#close-apps-hint', '#segMode', '#btn-build'];
+  const pipeCards = () => ['#sec-source', '#sec-identity', '#sec-configure', '#sec-wrap', '#btn-build'];
   function builderProgress() {
     if (!$('#screen-build').classList.contains('on')) return;
     const done = [form.Kind === 'printer' ? !!$('#f-printername').value.trim() : inspected,
@@ -1205,7 +1279,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
     const node = e.target.closest('[data-pipe-step]');
     if (!node || !$('#screen-build').classList.contains('on')) return;
     const target = $(pipeCards()[Number(node.dataset.pipeStep)]);
-    const card = target && (target.closest('.card') || target);
+    const card = target && (target.closest('.bsec') || target.closest('.card') || target);
     if (!card) return;
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse');
@@ -1267,6 +1341,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 
   segInit($('#segKind'), v => {
     form.Kind = v;
+    $('#screen-build').classList.toggle('printer', v === 'printer');
     $('#app-source-card').style.display = v === 'app' ? 'block' : 'none';
     $('#printer-source-card').style.display = v === 'printer' ? 'block' : 'none';
     $('#kindHint').textContent = v === 'app'
@@ -1496,23 +1571,102 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 
   function updateSummary() {
     builderProgress();
-    // Runtime detection checks the agent, and MSIX detection reads the package version itself.
-    $('#detectversion-wrap').style.display = form.Mode === 'simple' && window._installerType !== 'MSIX' ? 'block' : 'none';
-    $('#scripts-wrap').style.display = form.Mode === 'simple' && !['MSIX', 'Zip'].includes(window._installerType) ? 'block' : 'none';
-    const mode = form.Mode === 'runtime' ? 'AppUpdater Runtime' : 'Simple Package';
-    const target = form.SimplePkgTarget === 'intunewin' ? '.intunewin' : 'PSADT package';
-    const org = resolveBuildOrgName();
-    let name;
-    if (form.Kind === 'printer') {
-      name = $('#f-printername').value.trim();
-      if (!name) { $('#build-summary').textContent = 'Enter a printer name to begin.'; return; }
-    } else {
-      name = window._selectedInstaller ? window._selectedInstaller.split(/[\\/]/).pop() : null;
-      if (!name) { $('#build-summary').textContent = 'Select an installer to begin.'; return; }
-    }
-    const parts = [name, mode, org ? `${org} branding` : null, `\u2192 ${target}`].filter(Boolean).map(p => p === mode ? `<b>${escapeHtml(p)}</b>` : escapeHtml(p));
-    $('#build-summary').innerHTML = parts.join('<span class="sep">&middot;</span>');
+    // Only the rows that apply to this mode and output are shown. Runtime detection checks the agent, and MSIX
+    // detection reads the package version itself.
+    const app = form.Kind !== 'printer', simple = form.Mode === 'simple', runtime = form.Mode === 'runtime', psadt = form.SimplePkgTarget === 'psadt';
+    $('#detectversion-wrap').style.display = app && simple && window._installerType !== 'MSIX' ? 'grid' : 'none';
+    $('#scripts-wrap').style.display = simple && !['MSIX', 'Zip'].includes(window._installerType) ? 'block' : 'none';
+    $('#runtime-url-row').style.display = app && runtime ? 'grid' : 'none';
+    $('#close-apps-row').style.display = app && (psadt || runtime) ? 'grid' : 'none';
+    $('#defer-row').style.display = app && psadt ? 'grid' : 'none';
+    const minVersion = $('#f-detectversion').value.trim();
+    $('#detect-any').classList.toggle('on', !minVersion);
+    $('.detect').classList.toggle('min', !!minVersion);
+    const scripts = ['f-prehook', 'f-posthook', 'f-postuninstallhook'].filter(id => $('#' + id).value.trim()).length;
+    $('#extras-summary').innerHTML = `<span>Whole folder <b>${form.BundleFolder ? 'on' : 'off'}</b></span><span>Scripts <b>${scripts || 'none'}</b></span>` +
+      (simple ? `<span>Remove older <b>${form.RemoveOlderVersions ? 'on' : 'off'}</b></span>` : '');
+    const src = window._src || {};
+    for (const [id, key] of [['src-displayname', 'displayname'], ['src-appid', 'appid'], ['src-registry', 'registry'], ['src-silent', 'silent'], ['src-detect', 'detect']]) $('#' + id).textContent = src[key] || '';
+    const procs = (form.ProcessesToKill || '').split(/[,;]/).map(p => p.trim()).filter(Boolean);
+    $('#close-apps-hint').innerHTML = procs.length ? procs.map(p => `<span class="proc">${escapeHtml(p.replace(/\.exe$/i, ''))}.exe</span>`).join('') : '<span class="bnote">none detected</span>';
+    renderManifest();
+    renderChecksSummary();
   }
+  function manifestLines() {
+    // What the build will produce, in the order Intune uses it.
+    const id = $('#f-appid').value.trim() || '-', name = $('#f-displayname').value.trim() || '-';
+    const psadt = form.SimplePkgTarget === 'psadt', runtime = form.Mode === 'runtime';
+    if (form.Kind === 'printer') {
+      return [['package', `${id}  \u00b7  ${name}`], ['printer', $('#f-printername').value.trim() || '-', 'str'],
+        ['driver', $('#f-drivername').value.trim() || $('#f-driverid').value || '-'], ['port', `${$('#f-porthost').value.trim() || '-'}:${$('#f-portnumber').value.trim() || '9100'}`, 'num'],
+        ['install', 'Install-Printer.ps1 via the AppUpdater agent'], ['detect', 'printer exists with this driver and port', 'str'], ['output', `${id}/${id}.intunewin`, 'str']];
+    }
+    const file = window._selectedInstaller ? window._selectedInstaller.split(/[\\/]/).pop() : '-';
+    const sw = $('#f-silentargs').value.trim(), reg = $('#f-registryname').value.trim() || '-', min = $('#f-detectversion').value.trim();
+    const isMsi = /\.msi$/i.test(file), isMsix = window._installerType === 'MSIX', isZip = window._installerType === 'Zip';
+    const lines = [['package', `${id}  \u00b7  ${name}${window._selectedVersion ? ' ' + window._selectedVersion : ''}`], ['source', file, 'str']];
+    if (runtime) lines.push(['agent', `downloads ${$('#f-download-url').value.trim() || '[download URL]'}`, 'str'], ['  checks', 'on a schedule, installs newer versions', 'dim']);
+    if (isMsix) lines.push(['install', 'Add-AppxProvisionedPackage, all users']);
+    else if (isZip) lines.push(['install', `unpack to Program Files\\${id}, shortcut, ARP entry`]);
+    else if (isMsi) lines.push(['install', `msiexec /i ${file} ${sw ? sw + ' ' : ''}/qn /norestart`]);
+    else lines.push(['install', `${psadt ? 'Deploy-Application.ps1' : 'install.ps1'}  \u2192  ${file} ${sw || '[silent switch]'}`]);
+    if (!runtime && !isMsi && !isMsix && !isZip) lines.push(['  waits', `until "${reg}" registers`, 'dim']);
+    lines.push(runtime ? ['detect', `AppUpdater agent for ${id}`, 'str'] : isMsix ? ['detect', `provisioned package ${reg}`, 'str'] : ['detect', `ARP "${reg}"`, 'str']);
+    if (!runtime && !isMsix) lines.push(['  version', min ? `\u2265 ${min}` : 'any', min ? 'num' : 'dim']);
+    if (!runtime) lines.push(['uninstall', isMsi ? 'msiexec /x {product code}' : isMsix ? 'Remove-AppxProvisionedPackage' : 'QuietUninstallString, else the engine\'s switch']);
+    const procs = (form.closeAppsOn && (psadt || runtime)) ? (form.ProcessesToKill || '').trim() : '';
+    if (procs) lines.push(['closes', procs]);
+    if (psadt) lines.push(['prompts', `PSADT ${form.PSADTVersion}${form.allowDefer ? ', users may postpone 3 times' : ', no postponing'}`]);
+    lines.push(['runs as', window._perUser ? 'User (per-user installer)' : 'System']);
+    const scripts = [['before', 'f-prehook'], ['after', 'f-posthook'], ['after removal', 'f-postuninstallhook']].filter(x => $('#' + x[1]).value.trim());
+    if (scripts.length) lines.push(['scripts', scripts.map(x => x[0]).join(', ')]);
+    if (form.RemoveOlderVersions && !runtime) lines.push(['removes', 'older side-by-side versions first']);
+    const ver = (window._selectedVersion || '').replace(/[^A-Za-z0-9._-]/g, '_');
+    lines.push(['output', psadt ? `${id}-Simple-PSADT-${form.PSADTVersion}${ver && !runtime ? '-' + ver : ''}/` : runtime ? `${id}/Deploy-${id}.intunewin` : `${id}-Simple${ver ? '-' + ver : ''}/${id}-Simple.intunewin`, 'str']);
+    if (!runtime) lines.push(['epm', 'EPM-rules.csv  (installer hash and signer)', 'dim']);
+    const prof = $('#f-profile').value;
+    if (prof) lines.push(['profile', prof]);
+    return lines;
+  }
+  function renderManifest() {
+    const el = $('#manifest');
+    if (!el) return;
+    if (form.Kind !== 'printer' && !inspected) { el.innerHTML = '<div class="mline"><span class="n">1</span><span class="k">source</span><span class="v dim">pick an installer to see what will ship</span></div>'; return; }
+    el.innerHTML = manifestLines().map((l, i) => `<div class="mline"><span class="n">${i + 1}</span><span class="k">${escapeHtml(l[0])}</span><span class="v ${l[2] || ''}">${escapeHtml(l[1])}</span></div>`).join('');
+  }
+  function renderChecksSummary() {
+    const f = window._preview || null;
+    let text;
+    if (form.Kind === 'printer') text = 'Printer packages have no installer to check.';
+    else if (!inspected) text = 'Select an installer to begin.';
+    else if (!f) text = 'Checking the installer...';
+    else {
+      const red = f.filter(x => x.level === 'red').length, amber = f.filter(x => x.level === 'amber').length;
+      text = !f.length ? 'All checks pass.' : [red && `${red} blocking`, amber && `${amber} to review`].filter(Boolean).join(' \u00b7 ') + (red ? ' \u00b7 the build will stop until you override' : ' \u00b7 nothing blocks this build');
+    }
+    $('#build-summary').textContent = text;
+    $('#checks-state').textContent = form.Kind === 'printer' ? 'not used for printers' : !inspected ? 'pick an installer' : !f ? 'running' : f.length ? `${f.length} found` : 'all pass';
+    const glyph = { red: '\u2715', amber: '\u25B2' };
+    $('#checks-list').innerHTML = (f || []).map(x => `<div class="check ${x.level}"><span class="g" aria-hidden="true">${glyph[x.level] || '\u25CF'}</span><span>${escapeHtml(x.message)}</span></div>`).join('') ||
+      (f && inspected ? '<div class="check ok"><span class="g" aria-hidden="true">\u2713</span><span>Signature, winget hash and version checks found nothing to review.</span></div>' : '');
+  }
+  function requestPreview() {
+    // The same checks the build runs, worked out as soon as the installer is known.
+    if (form.Kind === 'printer' || !inspected || !window._selectedInstaller) return;
+    window._preview = null;
+    renderChecksSummary();
+    send('preflight-preview', { AppID: $('#f-appid').value.trim(), DisplayName: $('#f-displayname').value.trim(), InstallerPath: window._selectedInstaller,
+      Version: window._selectedVersion || '', DetectVersion: $('#f-detectversion').value.trim(), Identity: window._identity || {}, Winget: window._wingetMatch || null });
+  }
+  function markSource(key, value) { window._src = Object.assign(window._src || {}, { [key]: value }); }
+  $('#detect-any').addEventListener('click', () => { $('#f-detectversion').value = ''; markSource('detect', ''); updateSummary(); });
+  $('#f-detectversion').addEventListener('input', () => { markSource('detect', 'edited'); updateSummary(); });
+  $('#extras-toggle').addEventListener('click', () => { const p = $('#extras-panel'); p.hidden = !p.hidden; $('#extras-toggle').textContent = p.hidden ? 'Edit' : 'Done'; });
+  for (const [id, key] of [['f-displayname', 'displayname'], ['f-appid', 'appid'], ['f-registryname', 'registry'], ['f-silentargs', 'silent']]) {
+    $('#' + id).addEventListener('input', () => { markSource(key, 'edited'); updateSummary(); });
+  }
+  ['f-download-url', 'f-prehook', 'f-posthook', 'f-postuninstallhook', 'f-printername', 'f-drivername', 'f-porthost', 'f-portnumber'].forEach(id => $('#' + id).addEventListener('input', updateSummary));
+  $('#f-profile').addEventListener('change', updateSummary);
 
   $('#progress-error-back').addEventListener('click', () => goTo('build'));
   $('#btn-build').addEventListener('click', () => {
@@ -1630,6 +1784,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             if (registryWasEmpty) $('#f-registryname').value = (payload.detected && payload.detected.registryName) || $('#f-displayname').value;
             $('#f-silentargs').value = (payload.detected && payload.detected.silentArgs) || '';
             window._autoSilentArgs = $('#f-silentargs').value;
+            window._src = { displayname: 'installer', appid: 'installer', registry: 'installer', silent: $('#f-silentargs').value ? 'installer' : '', detect: '' };
+            window._preview = null;
             window._entryExe = (payload.detected && payload.detected.entryExe) || '';
             window._perUser = !!(payload.detected && payload.detected.installerType === 'Squirrel');
             // null never equals a field value, so a name the user typed is never replaced later.
@@ -1672,8 +1828,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             // Only replace values the user has not edited since inspection.
             if (m.Id && window._identity) window._identity.wingetId = m.Id;
             window._wingetMatch = { Id: m.Id, Version: m.Version, Match: m.Match, VersionMatch: !!m.VersionMatch, Latest: m.Latest || '', Files: m.Files || [] };
-            if (m.SilentArgs && $('#f-silentargs').value === window._autoSilentArgs) $('#f-silentargs').value = window._autoSilentArgs = m.SilentArgs;
-            if (m.ArpName && window._installerType !== 'MSIX' && $('#f-registryname').value === window._autoRegistryName) { $('#f-registryname').value = window._autoRegistryName = m.ArpName; updateSummary(); }
+            if (m.SilentArgs && $('#f-silentargs').value === window._autoSilentArgs) { $('#f-silentargs').value = window._autoSilentArgs = m.SilentArgs; markSource('silent', 'winget'); }
+            if (m.ArpName && window._installerType !== 'MSIX' && $('#f-registryname').value === window._autoRegistryName) { $('#f-registryname').value = window._autoRegistryName = m.ArpName; markSource('registry', 'winget'); updateSummary(); }
             const how = m.Match === 'hash' ? 'the exact file' : m.Match === 'productcode' ? 'the same product code' : (m.VersionMatch ? 'name and version' : 'name; its newest version is listed');
             const repoPath = `manifests/${m.Id.charAt(0).toLowerCase()}/${m.Id.split('.').join('/')}`;
             chips.push({ label: 'winget', tone: m.Match === 'name' ? '' : 'g', detail: `Matched ${m.Id} ${m.Version} in Microsoft's winget catalogue by ${how}. Its silent switch and registry name are used where you have not changed them.`, link: `https://github.com/microsoft/winget-pkgs/tree/master/${repoPath}`, linkLabel: 'Open in winget-pkgs' });
@@ -1686,6 +1842,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           }
           $('#inspect-chips').insertAdjacentHTML('beforeend', chips.map(chipHtml).join(''));
           if (bundleOk && window._knownBundle) setToggle('BundleFolder', true);
+          requestPreview();
           if (payload.known) applyKnownApp(payload.known);
           break;
         }
@@ -1763,6 +1920,18 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
             open.addEventListener('click', () => send('open-pr', { url: payload.prUrl }));
             appendToTestLog(open);
           } else if (payload.needsToken && $('#winget-submit')) { $('#winget-submit').disabled = false; }
+          break;
+        }
+        case 'preflight-preview-result':
+          if (payload.path === window._selectedInstaller) { window._preview = payload.ok === false ? [] : (payload.findings || []); renderChecksSummary(); }
+          break;
+        case 'status-data': {
+          const age = h => h == null ? null : h < 1 ? 'under 1 h old' : h < 48 ? `${Math.round(h)} h old` : `${Math.round(h / 24)} days old`;
+          $('#sb-winget').innerHTML = payload.lookups ? (payload.wingetAge == null ? '<span class="dot off">\u25CF</span> winget index not downloaded yet' : `<span class="dot">\u25CF</span> winget index ${age(payload.wingetAge)}`) : '<span class="dot off">\u25CF</span> online lookups off';
+          $('#sb-cisa').textContent = payload.lookups && payload.kevAge != null ? `CISA list ${age(payload.kevAge)}` : '';
+          $('#sb-nvd').textContent = payload.lookups && payload.nvd ? 'NVD on' : '';
+          $('#sb-mode').textContent = payload.connected ? 'Cloudflare connected' : 'Offline \u00b7 local manifest';
+          $('#sb-version').textContent = payload.version ? 'v' + payload.version : '';
           break;
         }
         case 'browse-script-result':
@@ -1898,6 +2067,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           break;
         case 'settings-saved':
           if (!payload.ok) toast('Save failed', 'Could not write the config file.', true);
+          send('get-status', {});
           break;
         case 'recovery-export-result':
           toast(payload.ok ? 'Bundle exported' : 'Export failed', payload.ok ? payload.path : 'Bundle could not be written.', !payload.ok);
@@ -1916,6 +2086,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           if (payload.done && payload.suggestedRegistryName) {
             addTestFix(`Use "${payload.suggestedRegistryName}" as the registry name`, () => {
               $('#f-registryname').value = payload.suggestedRegistryName;
+              markSource('registry', 'local test');
               window._autoRegistryName = null;
               toast('Registry name updated', inspected ? 'Build again to package with the detected name.' : 'Pick the installer again, then build.');
             });
@@ -1930,6 +2101,7 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
           if (payload.done && payload.suggestedDetectVersion) {
             addTestFix(`Require version ${payload.suggestedDetectVersion} or newer`, () => {
               $('#f-detectversion').value = payload.suggestedDetectVersion;
+              markSource('detect', 'local test');
               window._keepDetectVersion = !inspected;
               toast('Minimum version set', inspected ? 'Build again so detection requires this version.' : 'Pick the installer again, then build.');
             });
@@ -2025,6 +2197,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
       window._autoRegistryName = null;
     }
     if (s.SilentArgs) { $('#f-silentargs').value = s.SilentArgs; window._autoSilentArgs = null; }
+    window._src = Object.assign(window._src || {}, { appid: 'last build', displayname: s.DisplayName ? 'last build' : (window._src || {}).displayname,
+      registry: s.RegistryName ? 'last build' : (window._src || {}).registry, silent: s.SilentArgs ? 'last build' : (window._src || {}).silent });
     if (s.DownloadURL && $('#f-download-url')) $('#f-download-url').value = s.DownloadURL;
     pickSeg('segMode', s.Mode);
     pickSeg('segTarget', s.SimplePkgTarget);
@@ -2801,6 +2975,54 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
   send('get-profiles', {});
   send('get-history', {});
   send('get-psadt-stock-assets', {});
+  send('get-status', {});
+  // The status line also covers catalogues that finish downloading after launch.
+  setInterval(() => send('get-status', {}), 60000);
+
+  // Keyboard layer: number keys for the rail, Ctrl+O to pick an installer, Ctrl+Enter to build, Ctrl+K for every command.
+  $$('.rail .nav-btn[data-go]').forEach((b, i) => { if (i < 6) b.insertAdjacentHTML('beforeend', `<span class="nav-num" aria-hidden="true">${i + 1}</span>`); });
+  const railScreens = ['home', 'build', 'fleet', 'profiles', 'history', 'worker'];
+  const pickInstaller = () => { goTo('build'); if (form.Kind !== 'printer') send('browse-installer', {}); };
+  const buildNow = () => { if (!$('#screen-build').classList.contains('on')) goTo('build'); else if (!$('#btn-build').disabled) $('#btn-build').click(); };
+  const commands = [
+    ['Go', 'Home', () => goTo('home'), '1'], ['Go', 'Package builder', () => goTo('build'), '2'], ['Go', 'App fleet', () => goTo('fleet'), '3'],
+    ['Go', 'Client profiles', () => goTo('profiles'), '4'], ['Go', 'History', () => goTo('history'), '5'], ['Go', 'Worker & settings', () => goTo('worker'), '6'],
+    ['Build', 'Pick an installer', pickInstaller, 'Ctrl O'], ['Build', 'Build package', buildNow, 'Ctrl \u21b5'],
+    ['Build', 'Delivery: Simple', () => { goTo('build'); pickSeg('segMode', 'simple'); }], ['Build', 'Delivery: Runtime', () => { goTo('build'); pickSeg('segMode', 'runtime'); }],
+    ['Build', 'Output: .intunewin', () => { goTo('build'); pickSeg('segTarget', 'intunewin'); }], ['Build', 'Output: PSADT', () => { goTo('build'); pickSeg('segTarget', 'psadt'); }],
+    ['Build', 'Package a printer', () => { goTo('build'); pickSeg('segKind', 'printer'); }],
+    ['Settings', 'Toggle online lookups', () => { goTo('worker'); $('#tgl-release-check').click(); }]
+  ];
+  let cmdSel = 0, cmdShown = [];
+  document.body.insertAdjacentHTML('beforeend', `<div id="cmdk" hidden><div class="box" role="dialog" aria-label="Commands"><input id="cmdk-input" placeholder="Type a command or screen" aria-label="Command"><ul id="cmdk-list"></ul>
+    <div class="foot"><span>\u2191\u2193 move</span><span>Enter run</span><span>Esc close</span></div></div></div>`);
+  function renderCommands() {
+    const q = $('#cmdk-input').value.trim().toLowerCase();
+    cmdShown = commands.filter(c => !q || (c[0] + ' ' + c[1]).toLowerCase().includes(q));
+    cmdSel = Math.max(0, Math.min(cmdSel, cmdShown.length - 1));
+    $('#cmdk-list').innerHTML = cmdShown.map((c, i) => `<li class="${i === cmdSel ? 'sel' : ''}" data-i="${i}"><span class="grp">${escapeHtml(c[0])}</span><b>${escapeHtml(c[1])}</b>${c[3] ? `<kbd>${escapeHtml(c[3])}</kbd>` : ''}</li>`).join('');
+  }
+  const openCommands = () => { $('#cmdk').hidden = false; $('#cmdk-input').value = ''; cmdSel = 0; renderCommands(); $('#cmdk-input').focus(); };
+  const closeCommands = () => { $('#cmdk').hidden = true; };
+  const runCommand = i => { const c = cmdShown[i]; closeCommands(); if (c) c[2](); };
+  $('#cmd-open').addEventListener('click', openCommands);
+  $('#cmdk-input').addEventListener('input', () => { cmdSel = 0; renderCommands(); });
+  $('#cmdk').addEventListener('click', e => { const li = e.target.closest('li'); if (li) runCommand(Number(li.dataset.i)); else if (e.target.id === 'cmdk') closeCommands(); });
+  document.addEventListener('keydown', e => {
+    const ctrl = e.ctrlKey || e.metaKey, key = e.key.toLowerCase();
+    if (ctrl && key === 'k') { e.preventDefault(); $('#cmdk').hidden ? openCommands() : closeCommands(); return; }
+    if (!$('#cmdk').hidden) {
+      if (e.key === 'Escape') closeCommands();
+      else if (e.key === 'ArrowDown') { cmdSel++; renderCommands(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { cmdSel--; renderCommands(); e.preventDefault(); }
+      else if (e.key === 'Enter') { e.preventDefault(); runCommand(cmdSel); }
+      return;
+    }
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
+    if (ctrl && e.key === 'Enter') { e.preventDefault(); buildNow(); }
+    else if (ctrl && key === 'o') { e.preventDefault(); pickInstaller(); }
+    else if (!ctrl && !e.altKey && !typing && /^[1-6]$/.test(e.key) && $('#test-modal').style.display !== 'flex') goTo(railScreens[Number(e.key) - 1]);
+  });
 
   window._gotFleetData = false;
   setTimeout(() => {
@@ -3577,6 +3799,36 @@ $_result.message = if ($run.PrUrl) { 'Pull request opened.' } elseif ($run.Outpu
 $_result.needsToken = -not $run.PrUrl -and $run.Output -match '(?i)token|unauthori|credential'
 '@
               }
+            }
+            'preflight-preview' {
+              # The checks a build runs, worked out in the background as soon as an installer is picked.
+              $pf = ConvertTo-HashtableShallow $msg.payload
+              $kevFile = Join-Path $KevCacheDir 'kev.json'
+              if (-not $config.DisableReleaseCheck -and (Test-Path -LiteralPath $kevFile)) { $pf.KevPath = $kevFile }
+              $pf.NvdLookups = [bool]$config.NvdLookups -and -not $config.DisableReleaseCheck
+              $pfMemory = try { (Get-AppMemory)[[string]$pf.AppID] } catch { $null }
+              Start-BackgroundAction -Wv $wv -Roots @('Get-PreflightFindings') -Event 'preflight-preview-result' -TimeoutSeconds 180 -Variables @{
+                _fd = $pf; _history = @(if ($pfMemory) { $pfMemory.builds })
+              } -Script @'
+$_result.path = [string]$_fd.InstallerPath
+$installer = @{}
+if ($_fd.InstallerPath -and (Test-Path -LiteralPath $_fd.InstallerPath -PathType Leaf)) {
+  $installer.sha256 = (Get-FileHash -LiteralPath $_fd.InstallerPath -Algorithm SHA256).Hash
+  try {
+    $sig = Get-AuthenticodeSignature -LiteralPath $_fd.InstallerPath
+    $installer.status = [string]$sig.Status
+    if ($sig.SignerCertificate) { $installer.signer = $sig.SignerCertificate.Subject }
+  } catch { $installer.status = '' }
+}
+$_result.findings = @(Get-PreflightFindings -FormData $_fd -History $_history -Installer $installer)
+$_result.ok = $true
+'@
+            }
+            'get-status' {
+              $indexFile = Join-Path $WingetCacheDir 'index.db'; $kevFile = Join-Path $KevCacheDir 'kev.json'
+              $ageOf = { param($f) if (Test-Path -LiteralPath $f) { [math]::Round(((Get-Date) - (Get-Item -LiteralPath $f).LastWriteTime).TotalHours, 1) } else { $null } }
+              Send-ToPage $wv 'status-data' @{ lookups = -not [bool]$config.DisableReleaseCheck; nvd = [bool]$config.NvdLookups; wingetAge = (& $ageOf $indexFile); kevAge = (& $ageOf $kevFile)
+                                                connected = [bool]$config.WorkerURL; version = $global:Version }
             }
             'open-link' {
               # Only the pages tags point to; anything else from the page is ignored.
