@@ -1617,7 +1617,10 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     lines.push(['output', psadt ? `${id}-Simple-PSADT-${form.PSADTVersion}${ver && !runtime ? '-' + ver : ''}/` : runtime ? `${id}/Deploy-${id}.intunewin` : `${id}-Simple${ver ? '-' + ver : ''}/${id}-Simple.intunewin`, 'str']);
     if (!runtime) lines.push(['epm', 'EPM-rules.csv  (installer hash and signer)', 'dim']);
     const prof = $('#f-profile').value;
-    if (prof) lines.push(['profile', prof]);
+    if (prof) {
+      const pf = (window._profiles || []).find(x => x.Name === prof);
+      lines.push(['profile', prof + (pf && pf.OrgName ? ' \u00b7 ' + pf.OrgName + ' branding' : '')]);
+    }
     return lines;
   }
   function renderManifest() {

@@ -204,6 +204,7 @@ $proc = Start-Process -FilePath 'powershell.exe' `
   function Get-Value([string]$Selector) { return [string](Eval-Js "document.querySelector('$Selector').value") }
   function Write-Field([string]$Selector, [string]$Value) { Eval-Js "document.querySelector('$Selector').value = $(ConvertTo-Json $Value)" | Out-Null }
   function Get-Text([string]$Selector) { return [string](Eval-Js "document.querySelector('$Selector').textContent") }
+  function Get-ChipText { return [string](Eval-Js "Array.from(document.querySelectorAll('#inspect-chips .chip')).map(function (c) { return c.textContent + ': ' + (c.dataset.detail || ''); }).join(' | ')") }
   function Test-Toast([string]$Title) {
     return [bool](Eval-Js "Array.from(document.querySelectorAll('#toasts .toast b')).some(function (b) { return b.textContent === $(ConvertTo-Json $Title); })")
   }
@@ -389,6 +390,7 @@ window.__errors = [];
 
       Invoke-Click '#segMode button[data-val=simple]'
       Assert (Test-Shown '#detectversion-wrap') 'Simple mode shows the minimum version for detection'
+      if (-not (Test-Shown '#extras-panel')) { Invoke-Click '#extras-toggle' }
       Assert (Test-Shown '#scripts-wrap') 'Simple mode shows the scripts section'
       foreach ($selector in '.tgl[data-val=RemoveOlderVersions]', '#f-prehook', '#f-posthook', '#f-postuninstallhook',
                             '[data-browse-script=f-prehook]', '[data-browse-script=f-posthook]', '[data-browse-script=f-postuninstallhook]') {
@@ -471,7 +473,7 @@ window.__errors = [];
       Write-Field '#f-appid' 'placeholder-id'
       Write-Field '#f-registryname' 'placeholder name'
       Select-TestInstaller
-      Assert ((Get-Text '#inspect-chips') -like '*packaged before*') "The 'packaged before' chip is shown"
+      Assert ((Get-ChipText) -like '*packaged before*') "The 'packaged before' chip is shown"
       Assert ((Get-Value '#f-appid') -eq $script:appId) 'App ID is restored from the last build'
       Assert ((Get-Value '#f-registryname') -eq $script:registryName) 'Registry name is restored from the last build'
       if ($script:suggestedVersion) {
@@ -540,7 +542,7 @@ window.__errors = [];
       Invoke-Click '#segMode button[data-val=simple]'
       Invoke-Click '#segTarget button[data-val=psadt]'
       Invoke-Click '#segPsadtVersion button[data-val=v4]'
-      Assert ((Get-Text '#build-summary') -like '*Click Test Org branding*') 'The build summary names the profile organisation'
+      Assert ((Get-Text '#manifest') -like '*Click Test Org branding*') 'The manifest names the profile organisation'
       if (Test-Shown '#bp-disclosure') {
         Invoke-Click '#bp-disclosure'
         Save-Shot 'build-branding-preview' '#bp-panel'
@@ -668,7 +670,7 @@ window.__errors = [];
     Invoke-Click '#segKind button[data-val=app]'
     Clear-AppFields
     Select-TestInstaller $portableZip
-    Assert ((Get-Text '#inspect-chips') -like '*portable app: Tool\tool.exe*') "The zip shows the 'portable app' chip"
+    Assert ((Get-ChipText) -like '*portable app*Tool\tool.exe*') "The zip shows the 'portable app' chip"
     Invoke-Click '#segMode button[data-val=simple]'
     Invoke-Click '#segTarget button[data-val=psadt]'
     Test-BuildGuard 'Simple .intunewin only' 'A zip with the PSADT target'
@@ -684,7 +686,7 @@ window.__errors = [];
     Invoke-Click '.nav-btn[data-go=build]'
     Clear-AppFields
     Select-TestInstaller $msixFile
-    Assert ((Get-Text '#inspect-chips') -like '*MSIX*provisioned for every user*') 'The MSIX shows its provisioning chip'
+    Assert ((Get-ChipText) -like '*All users*provisioned for every user*') 'The MSIX shows its provisioning chip'
     Invoke-Click '#segMode button[data-val=simple]'
     Invoke-Click '#segTarget button[data-val=intunewin]'
     Assert (-not (Test-Shown '#detectversion-wrap')) 'MSIX hides the minimum version for detection'
