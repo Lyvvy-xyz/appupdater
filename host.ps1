@@ -16,7 +16,7 @@ $__UiHtml = @'
   --void:#0D0E10; --panel:#131417; --panel-2:#191B1F;
   --edge:#24262B; --edge-hi:#31343A;
   --ink:#ECEAE4; --dim:#A3A19A; --faint:#8A8881; --rule:#1B1D21;
-  --signal:#5468FF; --signal-2:#8FA0FF; --select:#1F2440;
+  --brand:#FF7A1A; --signal:#5468FF; --signal-2:#8FA0FF; --select:#1F2440;
   --ok:#4CC38A; --warn:#E5A93A; --bad:#EF5A5A;
   --code-str:#D6C49A;
   /* Channel values of the accent and status colours, for their translucent tints. */
@@ -282,7 +282,8 @@ body.colorblind-safe .toast.err b i{border-radius:1px}
 body{font-size:13px}
 body::before{display:none}
 .rail{background:var(--panel)}
-.logo{background:var(--ink);box-shadow:none;border-radius:7px}
+.logo{background:var(--brand);box-shadow:none;border-radius:7px}
+.logo svg{stroke:#1A0D05 !important}
 .nav-btn{border-radius:7px;position:relative}
 .nav-btn:hover{transform:none}
 .nav-btn.on{background:var(--select);color:var(--ink)}
@@ -465,6 +466,15 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 #screen-worker .tglrow small{display:block;color:var(--faint);font-size:12px;margin-top:2px;max-width:520px}
 #screen-worker .tglrow b{font-weight:500}
 .grid td.dayrow{height:30px;font:500 11px var(--font-m);color:var(--dim);background:var(--panel-2);letter-spacing:.02em}
+.phead .field,.srow2 .field,.pf-ctx .field{padding-top:0;padding-bottom:0;line-height:28px}
+.dlg{width:min(760px,92vw);max-height:86vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--edge-hi);border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.dlg-h{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--edge)}
+.dlg-h h2{margin:0;font:600 14px var(--font-b)}
+.dlg-b{padding:12px 18px 6px}
+.dlg-opt{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);cursor:pointer;padding:3px 0}
+.dlg-opt input{accent-color:var(--signal)}
+.dlg #test-log{margin:6px 18px 0;flex:1;min-height:240px;max-height:52vh}
+.dlg-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--edge);margin-top:12px}
 /* Profiles */
 .pf-layout{display:grid;grid-template-columns:260px 340px minmax(0,1fr);min-height:100%}
 .pf-list{padding:16px 16px 24px;border-right:1px solid var(--edge);background:var(--panel)}
@@ -475,7 +485,11 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 .pf-item.new b{color:var(--signal-2)}
 .pf-form{padding:16px 20px 24px;border-right:1px solid var(--edge)}
 .pf-preview{padding:16px 24px 24px;min-width:0}
-@media (max-width:1100px){.split,.pf-layout{grid-template-columns:1fr}.cols2{grid-template-columns:1fr}}
+.pf-ctx{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px;color:var(--dim)}
+.pf-ctx .field{width:220px;height:30px;font-size:12.5px}
+.pf-ctx label+.seg{margin-left:-2px}
+@media (max-width:1100px){.split{grid-template-columns:1fr}.cols2{grid-template-columns:1fr}
+  .pf-layout{grid-template-columns:220px minmax(0,1fr)}.pf-list{grid-row:span 2}.pf-form{border-right:0;border-bottom:1px solid var(--edge)}}
 </style>
 </head>
 <body>
@@ -492,7 +506,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     <button class="nav-btn" data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v5h5"/><path d="M3.05 13a9 9 0 1 0 2.13-7.83L3 8"/><path d="M12 7v5l4 2"/></svg><span class="nav-tip">History</span></button>
     <button class="nav-btn" data-go="worker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nav-tip">Worker &amp; settings</span></button>
     <div class="spacer"></div>
-    <button class="nav-btn" data-go="accessibility" title="Accessibility"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="4" r="1.6" fill="currentColor" stroke="none"/><path d="M5 8.5c3.5 1 10.5 1 14 0M12 6v6l-3 8M12 12l3 8"/></svg><span class="nav-tip">Accessibility</span></button>
+
     <button class="nav-btn" data-go="docs" title="Docs &amp; help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 1.8-2.5 3.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg><span class="nav-tip">Docs &amp; help</span></button>
   </nav>
 
@@ -859,19 +873,15 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
              scripts (or PSADT's own test invocation) on this machine, no
              Intune needed. Separate from "Preview". -->
         <div id="test-modal" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:90;align-items:center;justify-content:center">
-          <div class="card" style="width:560px;max-height:80vh;display:flex;flex-direction:column;padding:0">
-            <div style="padding:18px 22px 0"><div class="eyebrow">local sanity check</div><div class="card-t" id="test-modal-title" style="margin-top:4px">Test locally</div></div>
-            <div style="padding:12px 22px">
-              <p class="hint" style="margin:0 0 10px">Decrypts the real <b>.intunewin</b> file if one exists and tests that (not just loose scripts) - it will actually install (and optionally uninstall) the app on <b style="color:var(--warn)">this machine</b>. No Intune required.</p>
-              <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);cursor:pointer;margin-bottom:6px">
-                <input type="checkbox" id="test-simulate-system" checked> Simulate Intune deployment (run as SYSTEM, silent)
-              </label>
-              <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);cursor:pointer">
-                <input type="checkbox" id="test-also-uninstall"> Also test uninstall afterwards
-              </label>
+          <div class="dlg">
+            <div class="dlg-h"><h2 id="test-modal-title">Test locally</h2><span class="pmeta">installs on this machine</span></div>
+            <div class="dlg-b">
+              <p class="bnote" style="margin:0 0 8px">Unpacks the real package and runs its install, detection and optional uninstall here, the way Intune would. No Intune needed.</p>
+              <label class="dlg-opt"><input type="checkbox" id="test-simulate-system" checked> Run as SYSTEM, silently, like an Intune deployment</label>
+              <label class="dlg-opt"><input type="checkbox" id="test-also-uninstall"> Test uninstall afterwards</label>
             </div>
-            <div class="log" id="test-log" style="margin:0 22px;flex:1;min-height:180px;max-height:320px"></div>
-            <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px">
+            <div class="log" id="test-log"></div>
+            <div class="dlg-f">
               <button class="btn" id="test-modal-close">Close</button>
               <button class="btn primary" id="test-modal-start">Start test</button>
             </div>
@@ -912,15 +922,24 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                   <div><select class="field" id="f-orgname-settings" style="max-width:320px;height:30px"><option value="">Not set</option></select>
                     <div id="f-orgname-not-set-hint" style="display:none;margin-top:6px"><span class="bnote">Used when a build has no client profile. </span><button type="button" class="linkbtn" id="f-orgname-guide-btn">Set up a client profile</button></div></div></div>
               </div>
+              <div class="bsec">
+                <div class="bsec-h"><span class="bsec-n">04</span><span class="bsec-t">Display</span><span class="bsec-rule"></span></div>
+                <div class="tglrow"><div><b>Reduce motion</b><small>Disables window/page animations and transitions app-wide. Off by default.</small></div><button class="tgl" id="tgl-reduce-motion"></button></div>
+                <div class="tglrow"><div><b>High contrast</b><small>Stronger edges and text contrast throughout the app. Off by default.</small></div><button class="tgl" id="tgl-high-contrast"></button></div>
+                <div class="tglrow"><div><b>Colour-blind safe palette</b><small>Swaps status colours (green/amber/red) for a palette distinguishable across all common colour vision types, plus icon shapes so status is never colour-only. Off by default.</small></div><button class="tgl" id="tgl-colorblind"></button></div>
+              </div>
             </div>
             <div>
               <div class="bsec">
-                <div class="bsec-h"><span class="bsec-n">04</span><span class="bsec-t">Home screen</span><span class="bsec-rule"></span></div>
+                <div class="bsec-h"><span class="bsec-n">05</span><span class="bsec-t">Home screen &amp; guide</span><span class="bsec-rule"></span></div>
                 <div class="tglrow"><div><b>Show Cloudflare connection promo</b><small>The "Not connected to Cloudflare" card on Home and the fleet empty-state tip. Off if you dismissed it, or if you're offline-only by design.</small></div><button class="tgl on" id="tgl-cf-advert"></button></div>
                 <div class="tglrow"><div><b>Show getting-started checklist</b><small>The "A few things to try" card on Home. Off if you dismissed it or it's not needed anymore.</small></div><button class="tgl on" id="tgl-getting-started"></button></div>
+                <div class="tglrow"><div><b>Show Fleet and Settings in the sidebar</b><small>Brings them back if they were hidden during the tour.</small></div><button class="tgl on" id="tgl-cf-nav"></button></div>
+                <div class="tglrow"><div><b>Guided tour</b><small>Walks through each screen and what it does.</small></div><button class="btn sm" id="settings-replay-tour">Replay</button></div>
+                <div class="tglrow"><div><b>Reset for first launch</b><small>Clears the first-launch flags. Reopen AppUpdater to see the guide as a new install would.</small></div><button class="btn danger sm" id="docs-reset-onboarding">Reset</button></div>
               </div>
               <div class="bsec">
-                <div class="bsec-h"><span class="bsec-n">05</span><span class="bsec-t">Folders &amp; log</span><span class="bsec-rule"></span></div>
+                <div class="bsec-h"><span class="bsec-n">06</span><span class="bsec-t">Folders &amp; log</span><span class="bsec-rule"></span></div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">
                   <button class="btn sm" id="btn-open-output">Output</button>
                   <button class="btn sm" id="btn-open-cache">Toolkit cache</button>
@@ -930,7 +949,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                 <div id="settings-release" class="bnote">&nbsp;</div>
               </div>
               <div class="bsec">
-                <div class="bsec-h"><span class="bsec-n">06</span><span class="bsec-t">Recovery</span><span class="bsec-rule"></span></div>
+                <div class="bsec-h"><span class="bsec-n">07</span><span class="bsec-t">Recovery</span><span class="bsec-rule"></span></div>
                 <p class="bnote" style="margin:4px 0 10px">A passphrase-protected backup of the config, token, client profiles and manifest. It restores only on this machine; a new machine reconnects to the worker instead.</p>
                 <div style="display:flex;gap:8px"><button class="btn sm" id="btn-export-recovery">Export bundle&hellip;</button><button class="btn sm" id="btn-import-recovery">Import bundle&hellip;</button></div>
               </div>
@@ -979,15 +998,18 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
             </div>
 
             <div class="pf-preview">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-                <div class="eyebrow" style="margin:0">preview - what a real build with this profile looks like</div>
-                <div class="seg" id="segPfSwap" style="transform:scale(.82);transform-origin:left center;margin-left:-6px">
+              <div class="phead" style="margin-bottom:4px"><h2>What users see</h2><span class="pmeta" id="pf-preview-context"></span></div>
+              <div class="pf-ctx">
+                <label for="pf-preview-app">App</label>
+                <select class="field" id="pf-preview-app"><option value="">Example App</option></select>
+                <label>Toolkit</label>
+                <div class="seg seg-sm" id="segPfSwap">
                   <div class="thumb"></div>
-                  <button class="on" data-val="v3">v3 classic</button>
-                  <button data-val="v4">v4 fluent</button>
+                  <button class="on" data-val="v3">PSADT v3</button>
+                  <button data-val="v4">PSADT v4</button>
                 </div>
               </div>
-              <p class="hint" style="margin-bottom:12px">Click the logo, banner, or text below to edit that field directly - or use the fields on the left.</p>
+              <p class="bnote" style="margin:0 0 12px">The dialog a PSADT package shows when it needs apps closed. Click the logo, banner or organisation to change them.</p>
 
               <div id="pf-preview-v3" style="border-radius:6px;overflow:hidden;background:#F0F0F0;border:1px solid #ACACAC;box-shadow:0 6px 20px rgba(0,0,0,.35);font-family:'Segoe UI',var(--font-b);max-width:380px">
                 <div id="pf-v3-banner-wrap" class="pf-click-target" data-pf-click="pf-banner-browse" title="Click to set the banner image" style="width:100%;aspect-ratio:900/125;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid #ACACAC;cursor:pointer">
@@ -995,7 +1017,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                   <span id="pf-v3-banner-placeholder" style="font-size:10px;color:#888">Click to set a banner (900&times;125 recommended)</span>
                 </div>
                 <div style="padding:12px 14px;background:#F0F0F0">
-                  <div class="pf-click-target" data-pf-click="pf-name" title="Click to edit the app name" style="font-weight:600;font-size:12.5px;color:#1a1a1a;cursor:pointer" id="pf-v3-title">Welcome to the Example App Setup</div>
+                  <div class="pf-click-target" title="The app being installed" style="font-weight:600;font-size:12.5px;color:#1a1a1a;cursor:pointer" id="pf-v3-title">Welcome to the Example App Setup</div>
                   <div style="font-size:10.5px;color:#444;margin-top:4px">Please close the following programs before continuing:</div>
                   <div style="background:#fff;border:1px solid #ACACAC;border-radius:2px;margin-top:6px;padding:5px 8px;font-size:10px;color:#333">Microsoft Word</div>
                   <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
@@ -1011,7 +1033,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                     <span id="pf-v4-icon-placeholder" style="font-size:8px;color:#999;text-align:center">logo</span>
                   </div>
                   <div style="min-width:0">
-                    <div class="pf-click-target" data-pf-click="pf-name" title="Click to edit the app name" style="font-weight:600;font-size:14px;color:#fff;cursor:pointer" id="pf-v4-title">Example App</div>
+                    <div class="pf-click-target" title="The app being installed" style="font-weight:600;font-size:14px;color:#fff;cursor:pointer" id="pf-v4-title">Example App</div>
                     <div class="pf-click-target" data-pf-click="pf-orgname" title="Click to edit the organisation name" style="font-size:11px;color:#a0a0a0;margin-top:2px;cursor:pointer" id="pf-v4-subtitle">Acme Corp - please close the following applications to continue.</div>
                   </div>
                 </div>
@@ -1041,20 +1063,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
             <b>No history yet</b>
             <p>Builds, deploy marks and removals on this machine are listed here, newest first.</p>
             <button class="btn primary sm" data-go="build">Build a package</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========== ACCESSIBILITY ========== -->
-      <section class="screen" data-screen="accessibility" id="screen-accessibility">
-        <div style="max-width:640px;margin:0 auto">
-          <h2 class="rise" style="font-family:var(--font-d);font-weight:600;font-size:20px;margin:10px 0 18px">Accessibility</h2>
-          <div class="card rise">
-            <div class="card-b">
-              <div class="tglrow"><div><b>Reduce motion</b><small>Disables window/page animations and transitions app-wide. Off by default.</small></div><button class="tgl" id="tgl-reduce-motion"></button></div>
-              <div class="tglrow"><div><b>High contrast</b><small>Stronger edges and text contrast throughout the app. Off by default.</small></div><button class="tgl" id="tgl-high-contrast"></button></div>
-              <div class="tglrow"><div><b>Colour-blind safe palette</b><small>Swaps status colours (green/amber/red) for a palette distinguishable across all common colour vision types, plus icon shapes so status is never colour-only. Off by default.</small></div><button class="tgl" id="tgl-colorblind"></button></div>
-            </div>
           </div>
         </div>
       </section>
@@ -1090,14 +1098,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                 <div style="font-size:12px;color:var(--dim);margin-top:2px">Replay the tour that highlights each screen and explains what it does.</div>
               </div>
               <button class="btn primary" id="docs-replay-tour">Replay tour</button>
-            </div>
-            <div class="tglrow" style="border-top:1px solid var(--edge);padding-top:10px">
-              <div><b style="font-size:12.5px">Show Fleet &amp; Worker/settings pages</b><small style="font-size:10.5px">If you chose "Not now" for Cloudflare during the tour without keeping them visible, this brings them back.</small></div>
-              <button class="tgl on" id="tgl-cf-nav"></button>
-            </div>
-            <div class="tglrow" style="border-top:1px solid var(--edge);padding-top:10px">
-              <div><b style="font-size:12.5px">Reset app for first launch</b><small style="font-size:10.5px">Clears the first-launch flags - close and reopen AppUpdater to see the guide exactly as a new install would.</small></div>
-              <button class="btn danger sm" id="docs-reset-onboarding">Reset</button>
             </div>
           </div>
 
@@ -1287,7 +1287,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     this.classList.remove('spin'); void this.offsetWidth; this.classList.add('spin');
   });
 
-  const screens = ['home', 'build', 'progress', 'done', 'fleet', 'profiles', 'history', 'worker', 'accessibility', 'docs'];
+  const screens = ['home', 'build', 'progress', 'done', 'fleet', 'profiles', 'history', 'worker', 'docs'];
   const crumbs = { home: 'AppUpdater', build: 'Package builder', progress: 'Building', done: 'Package ready', fleet: 'App fleet', profiles: 'Client profiles', history: 'History', worker: 'Worker & settings', accessibility: 'Accessibility', docs: 'Docs & help' };
   function goTo(id) {
     screens.forEach(s => $('#screen-' + s).classList.toggle('on', s === id));
@@ -2345,8 +2345,14 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     renderProfiles(window._profiles || [], window._lastUsedProfile);
   }
   function updateProfilePreview() {
-    const name = $('#pf-name').value.trim() || 'Example App';
-    const org = $('#pf-orgname').value.trim() || 'Acme Corp';
+    // The dialog names the app being installed, so the preview uses a real app rather than the profile name.
+    const appSel = $('#pf-preview-app'), picked = appSel.value;
+    const names = Array.from(new Set(lastFleet.filter(a => !window._tourDemoFleet).map(a => a.name))).sort();
+    appSel.innerHTML = '<option value="">Example App</option>' + names.map(n => `<option${n === picked ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
+    const name = appSel.value || 'Example App';
+    const profileName = $('#pf-name').value.trim();
+    const org = $('#pf-orgname').value.trim() || $('#f-orgname-settings').value || 'Acme Corp';
+    $('#pf-preview-context').textContent = (profileName || 'New profile') + ' \u00b7 ' + org;
     const shown = window._pfSwapVersion || 'v3';
     $('#pf-preview-v3').style.display = shown === 'v3' ? 'block' : 'none';
     $('#pf-preview-v4').style.display = shown === 'v4' ? 'block' : 'none';
@@ -2625,8 +2631,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     { screen: 'profiles', selector: '#profile-editor', title: 'Client profiles', text: 'Save a client\'s branding here - logo, banner, org name - then pick it at build time instead of re-entering it every time. The preview on the right shows exactly what a real build will look like; click directly on the logo, banner, or text to edit it.' },
     { screen: 'history', selector: '#screen-history h2', title: 'History', text: 'Every build, deploy-mark, and removal is logged here automatically, most recent first. (Same as Fleet - what\'s showing now is example data since nothing\'s happened here yet.)' },
     { screen: 'worker', selector: '#worker-connect-card', title: 'Connect to Cloudflare?', text: 'Optional. Connecting gets you a live fleet view that updates as devices check in, automatic update checks, and a password-protected status page. You can always change this later from Docs & Help.', type: 'cf-choice' },
-    { screen: 'accessibility', selector: '#screen-accessibility h2', title: 'Accessibility', text: 'Reduce-motion and other accessibility options live here, separate from general settings.' },
-    { screen: 'docs', selector: '#screen-docs h1', title: 'Docs & help', text: 'Come back here any time to replay this tour, or to show Fleet/Worker & settings again if you hid them.' }
+    { screen: 'docs', selector: '#screen-docs h1', title: 'Docs & help', text: 'Come back here any time for how each screen works. The tour can be replayed from Settings.' }
   ];
   let tourIndex = 0;
   function tourStepsForCurrentNav() {
@@ -2755,6 +2760,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   }
   $('#getting-started-tour').addEventListener('click', startTour);
   $('#docs-replay-tour').addEventListener('click', startTour);
+  $('#settings-replay-tour').addEventListener('click', startTour);
   $('#docs-reset-onboarding').addEventListener('click', () => {
     if (confirm('Reset the guided tour and first-run hints? Close and reopen AppUpdater afterward to see them again.')) {
       send('reset-onboarding', {});
