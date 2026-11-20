@@ -365,6 +365,117 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
 #cmdk li.sel{background:var(--select)}
 #cmdk .foot{display:flex;gap:14px;padding:8px 14px;border-top:1px solid var(--edge);font:11px var(--font-m);color:var(--faint)}
 .cmd-btn{display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--edge);background:var(--panel);color:var(--dim);font:12px var(--font-b);cursor:pointer;margin-left:auto}
+
+/* Shared page frame: a one-line header, then content that fills the window. */
+.screen.page-flush{padding:0}
+.page{padding:16px 24px 24px;display:flex;flex-direction:column;gap:12px;min-height:100%}
+.phead{display:flex;align-items:center;gap:12px;min-height:32px}
+.phead h1,.phead h2{margin:0;font:600 15px var(--font-b);letter-spacing:-.01em}
+.phead .grow,.side-h .grow{flex:1}
+.pmeta{font:11.5px var(--font-m);color:var(--faint)}
+.pill{font:11px var(--font-m);padding:2px 8px;border-radius:4px;border:1px solid var(--edge-hi);color:var(--dim)}
+.pill.warn{color:var(--warn);border-color:rgba(var(--warn-rgb),.4)}
+.dim{color:var(--dim)} .linkbtn.dim{color:var(--faint)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);min-height:100%}
+.split-main{padding:16px 24px 24px;display:flex;flex-direction:column;gap:12px;min-width:0;border-right:1px solid var(--edge)}
+.split-side{padding:16px 20px 24px;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--panel)}
+.side-h{display:flex;align-items:center;gap:10px;min-height:28px}
+.side-h b{font-weight:600}
+.side-card{border:1px solid var(--edge);border-radius:8px;padding:10px 12px;background:var(--void)}
+.side-p{font-size:12px;color:var(--dim);margin:2px 0 10px}
+.side-card .tglrow{padding:6px 0;font-size:12.5px}
+.notice{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid rgba(var(--signal-rgb),.4);border-radius:8px;font:12px var(--font-m);color:var(--signal-2)}
+.notice span{flex:1}
+.demo-log{font:11.5px/1.9 var(--font-m)} .demo-log .ok{color:var(--ok)} .demo-log .warn{color:var(--warn)}
+/* Home queue */
+.queue{list-style:none;margin:0;padding:0;border:1px solid var(--edge);border-radius:8px;background:var(--panel);overflow:hidden}
+.queue:empty{display:none}
+.qrow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--rule);cursor:default}
+.qrow:last-child{border-bottom:0}
+.qrow.sel{background:var(--select);box-shadow:inset 2px 0 0 var(--signal)}
+.qg{text-align:center;font-size:12px} .qg.bad{color:var(--bad)} .qg.warn{color:var(--warn)} .qg.sig{color:var(--signal-2)} .qg.ok{color:var(--ok)}
+.qrow b{font-weight:600} .qd{color:var(--dim)} .qm{font:11.5px var(--font-m);color:var(--faint);margin-top:1px}
+.qa{display:flex;gap:6px}
+.newrow{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px dashed var(--edge-hi);border-radius:8px;cursor:pointer;color:var(--ink)}
+.newrow:hover,.newrow:focus-visible{border-color:var(--signal);background:var(--select)}
+.newrow b{font-weight:600} .newrow kbd{margin-left:auto}
+.newrow-plus{width:22px;text-align:center;color:var(--signal-2);font:500 16px var(--font-m)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--edge);border-radius:8px;overflow:hidden;margin-top:auto}
+.stats>div{padding:12px 14px;border-right:1px solid var(--edge);display:flex;flex-direction:column;gap:2px}
+.stats>div:last-child{border-right:0}
+.stats b{font:500 20px var(--font-m);letter-spacing:-.02em} .stats span{font-size:12px;color:var(--dim)}
+.actlog{font:12px/1.85 var(--font-m);display:flex;flex-direction:column}
+.actlog .al{display:grid;grid-template-columns:46px 14px minmax(0,1fr);gap:8px}
+.actlog .al .t{color:var(--faint)} .actlog .al .x{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--dim)}
+.actlog .al .ok{color:var(--ok)} .actlog .al .warn{color:var(--warn)} .actlog .al .sig{color:var(--signal-2)}
+.actlog .none{font-family:var(--font-b);color:var(--faint)}
+/* Data grid used by Fleet and History */
+.fchips{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--edge);background:transparent;color:var(--dim);font:12px var(--font-b);cursor:pointer;display:flex;align-items:center;gap:6px}
+.fchip span{font:11px var(--font-m);color:var(--faint)}
+.fchip.on{border-color:var(--signal);background:var(--select);color:var(--ink)}
+.bulkbar{display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--signal);border-radius:8px;background:var(--select);font-size:12.5px}
+.grid-wrap{border:1px solid var(--edge);border-radius:8px;background:var(--panel);overflow:visible}
+table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
+.grid th{height:34px;padding:0 12px;text-align:left;font:500 10.5px var(--font-m);letter-spacing:.05em;text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--edge)}
+.grid td{height:50px;padding:0 12px;border-bottom:1px solid var(--rule);vertical-align:middle}
+.grid tr:last-child td{border-bottom:0}
+.grid tr.r:hover td{background:rgba(255,255,255,.015)}
+.grid .nm{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid .id{font:11.5px var(--font-m);color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid .mono{font:12px var(--font-m)} .grid .newer{color:var(--signal-2)}
+.grid .st{font-size:12.5px;white-space:nowrap} .st.bad{color:var(--bad)} .st.warn{color:var(--warn)} .st.sig{color:var(--signal-2)} .st.ok{color:var(--ok)} .st.dim{color:var(--faint)}
+.grid .next{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.grid td.empty-cell{height:auto;padding:28px 16px;color:var(--faint)}
+.ledger{display:flex;gap:10px}
+.ledger .lv{display:flex;flex-direction:column;align-items:center;gap:3px}
+.ledger .sq{display:flex;gap:2px} .ledger .sq i{width:7px;height:7px;border-radius:1.5px;background:#2A2C31}
+.ledger .sq i.b{background:var(--faint)} .ledger .sq i.t{background:var(--signal-2)} .ledger .sq i.d{background:var(--ink)} .ledger .sq i.o{background:var(--ok)} .ledger .sq i.x{background:var(--bad)}
+.ledger .lv span{font:9.5px var(--font-m);color:var(--faint)}
+.legend{font:10px var(--font-m);color:var(--faint);text-transform:none;letter-spacing:0}
+.rowmenu{position:relative}
+.rowmenu summary{list-style:none;width:28px;height:28px;border-radius:6px;border:1px solid var(--edge-hi);display:grid;place-items:center;cursor:pointer;color:var(--dim)}
+.rowmenu summary::-webkit-details-marker{display:none}
+.rowmenu[open] summary{background:var(--select);color:var(--ink)}
+.rowmenu>div{position:absolute;right:0;top:32px;z-index:30;min-width:180px;padding:4px;border:1px solid var(--edge-hi);border-radius:8px;background:var(--panel-2);box-shadow:0 12px 30px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.rowmenu>div button{text-align:left;border:0;background:transparent;color:var(--ink);font:12.5px var(--font-b);padding:7px 10px;border-radius:5px;cursor:pointer}
+.rowmenu>div button:hover{background:var(--select)} .rowmenu>div button.danger{color:var(--bad)}
+.empty{padding:40px 20px;text-align:center;border:1px dashed var(--edge-hi);border-radius:8px}
+.empty b{font-weight:600} .empty p{color:var(--dim);font-size:12.5px;margin:6px 0 14px}
+/* Progress and done */
+.pbar{height:3px;border-radius:2px;background:var(--edge);overflow:hidden} .pbar i{display:block;height:100%;width:0;background:var(--signal);transition:width .3s}
+.log-tall{flex:1;min-height:320px;margin:0}
+#step-list .phase{padding:8px 0;border-bottom:1px solid var(--rule);font:12px var(--font-m)}
+.okmark{color:var(--ok);font-size:15px}
+#done-path{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border:1px solid var(--edge);border-radius:8px;background:var(--void)}
+.steps li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;padding:12px 14px;border-bottom:1px solid var(--rule)}
+.steps li:last-child{border-bottom:0}
+.steps .sn{width:22px;height:22px;border-radius:50%;border:1px solid var(--edge-hi);display:grid;place-items:center;font:500 11px var(--font-m);color:var(--dim)}
+.steps li.did .sn{border-color:var(--ok);color:var(--ok)} .steps li.now .sn{border-color:var(--signal);color:var(--signal-2)}
+.steps li.did b{color:var(--dim)}
+.steps p{margin:2px 0 8px;font-size:12px;color:var(--dim)}
+.steps li:not(.now) .btn.primary{background:transparent;color:var(--ink);border:1px solid var(--edge-hi)}
+/* Settings */
+.cols2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 40px}
+.cols2>div{display:flex;flex-direction:column;gap:18px}
+.srow2{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:center;min-height:40px;border-bottom:1px solid var(--rule)}
+.srow2 .k{color:var(--dim)}
+#screen-worker .tglrow{padding:10px 0;border-top:0;border-bottom:1px solid var(--rule)}
+#screen-worker .tglrow small{display:block;color:var(--faint);font-size:12px;margin-top:2px;max-width:520px}
+#screen-worker .tglrow b{font-weight:500}
+.grid td.dayrow{height:30px;font:500 11px var(--font-m);color:var(--dim);background:var(--panel-2);letter-spacing:.02em}
+/* Profiles */
+.pf-layout{display:grid;grid-template-columns:260px 340px minmax(0,1fr);min-height:100%}
+.pf-list{padding:16px 16px 24px;border-right:1px solid var(--edge);background:var(--panel)}
+#profiles-strip{display:flex;flex-direction:column;gap:4px}
+.pf-item{display:flex;flex-direction:column;gap:1px;text-align:left;padding:9px 10px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--ink);font:13px var(--font-b);cursor:pointer}
+.pf-item span{font-size:11.5px;color:var(--faint)} .pf-item b{font-weight:500}
+.pf-item:hover{background:var(--panel-2)} .pf-item.on{background:var(--select);border-color:var(--signal)}
+.pf-item.new b{color:var(--signal-2)}
+.pf-form{padding:16px 20px 24px;border-right:1px solid var(--edge)}
+.pf-preview{padding:16px 24px 24px;min-width:0}
+@media (max-width:1100px){.split,.pf-layout{grid-template-columns:1fr}.cols2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -403,136 +514,52 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
     <div class="screens" id="screens">
 
       <!-- ========== HOME ========== -->
-      <section class="screen on" data-screen="home" id="screen-home">
-        <div style="max-width:1240px;margin:0 auto;padding-bottom:20px">
-          <div class="rise" style="margin:20px 0 16px">
-            <div class="eyebrow">packaging console</div>
-            <h1 style="font-family:var(--font-d);font-weight:700;font-size:28px;letter-spacing:-.01em;margin-top:4px">Good afternoon.</h1>
-            <p style="color:var(--dim);margin-top:4px;font-size:13px" id="fleet-summary">Loading fleet&hellip;</p>
-          </div>
-
-          <div class="rise" id="home-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
-            <div class="card" style="padding:11px 14px">
-              <div class="eyebrow">apps tracked</div>
-              <div style="font-family:var(--font-d);font-weight:700;font-size:22px;margin-top:3px" id="stat-total">0</div>
+      <section class="screen on page-flush" data-screen="home" id="screen-home">
+        <div class="split">
+          <div class="split-main">
+            <div class="phead"><h1 id="queue-title">Nothing needs you</h1><span class="pmeta" id="fleet-summary">Loading&hellip;</span><span class="grow"></span><span class="pmeta" id="queue-keys">J / K move &middot; Enter acts</span></div>
+            <ol class="queue" id="home-queue"></ol>
+            <div class="newrow" id="home-build-cta" data-go="build" role="button" tabindex="0">
+              <span class="newrow-plus" aria-hidden="true">+</span>
+              <span><b>New package</b> <span class="dim">drop an installer, check what was read from it, build</span></span>
+              <kbd>Ctrl O</kbd>
             </div>
-            <div class="card" style="padding:11px 14px">
-              <div class="eyebrow">deployed</div>
-              <div style="font-family:var(--font-d);font-weight:700;font-size:22px;margin-top:3px;color:var(--ok)" id="stat-deployed">0</div>
-            </div>
-            <div class="card" style="padding:11px 14px">
-              <div class="eyebrow">updates available</div>
-              <div style="font-family:var(--font-d);font-weight:700;font-size:22px;margin-top:3px;color:var(--warn)" id="stat-updates">0</div>
-            </div>
-            <div class="card" style="padding:11px 14px">
-              <div class="eyebrow">not yet deployed</div>
-              <div style="font-family:var(--font-d);font-weight:700;font-size:22px;margin-top:3px;color:var(--signal)" id="stat-pending">0</div>
+            <div class="stats" id="home-stats">
+              <div><b id="stat-total">0</b><span>apps tracked</span></div>
+              <div><b id="stat-deployed">0</b><span>deployed</span></div>
+              <div><b id="stat-updates">0</b><span>newer in winget</span></div>
+              <div><b id="stat-pending">0</b><span>not deployed yet</span></div>
             </div>
           </div>
 
-          <div class="card rise" id="getting-started-card" style="display:none;padding:14px 16px;margin-bottom:12px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div><div class="eyebrow">getting started</div><div class="card-t" style="margin-top:2px">A few things to try</div></div>
-              <div style="display:flex;gap:8px">
-                <button class="btn primary sm" id="getting-started-tour">Take the guided tour</button>
-                <button class="btn ghost sm" id="getting-started-dismiss">Dismiss</button>
-              </div>
-            </div>
-            <div id="getting-started-list"></div>
-          </div>
-
-          <div class="card rise" id="release-banner" style="display:none;padding:12px 16px;margin-bottom:14px;border-color:rgba(var(--signal-rgb),.3);background:rgba(var(--signal-rgb),.06);align-items:center;gap:10px">
-            <span style="font-family:var(--font-m);font-size:12px;color:var(--signal);flex:1" id="release-banner-text"></span>
-            <button class="btn sm" id="release-banner-github">View</button>
-            <button class="btn ghost sm" id="release-banner-dismiss">Dismiss</button>
-          </div>
-
-          <div class="card rise" id="worker-banner" style="padding:11px 16px;display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <span style="width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0" id="worker-dot"></span>
-            <span style="font-family:var(--font-m);font-size:12px;color:var(--dim)" id="worker-banner-text">Checking worker&hellip;</span>
-          </div>
-
-          <!-- Shown instead of the banner above when no worker is connected yet.
-               Deliberately muted/greyed (not a hard block) - building packages
-               works fully standalone, so this is an invitation, not a gate. -->
-          <div class="card rise" id="connect-card" style="display:none;padding:14px 16px;margin-bottom:12px;opacity:.72;transition:opacity .2s var(--ease)">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:40px;height:40px;border-radius:10px;background:var(--panel-2);border:1px solid var(--edge);display:grid;place-items:center;flex-shrink:0;color:var(--faint)">
-                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 12a8 8 0 0 1 14-5.2M20 12a8 8 0 0 1-14 5.2"/><path d="M17.5 4.5v3h-3M6.5 19.5v-3h3"/></svg>
-              </div>
-              <div style="flex:1">
-                <div style="font-family:var(--font-d);font-weight:600;font-size:14.5px;color:var(--dim)">Not connected to Cloudflare</div>
-                <div style="font-size:12px;color:var(--faint);margin-top:2px">Building packages works fine without this. Connecting adds: a live fleet view that updates as devices check in, automatic update checks so you're not rebuilding manually, and a password-protected status page you can check from anywhere.</div>
-              </div>
-              <button class="btn sm" id="connect-preview-btn">See what it does</button>
-              <button class="btn primary sm" id="connect-btn">Connect</button>
-              <button class="btn ghost sm" id="connect-card-dismiss" title="Hide this - bring it back any time from Worker &amp; settings">Dismiss</button>
+          <aside class="split-side">
+            <div class="notice" id="release-banner" style="display:none">
+              <span id="release-banner-text"></span>
+              <button class="linkbtn" id="release-banner-github">View</button>
+              <button class="linkbtn dim" id="release-banner-dismiss">Dismiss</button>
             </div>
 
-            <div id="connect-demo" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--edge)">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-                <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);animation:livepulse 1.6s infinite"></span>
-                <span style="font-family:var(--font-m);font-size:10.5px;color:var(--dim)">preview - your fleet dashboard once connected</span>
-              </div>
-              <div style="background:var(--panel-2);border:1px solid var(--edge);border-radius:8px;padding:14px 16px;font-family:var(--font-m);font-size:11px">
-                <div class="demo-row" style="display:flex;align-items:center;gap:10px;padding:6px 0;animation:rise .4s var(--ease) both">
-                  <span class="badge ok" style="animation:livepulse 2s infinite"><i></i>online</span>
-                  <span style="color:var(--ink);flex:1">VLC media player</span>
-                  <span style="color:var(--faint)">3.0.20 &#8594; 3.0.21</span>
-                </div>
-                <div class="demo-row" style="display:flex;align-items:center;gap:10px;padding:6px 0;animation:rise .4s var(--ease) .08s both">
-                  <span class="badge ok"><i></i>online</span>
-                  <span style="color:var(--ink);flex:1">7-Zip</span>
-                  <span style="color:var(--faint)">up to date</span>
-                </div>
-                <div class="demo-row" style="display:flex;align-items:center;gap:10px;padding:6px 0;animation:rise .4s var(--ease) .16s both">
-                  <span class="badge wn"><i></i>checking</span>
-                  <span style="color:var(--ink);flex:1">Notepad++</span>
-                  <span style="color:var(--faint)">last seen 4m ago</span>
-                </div>
-              </div>
-              <div class="hint" style="margin-top:10px">Live, updates automatically as devices check in - password-protected, only you can see it.</div>
+            <div class="side-card" id="getting-started-card" style="display:none">
+              <div class="side-h"><b>Getting started</b><span class="grow"></span>
+                <button class="linkbtn" id="getting-started-tour">Tour</button><button class="linkbtn dim" id="getting-started-dismiss">Dismiss</button></div>
+              <div id="getting-started-list"></div>
             </div>
-          </div>
 
-          <div class="card rise build-cta" id="home-build-cta" style="cursor:pointer" data-go="build" role="button" tabindex="0">
-            <div class="card-b" style="display:flex;align-items:center;gap:18px;padding:22px 24px">
-              <div style="width:58px;height:58px;border-radius:14px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 30px rgba(var(--signal-rgb),.45)">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" style="stroke:var(--on-accent)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <!-- Building works fully standalone, so this is an invitation, not a gate. -->
+            <div class="side-card" id="connect-card" style="display:none">
+              <div class="side-h"><b>Live fleet view</b><span class="grow"></span><button class="linkbtn dim" id="connect-card-dismiss" title="Bring it back from Settings">Dismiss</button></div>
+              <p class="side-p">Connect a Cloudflare worker to see devices check in, get automatic update checks and a password-protected status page. Building works without it.</p>
+              <div style="display:flex;gap:8px"><button class="btn primary sm" id="connect-btn">Connect</button><button class="btn sm" id="connect-preview-btn">What it shows</button></div>
+              <div id="connect-demo" style="display:none;margin-top:10px" class="demo-log">
+                <div><span class="ok">&#9679;</span> VLC media player <span class="dim">3.0.20 &rarr; 3.0.21 on 41 devices</span></div>
+                <div><span class="ok">&#9679;</span> 7-Zip <span class="dim">up to date</span></div>
+                <div><span class="warn">&#9679;</span> Notepad++ <span class="dim">last seen 4 min ago</span></div>
               </div>
-              <div>
-                <div class="eyebrow">start here</div>
-                <div style="font-family:var(--font-d);font-weight:700;font-size:19px;margin-top:2px">Build app package</div>
-                <div style="color:var(--dim);font-size:12.5px;margin-top:3px">Drop an installer, pick a profile, ship it.</div>
-              </div>
-              <div class="build-cta-arrow" style="margin-left:auto;color:var(--signal);font-size:26px">&#8250;</div>
             </div>
-          </div>
 
-          <div class="rise" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
-            <div class="card">
-              <div class="card-h" style="display:flex;align-items:baseline;justify-content:space-between">
-                <div><div class="eyebrow">activity</div><div class="card-t">Recent history</div></div>
-                <button class="btn ghost" data-go="history" style="font-size:11.5px">View all &#8250;</button>
-              </div>
-              <div class="card-b" style="padding-top:10px" id="home-recent-activity">
-                <p class="hint" style="margin:0">Nothing yet - build, deploy, or remove an app to see activity here.</p>
-              </div>
-            </div>
-            <div class="card" id="deploy-feedback" style="display:none;margin-bottom:16px">
-              <div class="card-h"><div class="eyebrow">since last time</div><div class="card-t">Did these install correctly on devices?</div></div>
-              <div class="card-b" style="padding-top:10px" id="deploy-feedback-list"></div>
-            </div>
-            <div class="card">
-              <div class="card-h" style="display:flex;align-items:baseline;justify-content:space-between">
-                <div><div class="eyebrow">fleet</div><div class="card-t">Tracked in local manifest</div></div>
-                <button class="btn ghost" data-go="fleet" style="font-size:11.5px">View all &#8250;</button>
-              </div>
-              <div class="card-b" style="padding-top:10px">
-                <table class="fleet" id="home-fleet-table"></table>
-              </div>
-            </div>
-          </div>
+            <div class="side-h"><b>Activity</b><span class="grow"></span><button class="linkbtn" data-go="history">History</button></div>
+            <div class="actlog" id="home-recent-activity"></div>
+          </aside>
         </div>
       </section>
 
@@ -773,61 +800,59 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
       </section>
 
       <!-- ========== PROGRESS ========== -->
-      <section class="screen" data-screen="progress" id="screen-progress">
-        <div style="max-width:760px;margin:0 auto">
-          <div class="rise" style="margin:20px 0 22px;text-align:center">
-            <div class="eyebrow">building</div>
-            <h2 style="font-family:var(--font-d);font-weight:600;font-size:21px;margin-top:4px" id="progress-title">Package</h2>
-            <div class="pbar" style="max-width:420px;margin:16px auto 0"><i id="progress-bar"></i></div>
+      <section class="screen page-flush" data-screen="progress" id="screen-progress">
+        <div class="split">
+          <div class="split-main">
+            <div class="phead"><h2 id="progress-title">Package</h2><span class="pmeta">building</span></div>
+            <div class="pbar"><i id="progress-bar"></i></div>
+            <div id="progress-error" style="display:none" class="check red">
+              <span class="g">&#10005;</span>
+              <div><b id="progress-error-title">Build failed</b><div class="t" id="progress-error-msg"></div>
+                <button class="btn sm" id="progress-error-back" style="margin-top:10px">Back to the builder</button></div>
+            </div>
+            <div class="log log-tall" id="log"></div>
           </div>
-          <div id="progress-error" class="rise" style="display:none;margin-bottom:16px;padding:14px 16px;border-radius:var(--r);background:rgba(var(--bad-rgb),.08);border:1px solid rgba(var(--bad-rgb),.35)">
-            <div style="font-weight:600;font-size:13.5px;color:var(--bad)" id="progress-error-title">Build failed</div>
-            <div id="progress-error-msg" style="font-size:12.5px;color:var(--dim);margin-top:4px;line-height:1.5"></div>
-            <button class="btn ghost sm" id="progress-error-back" style="margin-top:10px">Back to Build</button>
-          </div>
-          <div style="display:grid;grid-template-columns:260px 1fr;gap:16px" class="rise">
-            <div class="card"><div class="card-b" style="padding-top:12px" id="step-list"></div></div>
-            <div class="log" id="log"></div>
-          </div>
+          <aside class="split-side"><div class="side-h"><b>Steps</b></div><div id="step-list"></div></aside>
         </div>
       </section>
 
       <!-- ========== DONE ========== -->
-      <section class="screen" data-screen="done" id="screen-done">
-        <div style="max-width:640px;margin:0 auto;text-align:center;padding-top:24px">
-          <div class="done-ring rise">
-            <svg viewBox="0 0 76 76"><circle class="rg" cx="38" cy="38" r="34"/><circle class="rp" cx="38" cy="38" r="34"/></svg>
-            <div class="chk"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+      <section class="screen page-flush" data-screen="done" id="screen-done">
+        <div class="split">
+          <div class="split-main">
+            <div class="phead"><span class="okmark" aria-hidden="true">&#10003;</span><h2>Package ready</h2><span class="pmeta" id="done-path">&nbsp;</span></div>
+            <div class="sheet" id="done-sheet"></div>
           </div>
-          <h2 class="rise" style="font-family:var(--font-d);font-weight:600;font-size:22px">Package ready</h2>
-          <p class="rise" style="color:var(--dim);font-size:12.5px;margin-top:4px" id="done-path">&nbsp;</p>
-          <div class="sheet rise" style="margin-top:22px;text-align:left" id="done-sheet"></div>
-          <div class="rise" style="display:flex;gap:10px;justify-content:center;margin-top:22px">
-            <button class="btn primary" id="done-test">Test on this machine</button>
-            <button class="btn" id="done-deployed">Mark deployed</button>
-            <button class="btn" data-go="fleet">View fleet</button>
-            <button class="btn ghost" data-go="home">Done</button>
-          </div>
+          <aside class="split-side">
+            <div class="side-h"><b>Next</b><span class="pmeta">each step unlocks the next</span></div>
+            <ol class="steps">
+              <li id="done-step-test"><span class="sn">1</span><div><b>Test it here</b><p>Runs the real package on this machine as Intune would, then checks detection.</p>
+                <button class="btn primary sm" id="done-test">Test on this machine</button></div></li>
+              <li id="done-step-intune"><span class="sn">2</span><div><b>Add it to Intune</b><p>Upload the package with the install, uninstall and detection values on the left. Each has a copy button.</p></div></li>
+              <li id="done-step-deploy"><span class="sn">3</span><div><b>Mark it deployed</b><p>Once it is assigned. Home asks on a later launch whether it installed on devices.</p>
+                <button class="btn sm" id="done-deployed">Mark deployed</button></div></li>
+            </ol>
+            <div style="display:flex;gap:8px;margin-top:6px"><button class="btn sm" data-go="build">New package</button><button class="btn ghost sm" data-go="fleet">App fleet</button></div>
+          </aside>
         </div>
       </section>
 
       <!-- ========== FLEET ========== -->
-      <section class="screen" data-screen="fleet" id="screen-fleet">
-        <div style="max-width:1240px;margin:0 auto">
-          <div class="rise" style="margin:10px 0 18px;display:flex;align-items:center;gap:14px">
-            <h2 style="font-family:var(--font-d);font-weight:600;font-size:20px">App fleet</h2>
-            <span id="fleet-demo-badge" style="display:none;font-family:var(--font-m);font-size:10.5px;color:var(--warn);border:1px solid rgba(var(--warn-rgb),.35);background:rgba(var(--warn-rgb),.08);padding:3px 9px;border-radius:20px">example data - tour only</span>
-            <input class="field" id="fleet-filter" placeholder="Filter apps&hellip;" style="max-width:240px;padding:7px 12px">
-            <button class="btn primary" style="margin-left:auto" data-go="build">New package</button>
+      <section class="screen page-flush" data-screen="fleet" id="screen-fleet">
+        <div class="page">
+          <div class="phead"><h2>App fleet</h2><span class="pmeta" id="fleet-meta"></span>
+            <span id="fleet-demo-badge" class="pill warn" style="display:none">example data</span>
+            <span class="grow"></span>
+            <input class="field" id="fleet-filter" placeholder="Filter by name or ID" aria-label="Filter apps" style="width:260px;height:30px">
+            <button class="btn primary sm" data-go="build">New package</button>
           </div>
-          <div class="card rise"><div class="card-b" style="padding-top:6px">
-            <div id="fleet-bulk-bar" style="display:none;align-items:center;gap:12px;padding:8px 4px;margin-bottom:6px;border-bottom:1px solid var(--edge)">
-              <span id="fleet-bulk-count" style="font-size:12px;color:var(--dim)"></span>
-              <button class="btn sm primary" id="fleet-bulk-mark-deployed">Mark deployed</button>
-              <button class="btn sm ghost" id="fleet-bulk-clear">Clear selection</button>
-            </div>
-            <table class="fleet" id="fleet-table"></table>
-          </div></div>
+          <div class="fchips" id="fleet-chips" role="group" aria-label="Show"></div>
+          <div id="fleet-bulk-bar" class="bulkbar" style="display:none">
+            <span id="fleet-bulk-count"></span>
+            <button class="btn sm primary" id="fleet-bulk-mark-deployed">Mark deployed</button>
+            <button class="btn sm ghost" id="fleet-bulk-clear">Clear selection</button>
+          </div>
+          <div class="grid-wrap"><table class="grid" id="fleet-table"></table></div>
         </div>
 
         <!-- Local sanity check - runs the REAL detect/install/uninstall
@@ -855,103 +880,76 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
       </section>
 
       <!-- ========== WORKER & SETTINGS ========== -->
-      <section class="screen" data-screen="worker" id="screen-worker">
-        <div style="max-width:760px;margin:0 auto;padding-bottom:24px">
-          <h2 class="rise" style="font-family:var(--font-d);font-weight:600;font-size:20px;margin:8px 0 14px">Worker &amp; settings</h2>
-
-          <!-- Worker stays its own card - it has real distinct actions, not just toggles -->
-          <div class="card rise" id="worker-connect-card" style="margin-bottom:12px;padding:16px 20px">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
-              <div style="width:38px;height:38px;border-radius:10px;background:var(--grad);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 18px rgba(var(--signal-rgb),.3)">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" style="stroke:var(--on-accent)" stroke-width="2"><path d="M4 12a8 8 0 0 1 14-5.2M20 12a8 8 0 0 1-14 5.2"/><path d="M17.5 4.5v3h-3M6.5 19.5v-3h3"/></svg>
+      <section class="screen page-flush" data-screen="worker" id="screen-worker">
+        <div class="page">
+          <div class="phead"><h2>Settings</h2><span class="pmeta">changes save as you make them</span><span id="settings-saved-flash" class="pmeta" style="color:var(--ok);opacity:0;transition:opacity .3s">Saved</span>
+            <span class="grow"></span><span class="pmeta" id="settings-version">&nbsp;</span></div>
+          <div class="cols2">
+            <div>
+              <div class="bsec" id="worker-connect-card">
+                <div class="bsec-h"><span class="bsec-n">01</span><span class="bsec-t">Cloudflare worker</span><span class="bsec-rule"></span></div>
+                <div class="srow2"><span class="k">Status</span><span id="worker-status">Loading&hellip;</span></div>
+                <div class="srow2"><span class="k"></span>
+                  <div>
+                    <div id="worker-actions-connected" style="display:none;gap:8px">
+                      <button class="btn sm" id="btn-open-status">Open status page</button>
+                      <button class="btn sm" id="btn-worker-options">Worker options&hellip;</button>
+                      <button class="btn sm danger" id="btn-disconnect">Disconnect</button>
+                    </div>
+                    <div id="worker-actions-disconnected" style="display:none"><button class="btn primary sm" id="btn-worker-connect">Connect to Cloudflare</button></div>
+                    <p class="bnote" id="worker-actions-hint" style="margin-top:6px;display:none">Worker options covers re-deploy, custom domain, password reset, MFA and token rotation.</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <div class="card-t" style="margin:0">Cloudflare worker</div>
-                <div id="worker-status" style="margin-top:2px;color:var(--dim);font-size:12px">Loading&hellip;</div>
+              <div class="bsec">
+                <div class="bsec-h"><span class="bsec-n">02</span><span class="bsec-t">Online lookups</span><span class="bsec-rule"></span></div>
+                <div class="tglrow"><div><b>Online lookups</b><small>New releases on GitHub, installer switches from Microsoft's winget catalogue and CISA's list of actively exploited vulnerabilities. Off = no outbound call is ever made. Recommended off for air-gapped machines.</small></div><button class="tgl on" id="tgl-release-check"></button></div>
+                <div class="tglrow"><div><b>NIST vulnerability check</b><small>Before each build, asks NIST's National Vulnerability Database which CVEs affect the exact version being packaged. Sends the app's name and version to NIST. Warnings only; needs online lookups.</small></div><button class="tgl" id="tgl-nvd"></button></div>
               </div>
-            </div>
-            <div id="worker-actions-connected" style="display:none;gap:10px">
-              <button class="btn" id="btn-open-status">Open /status dashboard</button>
-              <button class="btn" id="btn-worker-options">More worker options&hellip;</button>
-              <button class="btn danger" id="btn-disconnect">Disconnect</button>
-            </div>
-            <div id="worker-actions-disconnected" style="display:none">
-              <button class="btn primary" id="btn-worker-connect">Connect to Cloudflare</button>
-            </div>
-            <p class="hint" id="worker-actions-hint" style="margin-top:10px;display:none">
-              "More worker options" covers re-deploy, custom domain, password reset, MFA and token rotation -
-              still the existing dialog for now while those get ported into the shell individually.
-            </p>
-          </div>
-
-          <!-- One consolidated preferences card instead of 4 near-identical
-               stacked boxes - everything below saves itself the instant you
-               change it (no separate Save button; a small "Saved" flash
-               confirms it, the same way most modern settings screens work). -->
-          <div class="card rise" style="margin-bottom:14px">
-            <div style="padding:18px 22px 4px;display:flex;align-items:center;justify-content:space-between">
-              <div class="card-t" style="margin:0">Preferences</div>
-              <span id="settings-saved-flash" style="font-size:11px;color:var(--ok);opacity:0;transition:opacity .3s">Saved</span>
-            </div>
-
-            <div style="padding:14px 22px">
-              <label class="lbl">Default organisation name</label>
-              <small style="color:var(--faint);font-size:10.5px;display:block;margin-bottom:6px">Used whenever a build has no client profile selected - backed by a Client Profile, managed from the nav rail.</small>
-              <select class="field" id="f-orgname-settings" style="max-width:320px"><option value="">Not set</option></select>
-              <div id="f-orgname-not-set-hint" style="display:none;margin-top:6px">
-                <span class="hint" style="margin:0">Not set - </span>
-                <button type="button" class="btn ghost sm" id="f-orgname-guide-btn" style="padding:0;display:inline;font-size:11px;color:var(--signal)">set up a client profile instead &#8250;</button>
+              <div class="bsec">
+                <div class="bsec-h"><span class="bsec-n">03</span><span class="bsec-t">Defaults</span><span class="bsec-rule"></span></div>
+                <div class="srow2"><label class="k" for="f-orgname-settings">Organisation</label>
+                  <div><select class="field" id="f-orgname-settings" style="max-width:320px;height:30px"><option value="">Not set</option></select>
+                    <div id="f-orgname-not-set-hint" style="display:none;margin-top:6px"><span class="bnote">Used when a build has no client profile. </span><button type="button" class="linkbtn" id="f-orgname-guide-btn">Set up a client profile</button></div></div></div>
               </div>
             </div>
-
-            <div style="padding:0 22px">
-              <div class="tglrow"><div><b>Online lookups</b><small>New releases on GitHub, installer switches from Microsoft's winget catalogue and CISA's list of actively exploited vulnerabilities. Off = no outbound call is ever made. Recommended off for air-gapped machines.</small></div><button class="tgl on" id="tgl-release-check"></button></div>
-              <div class="tglrow"><div><b>NIST vulnerability check</b><small>Before each build, asks NIST's National Vulnerability Database which CVEs affect the exact version being packaged. Sends the app's name and version to NIST. Warnings only; needs online lookups.</small></div><button class="tgl" id="tgl-nvd"></button></div>
-              <div class="tglrow"><div><b>Show Cloudflare connection promo</b><small>The "Not connected to Cloudflare" card on Home and the fleet empty-state tip. Off if you dismissed it, or if you're offline-only by design.</small></div><button class="tgl on" id="tgl-cf-advert"></button></div>
-              <div class="tglrow"><div><b>Show getting-started checklist</b><small>The "A few things to try" card on Home. Off if you dismissed it or it's not needed anymore.</small></div><button class="tgl on" id="tgl-getting-started"></button></div>
-            </div>
-
-            <div style="padding:14px 22px 20px;border-top:1px solid var(--edge);margin-top:4px">
-              <label class="lbl" style="margin-bottom:8px;display:block">Folders &amp; log</label>
-              <div style="display:flex;gap:10px">
-                <button class="btn sm" id="btn-open-output">Output</button>
-                <button class="btn sm" id="btn-open-cache">Toolkit cache</button>
-                <button class="btn sm" id="btn-open-log">Log</button>
-                <button class="btn sm" id="btn-open-github" style="margin-left:auto">GitHub releases</button>
+            <div>
+              <div class="bsec">
+                <div class="bsec-h"><span class="bsec-n">04</span><span class="bsec-t">Home screen</span><span class="bsec-rule"></span></div>
+                <div class="tglrow"><div><b>Show Cloudflare connection promo</b><small>The "Not connected to Cloudflare" card on Home and the fleet empty-state tip. Off if you dismissed it, or if you're offline-only by design.</small></div><button class="tgl on" id="tgl-cf-advert"></button></div>
+                <div class="tglrow"><div><b>Show getting-started checklist</b><small>The "A few things to try" card on Home. Off if you dismissed it or it's not needed anymore.</small></div><button class="tgl on" id="tgl-getting-started"></button></div>
               </div>
-              <div id="settings-release" style="font-size:11px;color:var(--dim);margin-top:10px">&nbsp;</div>
-            </div>
-          </div>
-
-          <!-- Recovery kept visually distinct - these are the two genuinely
-               destructive/consequential actions on this screen. -->
-          <div class="card rise" style="border-color:rgba(var(--warn-rgb),.25)">
-            <div class="card-b">
-              <div style="display:flex;align-items:center;gap:8px"><span class="eyebrow" style="color:var(--warn)">recovery</span></div>
-              <p class="hint" style="margin:8px 0 12px">A passphrase-protected backup of your config, token, client profiles and manifest. Restores only on THIS machine - for a new machine, reconnect to the Worker and re-run setup.</p>
-              <div style="display:flex;gap:10px">
-                <button class="btn primary" id="btn-export-recovery">Export recovery bundle&hellip;</button>
-                <button class="btn" id="btn-import-recovery">Import bundle&hellip;</button>
+              <div class="bsec">
+                <div class="bsec-h"><span class="bsec-n">05</span><span class="bsec-t">Folders &amp; log</span><span class="bsec-rule"></span></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">
+                  <button class="btn sm" id="btn-open-output">Output</button>
+                  <button class="btn sm" id="btn-open-cache">Toolkit cache</button>
+                  <button class="btn sm" id="btn-open-log">Log</button>
+                  <button class="btn sm ghost" id="btn-open-github" style="margin-left:auto">GitHub releases</button>
+                </div>
+                <div id="settings-release" class="bnote">&nbsp;</div>
+              </div>
+              <div class="bsec">
+                <div class="bsec-h"><span class="bsec-n">06</span><span class="bsec-t">Recovery</span><span class="bsec-rule"></span></div>
+                <p class="bnote" style="margin:4px 0 10px">A passphrase-protected backup of the config, token, client profiles and manifest. It restores only on this machine; a new machine reconnects to the worker instead.</p>
+                <div style="display:flex;gap:8px"><button class="btn sm" id="btn-export-recovery">Export bundle&hellip;</button><button class="btn sm" id="btn-import-recovery">Import bundle&hellip;</button></div>
               </div>
             </div>
           </div>
-
-          <div id="settings-version" style="text-align:center;margin-top:16px;font-size:11px;color:var(--faint)">&nbsp;</div>
         </div>
       </section>
 
       <!-- ========== CLIENT PROFILES ========== -->
-      <section class="screen" data-screen="profiles" id="screen-profiles">
-        <div style="max-width:1240px;margin:0 auto">
-          <div class="rise" style="margin:10px 0 14px;display:flex;align-items:center;gap:14px">
-            <h2 style="font-family:var(--font-d);font-weight:600;font-size:20px">Client profiles</h2>
-            <p class="hint" style="margin:0">Branding + defaults applied to every build for a client.</p>
-          </div>
-          <div id="profiles-strip" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
-
-          <div id="profile-editor" style="max-width:1240px;margin:0 auto">
-          <div class="card rise" style="display:flex;overflow:hidden">
-            <div style="width:320px;flex-shrink:0;padding:20px;overflow-y:auto;border-right:1px solid var(--edge)">
+      <section class="screen page-flush" data-screen="profiles" id="screen-profiles">
+        <div class="pf-layout">
+          <nav class="pf-list" aria-label="Profiles">
+            <div class="phead"><h2>Client profiles</h2></div>
+            <p class="bnote" style="margin:0 0 10px">Branding and defaults applied to every build for a client.</p>
+            <div id="profiles-strip"></div>
+          </nav>
+          <div id="profile-editor" style="display:contents">
+          <div style="display:contents">
+            <div class="pf-form">
               <div class="eyebrow" style="margin-bottom:10px" id="pf-editing-label">new profile</div>
               <label class="lbl">Name</label>
               <input class="field" id="pf-name" style="margin-bottom:10px">
@@ -980,7 +978,7 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
               </div>
             </div>
 
-            <div style="flex:1;padding:20px;overflow-y:auto;background:var(--void);min-width:0">
+            <div class="pf-preview">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
                 <div class="eyebrow" style="margin:0">preview - what a real build with this profile looks like</div>
                 <div class="seg" id="segPfSwap" style="transform:scale(.82);transform-origin:left center;margin-left:-6px">
@@ -1032,24 +1030,18 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
       </section>
 
       <!-- ========== HISTORY ========== -->
-      <section class="screen" data-screen="history" id="screen-history">
-        <div style="max-width:1240px;margin:0 auto">
-          <div class="rise" style="margin:10px 0 18px;display:flex;align-items:center;gap:14px">
-            <h2 style="font-family:var(--font-d);font-weight:600;font-size:20px">History</h2>
-            <span id="history-demo-badge" style="display:none;font-family:var(--font-m);font-size:10.5px;color:var(--warn);border:1px solid rgba(var(--warn-rgb),.35);background:rgba(var(--warn-rgb),.08);padding:3px 9px;border-radius:20px">example data - tour only</span>
-            <p class="hint" style="margin:0">Every build, deploy-mark, and removal recorded on this machine, most recent first.</p>
+      <section class="screen page-flush" data-screen="history" id="screen-history">
+        <div class="page">
+          <div class="phead"><h2>History</h2><span class="pmeta">every build, deploy mark and removal on this machine</span>
+            <span id="history-demo-badge" class="pill warn" style="display:none">example data</span><span class="grow"></span>
+            <input class="field" id="history-filter" placeholder="Filter by app" aria-label="Filter history" style="width:220px;height:30px"></div>
+          <div class="fchips" id="history-chips" role="group" aria-label="Show"></div>
+          <div class="grid-wrap"><table class="grid" id="history-table"></table></div>
+          <div id="history-empty" class="empty" style="display:none">
+            <b>No history yet</b>
+            <p>Builds, deploy marks and removals on this machine are listed here, newest first.</p>
+            <button class="btn primary sm" data-go="build">Build a package</button>
           </div>
-          <div class="card rise"><div class="card-b" style="padding-top:6px">
-            <table class="fleet" id="history-table"></table>
-            <div id="history-empty" style="display:none;text-align:center;padding:44px 20px">
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="var(--faint)" stroke-width="1.5" style="margin-bottom:14px">
-                <path d="M3 3v5h5"/><path d="M3.05 13a9 9 0 1 0 2.13-7.83L3 8"/><path d="M12 7v5l4 2"/>
-              </svg>
-              <div style="font-family:var(--font-d);font-weight:600;font-size:15px;margin-bottom:6px">No history yet</div>
-              <p class="hint" style="max-width:380px;margin:0 auto 18px">Every build, deploy-mark, and removal you perform on this machine will show up here automatically, most recent first.</p>
-              <button class="btn primary sm" data-go="build">Build your first package</button>
-            </div>
-          </div></div>
         </div>
       </section>
 
@@ -1957,6 +1949,7 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
         case 'build-done':
           window._lastBuiltAppId = $('#f-appid').value;
           $('#done-deployed').disabled = false;
+          $('#done-step-test').className = 'now'; $('#done-step-intune').className = ''; $('#done-step-deploy').className = '';
           $('#progress-bar').style.width = '100%';
           $('#done-path').textContent = payload.path || '';
           renderDoneSheet(payload);
@@ -2083,6 +2076,10 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
         case 'test-log':
           if (payload.line) logTestLine(payload.line);
           if (payload.done) logTestLine(payload.ok ? '\u2713 Done' : '\u2717 Failed', payload.ok ? 'ok' : 'wr');
+          // A passing test of the package just built moves the done screen on to the Intune step.
+          if (payload.done && payload.ok && currentTestId === window._lastBuiltAppId) {
+            $('#done-step-test').className = 'did'; $('#done-step-intune').className = 'did'; $('#done-step-deploy').className = 'now';
+          }
           if (payload.done && payload.suggestedRegistryName) {
             addTestFix(`Use "${payload.suggestedRegistryName}" as the registry name`, () => {
               $('#f-registryname').value = payload.suggestedRegistryName;
@@ -2111,25 +2108,73 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
     });
   }
 
+  // Asked once per launch; "Later" asks again next time.
+  window._feedbackAnswered = new Set();
+  window._feedbackDue = [];
   function renderDeployFeedback(due) {
-    // Asked once per launch; "Later" asks again next time.
-    window._feedbackAnswered = window._feedbackAnswered || new Set();
-    const items = (Array.isArray(due) ? due : []).filter(d => !window._feedbackAnswered.has(d.id));
-    $('#deploy-feedback').style.display = items.length ? 'block' : 'none';
-    $('#deploy-feedback-list').innerHTML = items.map(d => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
-        <span style="flex:1"><b style="font-weight:600">${escapeHtml(d.name)}</b> <span class="mono">${escapeHtml(d.version || '')}</span></span>
-        <button class="btn sm" data-feedback="${escapeHtml(d.id)}" data-outcome="ok">Yes</button>
-        <button class="btn sm danger" data-feedback="${escapeHtml(d.id)}" data-outcome="failed">No</button>
-        <button class="btn ghost sm" data-feedback="${escapeHtml(d.id)}" data-outcome="later">Later</button>
-      </div>`).join('');
-    $('#deploy-feedback-list').querySelectorAll('[data-feedback]').forEach(b => b.addEventListener('click', () => {
-      window._feedbackAnswered.add(b.dataset.feedback);
-      if (b.dataset.outcome !== 'later') send('deploy-feedback', { id: b.dataset.feedback, outcome: b.dataset.outcome });
-      if (b.dataset.outcome === 'failed') toast('Noted', 'The next package of this app will show a warning before it is built.');
-      renderDeployFeedback(items);
-    }));
+    window._feedbackDue = Array.isArray(due) ? due : [];
+    renderQueue();
   }
+  const typeLabel = t => ({ intunewin: '.intunewin', 'psadt-v4': 'PSADT v4', 'psadt-v3': 'PSADT v3', psadt: 'PSADT', runtime: 'Runtime', printer: 'Printer' })[String(t || '').toLowerCase()] || (t || '\u2014');
+  function ago(at) {
+    const t = new Date(at).getTime();
+    if (!t) return '';
+    const m = Math.round((Date.now() - t) / 60000);
+    return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago';
+  }
+  const feedbackOpen = id => window._feedbackDue.some(d => d.id === id && !window._feedbackAnswered.has(d.id));
+  // One place decides what an app needs next, so Home and Fleet always agree.
+  function appState(a) {
+    const v = a.version ? ' ' + a.version : '';
+    if (a.outcome === 'failed') return { tone: 'bad', g: '\u2715', label: 'Reported failing', detail: 'reported as not installing', hint: 'rebuild with a fix, test it, deploy again', act: ['Rebuild', 'data-rebuild', true], v };
+    if (feedbackOpen(a.id)) return { tone: 'warn', g: '?', label: 'Did it install?', detail: 'was deployed. Did it install on devices?', hint: 'the answer is shown before the next build of this app', ask: true, v };
+    if (a.status === 'unknown') return { tone: 'dim', g: '\u00b7', label: 'Not built here', act: ['Package', 'data-rebuild', false], v };
+    if (a.status !== 'deployed' && a.outputDir && !a.tested) return { tone: 'warn', g: '\u25d0', label: 'Built, not tested', detail: 'is built but not tested yet', hint: 'test it here before it goes to devices', act: ['Test here', 'data-test', true], v };
+    if (a.status !== 'deployed') return { tone: 'sig', g: '\u2192', label: 'Ready to deploy', detail: 'is tested. Add it to Intune, then mark it deployed', hint: '', act: ['Mark deployed', 'data-mark-deployed', true], v };
+    if (a.newerVersion) return { tone: 'sig', g: '\u2191', label: a.newerVersion + ' in winget', detail: 'has ' + a.newerVersion + ' in winget', hint: 'settings from the last build are reused', act: ['Package ' + a.newerVersion, 'data-rebuild', false], v };
+    return { tone: 'ok', g: '\u2713', label: a.outcome === 'ok' ? 'Installing fine' : 'Deployed', act: null, v };
+  }
+  const actBtn = (act, id, extra) => `<button class="btn sm${act[2] ? ' primary' : ''}" ${act[1]}="${escapeHtml(id)}"${extra || ''}>${escapeHtml(act[0])}</button>`;
+  let queueSel = 0;
+  function renderQueue() {
+    const rank = { bad: 0, warn: 1, sig: 2 };
+    const items = lastFleet.map(a => ({ a, st: appState(a) })).filter(x => x.st.detail && !window._tourDemoFleet)
+      .sort((x, y) => rank[x.st.tone] - rank[y.st.tone]);
+    // Apps asked about that are no longer in the fleet still get asked.
+    for (const d of window._feedbackDue) if (feedbackOpen(d.id) && !lastFleet.some(a => a.id === d.id))
+      items.splice(0, 0, { a: { id: d.id, name: d.name, type: '' }, st: { tone: 'warn', g: '?', detail: 'was deployed. Did it install on devices?', hint: '', ask: true, v: d.version ? ' ' + d.version : '' } });
+    queueSel = Math.max(0, Math.min(queueSel, items.length - 1));
+    $('#queue-title').textContent = items.length ? `${items.length} thing${items.length === 1 ? '' : 's'} need${items.length === 1 ? 's' : ''} you` : 'Nothing needs you';
+    $('#queue-keys').style.display = items.length > 1 ? '' : 'none';
+    $('#home-queue').innerHTML = items.map(({ a, st }, i) => {
+      const acts = st.ask
+        ? `<button class="btn sm" data-feedback="${escapeHtml(a.id)}" data-outcome="ok">Yes</button><button class="btn sm danger" data-feedback="${escapeHtml(a.id)}" data-outcome="failed">No</button><button class="btn ghost sm" data-feedback="${escapeHtml(a.id)}" data-outcome="later">Later</button>`
+        : actBtn(st.act, a.id);
+      const meta = [typeLabel(a.type) !== '\u2014' ? typeLabel(a.type) : '', a.builtAt ? 'built ' + ago(a.builtAt) : '', st.hint].filter(Boolean).join(' \u00b7 ');
+      return `<li class="qrow${i === queueSel ? ' sel' : ''}" data-q="${i}"><span class="qg ${st.tone}" aria-hidden="true">${st.g}</span>
+        <div style="min-width:0"><div><b>${escapeHtml(a.name + st.v)}</b> <span class="qd">${escapeHtml(st.detail)}</span></div><div class="qm">${escapeHtml(meta)}</div></div>
+        <div class="qa">${acts}</div></li>`;
+    }).join('');
+  }
+  document.addEventListener('click', e => {
+    const fb = e.target.closest('[data-feedback]');
+    if (fb) {
+      window._feedbackAnswered.add(fb.dataset.feedback);
+      if (fb.dataset.outcome !== 'later') send('deploy-feedback', { id: fb.dataset.feedback, outcome: fb.dataset.outcome });
+      if (fb.dataset.outcome === 'failed') toast('Noted', 'The next package of this app will show a warning before it is built.');
+      renderQueue(); paintFleet();
+    }
+    const q = e.target.closest('.qrow');
+    if (q) { queueSel = Number(q.dataset.q); $$('#home-queue .qrow').forEach((r, i) => r.classList.toggle('sel', i === queueSel)); }
+  });
+  document.addEventListener('keydown', e => {
+    if (!$('#screen-home').classList.contains('on') || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '') || !$('#cmdk').hidden) return;
+    const rows = $$('#home-queue .qrow');
+    if (!rows.length) return;
+    if (e.key === 'j' || e.key === 'k') { queueSel = Math.max(0, Math.min(rows.length - 1, queueSel + (e.key === 'j' ? 1 : -1))); rows.forEach((r, i) => r.classList.toggle('sel', i === queueSel)); }
+    else if (e.key === 'Enter') { const b = rows[queueSel] && rows[queueSel].querySelector('.qa .btn'); if (b) { e.preventDefault(); b.click(); } }
+  });
   function chipHtml(c) {
     const detail = c.detail ? ` data-detail="${escapeHtml(c.detail)}" data-link="${escapeHtml(c.link || '')}" data-link-label="${escapeHtml(c.linkLabel || '')}" tabindex="0" role="button"` : '';
     return `<span class="chip ${escapeHtml(c.tone || '')}${c.detail ? ' has-detail' : ''}"${detail}><i></i>${escapeHtml(c.label)}</span>`;
@@ -2172,6 +2217,7 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
   $('#done-deployed').addEventListener('click', () => {
     send('mark-deployed', { id: window._lastBuiltAppId });
     $('#done-deployed').disabled = true;
+    ['test', 'intune', 'deploy'].forEach(k => { $('#done-step-' + k).className = 'did'; });
     toast('Marked deployed', 'AppUpdater will ask on a later launch whether it installed correctly.');
   });
   function setToggle(key, on) {
@@ -2253,11 +2299,10 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
     sel.innerHTML = '<option value="">Default (uses Settings organisation name)</option>' +
       profiles.map(function(p){ return '<option value="' + escapeHtml(p.Name) + '">' + escapeHtml(p.Name) + '</option>'; }).join('');
     grid.innerHTML = profiles.map(function(p){
-      var active = p.Name === editingProfile ? ' style="border-color:var(--signal);color:var(--signal)"' : '';
-      return '<button class="btn sm" data-edit-profile="' + escapeHtml(p.Name) + '"' + active + '>' + escapeHtml(p.Name) +
-        (p.Name === lastUsed ? ' <span style="color:var(--faint);font-size:10px">&middot; last used</span>' : '') + '</button>';
+      return '<button class="pf-item' + (p.Name === editingProfile ? ' on' : '') + '" data-edit-profile="' + escapeHtml(p.Name) + '"><b>' + escapeHtml(p.Name) + '</b>' +
+        '<span>' + escapeHtml(p.OrgName || 'no organisation override') + (p.Name === lastUsed ? ' &middot; last used' : '') + '</span></button>';
     }).join('') +
-      '<button class="btn sm primary" id="new-profile-card">+ New profile</button>';
+      '<button class="pf-item new' + (editingProfile === null ? ' on' : '') + '" id="new-profile-card"><b>+ New profile</b><span>logo, banner, organisation, output</span></button>';
   }
   function renderOrgNameSettingsSelect() {
     const sel = $('#f-orgname-settings');
@@ -2511,12 +2556,6 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
   window._showCfAdvert = true;
   window._showGettingStarted = true;
   window._showCfNav = true;
-  function badgeHtml(status) {
-    if (status === 'deployed') return `<span class="badge ok"><i></i>deployed</span>`;
-    if (status === 'built - not deployed') return `<span class="badge" style="color:var(--signal);border-color:rgba(var(--signal-rgb),.3);background:rgba(var(--signal-rgb),.07)"><i style="background:currentColor"></i>built &middot; not deployed</span>`;
-    if (status === 'unknown') return `<span class="badge" style="color:var(--faint);border-color:var(--edge)"><i style="background:currentColor"></i>untracked</span>`;
-    return `<span class="badge wn"><i></i>update available</span>`;
-  }
   function renderHomeStats(apps) {
     const total = apps.length;
     const deployed = apps.filter(a => a.status === 'deployed').length;
@@ -2526,20 +2565,22 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
     $('#stat-deployed').textContent = deployed;
     $('#stat-updates').textContent = updates;
     $('#stat-pending').textContent = pending;
+    $('#stat-updates').textContent = apps.filter(a => a.newerVersion).length;
   }
+  function shortWhen(at) {
+    const d = new Date(at), now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.toTimeString().slice(0, 5);
+    return (now - d) < 6 * 864e5 ? d.toLocaleDateString(undefined, { weekday: 'short' }) : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  }
+  const eventMark = ev => ev.indexOf('deployed') === 0 ? ['ok', '\u2713'] : ev.indexOf('removed') === 0 ? ['warn', '\u2212'] : ['sig', '\u25a0'];
   function renderRecentActivity(events) {
     const el = $('#home-recent-activity');
     if (!el) return;
-    const recent = (events || []).slice(0, 4);
+    const recent = (events || []).slice(0, 18);
     el.innerHTML = recent.length
-      ? recent.map(ev => `
-        <div class="tglrow" style="padding:7px 0">
-          <div style="min-width:0"><b style="font-weight:600;font-size:12.5px">${escapeHtml(ev.name)}</b>
-            <div class="mono" style="font-size:10px;color:var(--faint)">${new Date(ev.at).toLocaleString()}</div>
-          </div>
-          ${historyBadgeHtml(ev.event)}
-        </div>`).join('')
-      : `<p class="hint" style="margin:0">Nothing yet - build, deploy, or remove an app to see activity here.</p>`;
+      ? recent.map(ev => { const m = eventMark(ev.event); return `<div class="al"><span class="t">${escapeHtml(shortWhen(ev.at))}</span><span class="${m[0]}" aria-hidden="true">${m[1]}</span>
+          <span class="x" title="${escapeHtml(ev.name + ' ' + ev.event)}">${escapeHtml(ev.event)} ${escapeHtml(ev.name)}${ev.target ? ' \u00b7 ' + escapeHtml(typeLabel(ev.target)) : ''}</span></div>`; }).join('')
+      : `<span class="none">Builds, tests and deploy marks show up here.</span>`;
   }
   function renderGettingStarted() {
     const card = $('#getting-started-card');
@@ -2733,96 +2774,80 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
     paintFleet();
     renderHomeStats(lastFleet);
     renderGettingStarted();
-    const banner = $('#worker-banner'), dot = $('#worker-dot'), bannerText = $('#worker-banner-text');
     const connectCard = $('#connect-card'), workerStatus = $('#worker-status');
     const actionsConnected = $('#worker-actions-connected'), actionsDisconnected = $('#worker-actions-disconnected'), actionsHint = $('#worker-actions-hint');
     if (window._workerUrl) {
-      banner.style.display = 'flex';
       connectCard.style.display = 'none';
-      dot.style.background = 'var(--ok)';
-      bannerText.style.color = 'var(--ok)';
-      bannerText.textContent = `${window._workerUrl} — connected`;
       workerStatus.innerHTML = `<span style="display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span><span style="font-family:var(--font-m);font-size:12px;color:var(--ok)">${escapeHtml(window._workerUrl)}</span></span>`;
       actionsConnected.style.display = 'flex';
       actionsDisconnected.style.display = 'none';
       actionsHint.style.display = 'block';
     } else {
-      banner.style.display = 'flex';
-      dot.style.background = 'var(--faint)';
-      bannerText.style.color = 'var(--dim)';
-      bannerText.textContent = 'Not yet connected to Cloudflare';
       connectCard.style.display = window._showCfAdvert ? 'block' : 'none';
-      workerStatus.textContent = 'Not connected yet.';
+      workerStatus.innerHTML = '<span class="dim">Not connected. Building works without it.</span>';
       actionsConnected.style.display = 'none';
       actionsDisconnected.style.display = 'block';
       actionsHint.style.display = 'none';
     }
   }
   function fleetEmptyHtml() {
-    if (window._workerUrl || !window._showCfAdvert) {
-      return `<tr><td style="color:var(--faint);padding:18px 14px">No apps tracked yet - build your first package.</td></tr>`;
-    }
-    return `<tr><td style="padding:22px 18px">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
-        <div style="flex:1;min-width:220px">
-          <div style="font-weight:600;font-size:13.5px;color:var(--dim)">No apps tracked yet</div>
-          <div style="font-size:12px;color:var(--faint);margin-top:3px">Build your first package below - or connect to Cloudflare first for a live fleet view that updates as devices check in, not just this machine's local records.</div>
-        </div>
-        <button class="btn primary sm" data-go="build">Build your first package</button>
-        <button class="btn sm" data-go="worker">Connect</button>
-        <button class="btn ghost sm" data-fleet-advert-dismiss>Dismiss</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);animation:livepulse 1.6s infinite"></span>
-        <span style="font-family:var(--font-m);font-size:10.5px;color:var(--dim)">example - what this table looks like once connected</span>
-      </div>
-      <div style="background:var(--panel-2);border:1px solid var(--edge);border-radius:8px;padding:14px 16px;font-family:var(--font-m);font-size:11px">
-        <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-          <span class="badge ok"><i></i>online</span>
-          <span style="color:var(--ink);flex:1">VLC media player</span>
-          <span style="color:var(--faint)">3.0.20 &#8594; 3.0.21</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-          <span class="badge ok"><i></i>online</span>
-          <span style="color:var(--ink);flex:1">7-Zip</span>
-          <span style="color:var(--faint)">up to date</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-          <span class="badge wn"><i></i>checking</span>
-          <span style="color:var(--ink);flex:1">Notepad++</span>
-          <span style="color:var(--faint)">last seen 4m ago</span>
-        </div>
-      </div>
-    </td></tr>`;
+    const cf = !window._workerUrl && window._showCfAdvert
+      ? ` <button class="linkbtn" data-go="worker">Connect a worker</button> to see devices check in as well. <button class="linkbtn dim" data-fleet-advert-dismiss>Hide this</button>` : '';
+    return `<tr><td class="empty-cell" colspan="7">No apps tracked yet. <button class="linkbtn" data-go="build">Build a package</button> and it appears here.${cf}</td></tr>`;
+  }
+  let fleetView = 'all';
+  const fleetViews = [
+    ['all', 'All', () => true],
+    ['needs', 'Needs you', a => { const st = appState(a); return st.tone === 'bad' || st.tone === 'warn' || !!(st.act && st.act[2]); }],
+    ['undeployed', 'Not deployed', a => a.status !== 'deployed'],
+    ['newer', 'Newer in winget', a => !!a.newerVersion],
+    ['failing', 'Failing', a => a.outcome === 'failed']
+  ];
+  function ledgerHtml(a) {
+    const l = Array.isArray(a.ledger) ? a.ledger : [];
+    if (!l.length) return '<span class="id">\u2014</span>';
+    return '<div class="ledger">' + l.map(v => `<div class="lv" title="${escapeHtml(v.v)}: built${v.t ? ', tested' : ''}${v.d ? ', deployed' : ''}${v.o === 'ok' ? ', installed fine' : v.o === 'failed' ? ', reported failing' : ''}">
+      <div class="sq"><i class="b"></i><i class="${v.t ? 't' : ''}"></i><i class="${v.d ? 'd' : ''}"></i><i class="${v.o === 'ok' ? 'o' : v.o === 'failed' ? 'x' : ''}"></i></div><span>${escapeHtml(v.v)}</span></div>`).join('') + '</div>';
   }
   function paintFleet() {
     const q = ($('#fleet-filter') ? $('#fleet-filter').value : '').toLowerCase();
-    const apps = lastFleet.filter(a => !q || a.name.toLowerCase().includes(q));
+    $('#fleet-chips').innerHTML = fleetViews.map(v => `<button class="fchip${fleetView === v[0] ? ' on' : ''}" data-fleet-view="${v[0]}">${v[1]} <span>${lastFleet.filter(v[2]).length}</span></button>`).join('');
+    const pred = (fleetViews.find(v => v[0] === fleetView) || fleetViews[0])[2];
+    const apps = lastFleet.filter(a => pred(a) && (!q || a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q)));
     const rowsHtml = apps.map(a => {
-      const actions = a.status === 'built - not deployed' || a.status === 'unknown'
-        ? `<button class="btn sm" data-rebuild="${escapeHtml(a.id)}">Preview</button><button class="btn primary sm" data-mark-deployed="${escapeHtml(a.id)}">Mark deployed</button>`
-        : a.status === 'update available'
-        ? `<button class="btn sm" data-rebuild="${escapeHtml(a.id)}">Rebuild</button>`
-        : `<button class="btn sm" data-rebuild="${escapeHtml(a.id)}">Preview</button>`;
-      const testBtn = a.outputDir ? `<button class="btn sm" data-test="${escapeHtml(a.id)}" title="Run the real install/detect scripts on this machine">Test locally</button>` : '';
-      const removeBtn = `<button class="btn sm danger" data-remove="${escapeHtml(a.id)}" title="Remove from the manifest, with the option to also clean up this machine">Remove</button>`;
+      const st = appState(a), id = escapeHtml(a.id);
+      const primary = st.ask ? `<button class="btn sm primary" data-go="home">Answer</button>` : st.act ? actBtn(st.act, a.id) : '';
+      const menu = [
+        a.outputDir && !(st.act && st.act[1] === 'data-test') ? `<button data-test="${id}">Test on this machine</button>` : '',
+        st.act && st.act[1] === 'data-rebuild' ? '' : `<button data-rebuild="${id}">Rebuild</button>`,
+        a.status !== 'deployed' && !(st.act && st.act[1] === 'data-mark-deployed') ? `<button data-mark-deployed="${id}">Mark deployed</button>` : '',
+        `<button class="danger" data-remove="${id}">Remove&hellip;</button>`].join('');
       const checked = selectedFleetIds.has(a.id) ? ' checked' : '';
-      return `
-      <tr class="r"><td style="width:26px"><input type="checkbox" data-select="${escapeHtml(a.id)}"${checked}></td>
-      <td style="width:32%"><b style="font-weight:600">${escapeHtml(a.name)}</b><div class="mono">${escapeHtml(a.id)}${a.profile ? ' &middot; ' + escapeHtml(a.profile) : ''}</div></td>
-      <td class="mono">${escapeHtml(a.version || 'auto')}${a.newerVersion ? `<div style="color:var(--signal)" title="winget package ${escapeHtml(a.wingetId)}">${escapeHtml(a.newerVersion)} available</div>` : ''}</td><td class="mono">${escapeHtml(a.type || '\u2014')}</td>
-      <td style="text-align:right">${badgeHtml(a.status)}</td>
-      <td style="text-align:right;white-space:nowrap">${actions} ${testBtn} ${removeBtn}</td></tr>`;
+      return `<tr class="r"><td><input type="checkbox" data-select="${id}"${checked} aria-label="Select ${escapeHtml(a.name)}"></td>
+      <td><div class="nm">${escapeHtml(a.name)}</div><div class="id">${id}${a.profile ? ' \u00b7 ' + escapeHtml(a.profile) : ''}</div></td>
+      <td class="mono">${escapeHtml(a.version || 'auto')}${a.newerVersion ? `<span class="newer" title="winget package ${escapeHtml(a.wingetId)}"> \u2192 ${escapeHtml(a.newerVersion)}</span>` : ''}</td>
+      <td class="mono dim">${escapeHtml(typeLabel(a.type))}</td>
+      <td>${ledgerHtml(a)}</td>
+      <td class="st ${st.tone}"><span aria-hidden="true">${st.g}</span> ${escapeHtml(st.label)}</td>
+      <td><div class="next">${primary}<details class="rowmenu"><summary aria-label="More for ${escapeHtml(a.name)}">\u22ef</summary><div>${menu}</div></details></div></td></tr>`;
     }).join('');
     const presentIds = new Set(apps.map(a => a.id));
     for (const id of Array.from(selectedFleetIds)) if (!presentIds.has(id)) selectedFleetIds.delete(id);
-    $('#fleet-table').innerHTML = apps.length
-      ? `<tr><th style="width:26px"></th><th style="width:32%">App</th><th>Version</th><th>Target</th><th style="text-align:right" title="Reflects local build/deploy records only, not live device state">Status</th><th></th></tr>${rowsHtml}`
-      : fleetEmptyHtml();
-    $('#home-fleet-table').innerHTML = rowsHtml || `<tr><td style="color:var(--faint);padding:18px 14px">No apps tracked yet - build your first package.</td></tr>`;
-    $('#fleet-summary').textContent = `${lastFleet.length} app${lastFleet.length === 1 ? '' : 's'} in the fleet`;
+    $('#fleet-table').innerHTML = `<colgroup><col style="width:40px"><col><col style="width:150px"><col style="width:110px"><col style="width:250px"><col style="width:170px"><col style="width:200px"></colgroup>
+      <tr><th></th><th>App</th><th>Version</th><th>Output</th><th>Versions <span class="legend">built \u00b7 tested \u00b7 deployed \u00b7 installed</span></th><th>State</th><th style="text-align:right">Next</th></tr>` +
+      (rowsHtml || (lastFleet.length ? `<tr><td class="empty-cell" colspan="7">Nothing matches.</td></tr>` : fleetEmptyHtml()));
+    const needs = lastFleet.filter(a => appState(a).tone === 'bad' || appState(a).tone === 'warn').length;
+    $('#fleet-meta').innerHTML = `${lastFleet.length} app${lastFleet.length === 1 ? '' : 's'}` + (needs ? ` \u00b7 <span style="color:var(--warn)">${needs} need you</span>` : '') + ` \u00b7 ${lastFleet.filter(a => a.status === 'deployed').length} deployed`;
+    $('#fleet-summary').textContent = `${lastFleet.length} app${lastFleet.length === 1 ? '' : 's'} tracked`;
     paintBulkBar();
+    renderQueue();
   }
+  document.addEventListener('click', e => {
+    const v = e.target.closest('[data-fleet-view]');
+    if (v) { fleetView = v.dataset.fleetView; paintFleet(); }
+    // Close any open row menu when clicking elsewhere, or after choosing from it.
+    $$('.rowmenu[open]').forEach(m => { if (!m.contains(e.target) || e.target.closest('.rowmenu>div button')) m.open = false; });
+  });
   function paintBulkBar() {
     const bar = $('#fleet-bulk-bar');
     if (!bar) return;
@@ -2830,23 +2855,34 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
     bar.style.display = n ? 'flex' : 'none';
     if (n) $('#fleet-bulk-count').textContent = `${n} selected`;
   }
-  function historyBadgeHtml(ev) {
-    if (ev.indexOf('deployed') === 0) return `<span class="badge ok"><i></i>${escapeHtml(ev)}</span>`;
-    if (ev.indexOf('removed') === 0) return `<span class="badge wn"><i></i>${escapeHtml(ev)}</span>`;
-    return `<span class="badge" style="color:var(--signal);border-color:rgba(var(--signal-rgb),.3);background:rgba(var(--signal-rgb),.07)"><i style="background:currentColor"></i>${escapeHtml(ev)}</span>`;
-  }
+  let historyView = 'all', lastHistory = [];
   function renderHistory(events) {
-    const has = events && events.length;
+    lastHistory = Array.isArray(events) ? events : [];
+    const has = lastHistory.length > 0;
     $('#history-empty').style.display = has ? 'none' : 'block';
-    $('#history-table').style.display = has ? '' : 'none';
+    $('#history-table').parentElement.style.display = has ? '' : 'none';
+    $('#history-chips').style.display = has ? '' : 'none';
     if (!has) { $('#history-table').innerHTML = ''; return; }
-    const rowsHtml = events.map(ev => `
-      <tr class="r"><td class="mono" style="white-space:nowrap;color:var(--dim)">${new Date(ev.at).toLocaleString()}</td>
-      <td><b style="font-weight:600">${escapeHtml(ev.name)}</b><div class="mono">${escapeHtml(ev.id)}</div></td>
-      <td>${historyBadgeHtml(ev.event)}</td>
-      <td class="mono">${escapeHtml(ev.target || '\u2014')}</td><td class="mono">${escapeHtml(ev.profile || '\u2014')}</td></tr>`).join('');
-    $('#history-table').innerHTML = `<tr><th>When</th><th>App</th><th>Event</th><th>Target</th><th>Profile</th></tr>${rowsHtml}`;
+    const kinds = [['all', 'All'], ['built', 'Built'], ['deployed', 'Deployed'], ['removed', 'Removed']];
+    const kindOf = ev => (kinds.find(k => k[0] !== 'all' && ev.event.indexOf(k[0]) === 0) || ['other'])[0];
+    $('#history-chips').innerHTML = kinds.map(k => `<button class="fchip${historyView === k[0] ? ' on' : ''}" data-history-view="${k[0]}">${k[1]} <span>${k[0] === 'all' ? lastHistory.length : lastHistory.filter(ev => kindOf(ev) === k[0]).length}</span></button>`).join('');
+    const q = ($('#history-filter').value || '').toLowerCase();
+    const shown = lastHistory.filter(ev => (historyView === 'all' || kindOf(ev) === historyView) && (!q || (ev.name + ' ' + ev.id).toLowerCase().includes(q)));
+    let lastDay = '';
+    const rowsHtml = shown.map(ev => {
+      const d = new Date(ev.at), day = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }), m = eventMark(ev.event);
+      const head = day !== lastDay ? `<tr><td colspan="5" class="dayrow">${escapeHtml(day)}</td></tr>` : '';
+      lastDay = day;
+      return head + `<tr class="r"><td class="mono dim">${escapeHtml(d.toTimeString().slice(0, 5))}</td>
+      <td class="st ${m[0]}"><span aria-hidden="true">${m[1]}</span> ${escapeHtml(ev.event)}</td>
+      <td><div class="nm">${escapeHtml(ev.name)}</div><div class="id">${escapeHtml(ev.id)}</div></td>
+      <td class="mono dim">${escapeHtml(typeLabel(ev.target))}</td><td class="mono dim">${ev.profile || '\u2014'}</td></tr>`;
+    }).join('');
+    $('#history-table').innerHTML = `<colgroup><col style="width:90px"><col style="width:200px"><col><col style="width:150px"><col style="width:200px"></colgroup>
+      <tr><th>Time</th><th>Event</th><th>App</th><th>Output</th><th>Profile</th></tr>` + (rowsHtml || `<tr><td class="empty-cell" colspan="5">Nothing matches.</td></tr>`);
   }
+  document.addEventListener('click', e => { const v = e.target.closest('[data-history-view]'); if (v) { historyView = v.dataset.historyView; renderHistory(lastHistory); } });
+  $('#history-filter').addEventListener('input', () => renderHistory(lastHistory));
   document.addEventListener('click', e => {
     const rb = e.target.closest('[data-rebuild]');
     if (rb) {
@@ -3446,6 +3482,13 @@ function Set-DeployStatus {
   if (-not $store.ContainsKey($AppID)) { $store[$AppID] = @{} }
   if ($MarkDeployed) {
     $store[$AppID]['deployedAt'] = (Get-Date -Format 'o')
+    $memory = Get-AppMemory
+    if ($memory[$AppID] -and @($memory[$AppID].builds).Count) {
+      $builds = @($memory[$AppID].builds)
+      $builds[-1].deployedAt = $store[$AppID]['deployedAt']
+      $memory[$AppID].builds = $builds
+      Write-AtomicText -Path $AppMemoryFile -Text ($memory | ConvertTo-Json -Depth 8)
+    }
   } else {
     $store[$AppID]['builtAt'] = (Get-Date -Format 'o')
     $store[$AppID]['name'] = $AppName
@@ -3511,6 +3554,15 @@ function Get-FleetPayload {
     if (-not $mem) { continue }
     $last = @($mem.builds)[-1]
     if (-not $app.version -and $last) { $app.version = [string]$last.version }
+    $app.tested = [bool]($last -and $last.testedAt)
+    $app.outcome = if ($last) { [string]$last.deployOutcome } else { '' }
+    # The last few builds, so the fleet shows how far each version got: built, tested, deployed, installed.
+    $recent = @(@($mem.builds) | Select-Object -Last 4)
+    $app.ledger = @(for ($n = 0; $n -lt $recent.Count; $n++) {
+      $b = $recent[$n]
+      $isLast = $n -eq $recent.Count - 1
+      @{ v = [string]$b.version; t = [bool]$b.testedAt; d = [bool]($b.deployedAt -or $b.deployOutcome -or ($isLast -and $app.status -eq 'deployed')); o = [string]$b.deployOutcome }
+    })
     if ($useWinget -and $mem.keys.wingetId) {
       try {
         $latest = Get-WingetLatestVersion -Id ([string]$mem.keys.wingetId) -IndexPath $indexPath
