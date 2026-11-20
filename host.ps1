@@ -1203,7 +1203,11 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   function escapeHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
+  // Answers to get-settings arrive in request order; one asked for before the last save is older than what is on screen.
+  let settingsAsked = 0, settingsAnswered = 0, settingsSavedAfter = 0;
   function send(action, payload) {
+    if (action === 'get-settings') settingsAsked++;
+    if (action === 'save-settings') settingsSavedAfter = settingsAsked;
     if (bridge) bridge.postMessage({ action, payload });
     else console.warn('WebView2 bridge unavailable — running outside host?', action, payload);
   }
@@ -2027,6 +2031,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           updateBuildBrandingPreview();
           break;
         case 'settings-data':
+          if (++settingsAnswered <= settingsSavedAfter && window._settingsLoaded) break;
+          window._settingsLoaded = true;
           window._defaultOrgName = payload.orgName || '';
           renderOrgNameSettingsSelect();
           window._modeExplainerSeen = !!payload.modeExplainerSeen;
