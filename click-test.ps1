@@ -337,6 +337,17 @@ window.__errors = [];
     Assert (-not (Eval-Js "document.getElementById('tgl-nvd').classList.contains('on')")) 'Clicking the NIST toggle again switches it off'
   }
 
+  Invoke-Flow 'Vendor release checks without a worker' {
+    Invoke-Click '.nav-btn[data-go=worker]'
+    Wait-Js "window.__msgs.indexOf('epm-state') >= 0"
+    Assert ((Get-Text '#epm-status-t') -eq 'Needs the Cloudflare worker') 'Release checks ask for the worker first'
+    Eval-Js "window.__msgs = []" | Out-Null
+    Invoke-Click '#epm-setup'
+    Wait-Js "window.__msgs.indexOf('epm-code') >= 0"
+    Assert ((Get-Text '#epm-status') -like '*Cloudflare worker*') 'GitHub sign-in waits for the worker'
+    Assert (-not (Eval-Js "document.getElementById('epm-setup').disabled")) 'The sign-in button is usable again'
+  }
+
   Invoke-Flow 'Cloudflare connect' {
     # The connect wizard is a native WPF window, so UI Automation finds and closes it.
     Invoke-Click '.nav-btn[data-go=worker]'

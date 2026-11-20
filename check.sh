@@ -79,6 +79,10 @@ EOF
 then fail=1; fi
 
 echo
+echo "== Worker release-check routes =="
+if node tests/worker-epm.mjs host.ps1; then :; else fail=1; fi
+
+echo
 if [ $fail -eq 0 ]; then
   echo "ALL CHECKS PASSED"
 else

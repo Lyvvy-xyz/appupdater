@@ -18,7 +18,7 @@ foreach ($source in @($coreSource, $hostSource)) {
       . ([scriptblock]::Create($node.Extent.Text))
     }
     if ($node -is [Management.Automation.Language.AssignmentStatementAst] -and
-        $node.Left.Extent.Text -match '^\$script:(Install|Detect|Uninstall)PrinterScriptSrc$') {
+        $node.Left.Extent.Text -match '^\$(script:(Install|Detect|Uninstall)PrinterScriptSrc|EpmCheckScript|EpmWorkflow)$') {
       . ([scriptblock]::Create($node.Extent.Text))
     }
   }
@@ -44,6 +44,20 @@ $accepted = @($realInstalls.ParamBlock.Parameters | Where-Object { $_.Name.Varia
 $listed = @((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'apps.json') -Raw | ConvertFrom-Json) | ForEach-Object { $_.scenario } | Where-Object { $_ } | Sort-Object -Unique)
 Assert (-not @($listed | Where-Object { $_ -notin $accepted }).Count) "Every CI scenario in tests/apps.json is one real-installs.ps1 accepts: $($listed -join ', ')"
 function Write-AppLog { param($Message, $Level) }
+$epmJson = { param($Text) $Text | ConvertFrom-Json }
+$epmApp = ConvertTo-EpmApp (& $epmJson '{"id":"pt","name":"PowerToys","winget":"Microsoft.PowerToys","source":{"type":"github","repo":"microsoft/PowerToys","asset":"x64\\.exe$"}}')
+Assert ($epmApp.source.repo -eq 'microsoft/PowerToys' -and $epmApp.source.asset -eq 'x64\.exe$') 'A watched GitHub app keeps its repo and file pattern'
+Assert ((ConvertTo-EpmApp (& $epmJson '{"id":"7zip","name":"7-Zip","source":{"type":"page","url":"https://www.7-zip.org/download.html","versionRegex":"7-Zip (\\d+)","download":"https://www.7-zip.org/a/7z{nodots}-x64.exe"}}')).source.download -like '*{nodots}*') 'A web page source keeps its download template'
+foreach ($bad in @(
+    '{"id":"x","name":"X","source":{"type":"redirect","url":"http://example.com/x.exe"}}',
+    '{"id":"../x","name":"X","source":{"type":"github","repo":"a/b"}}',
+    '{"id":"x","name":"X","source":{"type":"github","repo":"a/b/../c"}}',
+    '{"id":"x","name":"X","source":{"type":"github","repo":"a/b","asset":"(("}}',
+    '{"id":"x","name":"X","source":{"type":"page","url":"https://a.example/","download":"https://a.example/{version}.exe"}}',
+    '{"id":"x","name":"X","winget":"no spaces","source":{"type":"github","repo":"a/b"}}')) {
+  Assert-Throws { ConvertTo-EpmApp (& $epmJson $bad) } "A malformed watched app is refused: $bad"
+}
+Assert ($EpmWorkflow -match 'id-token: write' -and $EpmCheckScript -match 'Get-AuthenticodeSignature') 'The release-check job is embedded'
 function Invoke-TestWorker([string]$FunctionName, [hashtable]$Variables, [string]$Setup = '') {
   $definition = Get-Item "Function:\$FunctionName"
   $call = $definition.ScriptBlock.Ast.Find({ param($node)
