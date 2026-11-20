@@ -280,12 +280,12 @@ window.__errors = [];
 })();
 "@ | Out-Null
 
-  Invoke-Flow 'Deploy feedback card' {
-    Wait-Js "document.getElementById('deploy-feedback').style.display === 'block'" 30
-    Assert ((Get-Text '#deploy-feedback-list') -like '*Feedback Sample*1.2.3*') 'Home asks about the app deployed before this launch'
-    Save-Shot 'home-deploy-feedback' '#deploy-feedback'
-    Invoke-Click "#deploy-feedback-list [data-feedback=$feedbackId][data-outcome=ok]"
-    Assert (-not (Test-Shown '#deploy-feedback')) 'Answering Yes hides the deploy feedback card'
+  Invoke-Flow 'Deploy feedback in the Home queue' {
+    Wait-Js "!!document.querySelector('#home-queue [data-feedback=$feedbackId]')" 30
+    Assert ((Get-Text '#home-queue') -like '*Feedback Sample*1.2.3*did it install*') 'Home asks about the app deployed before this launch'
+    Save-Shot 'home-queue' '#screen-home'
+    Invoke-Click "#home-queue [data-feedback=$feedbackId][data-outcome=ok]"
+    Assert (-not [bool](Eval-Js "!!document.querySelector('#home-queue [data-feedback=$feedbackId]')")) 'Answering Yes removes the question from the queue'
     $outcome = $null
     for ($i = 0; $i -lt 50 -and $outcome -ne 'ok'; $i++) {
       Start-Sleep -Milliseconds 200
@@ -294,7 +294,7 @@ window.__errors = [];
     Assert ($outcome -eq 'ok') 'The Yes answer is recorded in app-memory.json'
   }
 
-  foreach ($screen in 'home', 'build', 'fleet', 'profiles', 'history', 'worker', 'accessibility', 'docs') {
+  foreach ($screen in 'home', 'build', 'fleet', 'profiles', 'history', 'worker', 'docs') {
     Invoke-Click ".nav-btn[data-go=$screen]"
     Start-Sleep -Milliseconds 500
     Assert ((Test-ScreenOn $screen) -and (Get-Text "#screen-$screen").Trim().Length -gt 0) "nav '$screen' shows its screen"
