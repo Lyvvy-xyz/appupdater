@@ -40,7 +40,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 input,textarea,select{font:inherit;color:inherit}
 
-.app{display:grid;grid-template-columns:64px 1fr;grid-template-rows:calc(100vh - 6px);height:calc(100vh - 6px)}
+.app{display:grid;grid-template-columns:64px 1fr;grid-template-rows:100vh;height:100vh}
 .rail{border-right:1px solid var(--edge);background:rgba(13,14,26,.6);display:flex;flex-direction:column;align-items:center;padding:14px 0 20px;gap:6px;z-index:5}
 .logo{width:36px;height:36px;border-radius:9px;background:var(--grad);display:grid;place-items:center;margin-bottom:14px;box-shadow:0 0 24px rgba(var(--signal-rgb),.35);cursor:pointer}
 .logo svg{transition:none}
@@ -60,7 +60,7 @@ input,textarea,select{font:inherit;color:inherit}
   transition:opacity .15s var(--ease),translate .15s var(--ease);z-index:50}
 .nav-btn:hover .nav-tip{opacity:1;translate:4px -50%}
 
-.stage{display:flex;flex-direction:column;min-width:0;height:calc(100vh - 6px);min-height:0}
+.stage{display:flex;flex-direction:column;min-width:0;height:100vh;min-height:0}
 .rail{height:calc(100vh - 6px)}
 .topbar{height:64px;border-bottom:1px solid var(--edge);display:flex;align-items:center;gap:22px;padding:0 26px;flex-shrink:0}
 .crumb{font-family:var(--font-d);font-weight:600;font-size:15px;letter-spacing:.01em}
@@ -338,7 +338,9 @@ kbd{display:inline-flex;align-items:center;font:500 10.5px var(--font-m);color:v
 .detect button{height:28px;padding:0 12px;border:0;background:transparent;color:var(--dim);font:12px var(--font-b);cursor:pointer}
 .detect button.on{background:var(--select);color:var(--ink)}
 .detect-ge{padding:0 4px 0 10px;border-left:1px solid var(--edge-hi);color:var(--dim);font-family:var(--font-m)}
-.detect .field{border:0;background:transparent;height:28px;width:130px;padding:0 8px}
+.detect .field{border:0;border-radius:0;background:transparent;height:28px;width:130px;padding:0 8px}
+.detect .field:focus{box-shadow:none}
+.detect:focus-within{border-color:var(--signal)}
 .detect.min .detect-ge,.detect.min .field{background:var(--select);color:var(--ink)}
 .procs{font:12px var(--font-m);display:flex;gap:6px;flex-wrap:wrap}
 .procs .proc{padding:2px 8px;border-radius:4px;background:var(--panel-2);border:1px solid var(--edge)}
@@ -479,6 +481,15 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 .badge.bad{color:var(--bad);border-color:var(--bad)}
 .epm-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule)}
 .epm-row small{display:block;color:var(--faint);font-size:11px;overflow-wrap:anywhere}
+.wiz-steps{display:flex;gap:6px;list-style:none;margin:0;padding:10px 18px 0;counter-reset:w}
+.wiz-steps li{flex:1;counter-increment:w;font:500 11px var(--font-m);color:var(--faint);border-top:2px solid var(--edge);padding-top:6px}
+.wiz-steps li::before{content:counter(w) ' '}
+.wiz-steps li.on{color:var(--ink);border-color:var(--signal)} .wiz-steps li.done{color:var(--dim);border-color:var(--ok)}
+.wiz-pick{align-items:flex-start;padding:8px 0} .wiz-pick small{display:block;color:var(--faint);font-size:11.5px}
+.wiz-list{margin:6px 0 8px 18px;font-size:12.5px;color:var(--dim)} .wiz-list li{padding:2px 0}
+.wiz-progress{list-style:none;margin-left:0} .wiz-progress li::before{display:inline-block;width:18px;content:'\25CB';color:var(--faint)}
+.wiz-progress li.done::before{content:'\2713';color:var(--ok)} .wiz-progress li.now::before{content:'\25D0';color:var(--signal)} .wiz-progress li.bad::before{content:'\2715';color:var(--bad)}
+.wiz-warn{color:var(--warn)}
 .epm-code{font:600 18px var(--font-m);letter-spacing:.12em;color:var(--signal)}
 #epm-add .field{margin-bottom:8px}
 /* Builder: the three choices that shape the rest of the form */
@@ -722,7 +733,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                 <div class="extras-sum" id="extras-summary"></div>
                 <button type="button" class="linkbtn" id="extras-toggle">Edit</button></div>
               <div class="extras" id="extras-panel" hidden>
-                <div class="tglrow"><div><b>Bundle the whole folder</b><small id="bundle-hint">Include every file next to the installer (Simple packages only)</small></div><button class="tgl" data-val="BundleFolder"></button></div>
+                <div class="tglrow"><div><b>Bundle the whole folder</b><small id="bundle-hint">Copies everything in the installer's folder into the package, not just the installer. Turn on when setup needs files beside it, such as a config, a licence or an .mst. Off for You push updates only.</small></div><button class="tgl" data-val="BundleFolder"></button></div>
                 <div id="scripts-wrap">
                   <div class="tglrow"><div><b>Remove older versions first</b><small>For apps that install side by side, such as Java. Needs a minimum version.</small></div><button class="tgl" data-val="RemoveOlderVersions"></button></div>
                   <div class="scripts">
@@ -902,6 +913,45 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
         <!-- Local sanity check - runs the REAL detect/install/uninstall
              scripts (or PSADT's own test invocation) on this machine, no
              Intune needed. Separate from "Preview". -->
+        <div id="epm-wiz" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:90;align-items:center;justify-content:center">
+          <div class="dlg" style="width:min(560px,92vw)" role="dialog" aria-labelledby="epm-wiz-title">
+            <div class="dlg-h"><h2 id="epm-wiz-title">Set up vendor release checks</h2><span class="pmeta" id="epm-wiz-count"></span></div>
+            <ol class="wiz-steps" id="epm-wiz-steps"><li>Where</li><li>Sign in</li><li>Set up</li><li>First check</li></ol>
+            <div class="dlg-b">
+              <div data-wiz="0">
+                <p class="bnote">A small job checks each vendor every 6 hours. When there is a new installer it downloads it on a throwaway machine, checks who signed it and takes its SHA-256. Only those come back to AppUpdater.</p>
+                <label class="dlg-opt wiz-pick"><input type="radio" name="epm-wiz-runner" value="github" checked><span><b>GitHub Actions</b><small>A private repo in your GitHub account. Free within GitHub's monthly Actions minutes.</small></span></label>
+                <label class="dlg-opt wiz-pick" style="opacity:.55"><input type="radio" name="epm-wiz-runner" value="azure" disabled><span><b>Azure Automation</b><small>Runs in your Azure subscription. Coming later.</small></span></label>
+                <p class="bnote wiz-warn" id="epm-wiz-noworker" hidden>Results come back through your Cloudflare worker, which is not connected yet. Connect it in Settings section 01 first.</p>
+              </div>
+              <div data-wiz="1" hidden>
+                <p class="bnote">Signing in lets AppUpdater do three things, once:</p>
+                <ul class="wiz-list"><li>Create a private repo, <span class="mono">appupdater-checks</span></li><li>Add the check script and its schedule</li><li>Start the first run</li></ul>
+                <p class="bnote">The sign-in is not kept. To change anything later, sign in again.</p>
+                <div id="epm-wiz-code-box" hidden>
+                  <p class="bnote" style="margin-top:10px">GitHub's sign-in page has opened. Enter this code there and approve:</p>
+                  <div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span class="epm-code" id="epm-wiz-code"></span>
+                    <button class="btn sm" id="epm-wiz-copy">Copy</button><button class="btn sm" id="epm-wiz-reopen">Open GitHub again</button></div>
+                </div>
+                <p class="bnote" id="epm-wiz-msg"></p>
+              </div>
+              <div data-wiz="2" hidden>
+                <ul class="wiz-list wiz-progress"><li class="done">Signed in to GitHub</li><li class="now">Creating the repo, adding the check, starting the first run</li></ul>
+                <p class="bnote" id="epm-wiz-msg2"></p>
+              </div>
+              <div data-wiz="3" hidden>
+                <p class="bnote" id="epm-wiz-repo"></p>
+                <ul class="wiz-list wiz-progress"><li class="done">Repo created and trusted by your worker</li><li id="epm-wiz-run" class="now">First run in progress, usually a few minutes</li></ul>
+                <p class="bnote">Next, tell it which apps to watch. Each one needs where its releases come from and the publisher that must have signed it.</p>
+              </div>
+            </div>
+            <div class="dlg-f">
+              <button class="btn" id="epm-wiz-close">Close</button>
+              <button class="btn" id="epm-wiz-back">Back</button>
+              <button class="btn primary" id="epm-wiz-next">Next</button>
+            </div>
+          </div>
+        </div>
         <div id="test-modal" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:90;align-items:center;justify-content:center">
           <div class="dlg">
             <div class="dlg-h"><h2 id="test-modal-title">Test locally</h2><span class="pmeta">installs on this machine</span></div>
@@ -987,12 +1037,13 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                 <div class="bsec-h"><span class="bsec-n">08</span><span class="bsec-t">Vendor release checks</span><span class="bsec-rule"></span></div>
                 <p class="bnote" style="margin:4px 0 6px">Watches each vendor for a new installer, then downloads it on a throwaway GitHub runner, checks who signed it and takes its SHA-256 for EPM rules. Nothing is downloaded to this PC; only the version, hash and signer come back, through your Cloudflare worker.</p>
                 <div class="srow2"><span class="k">Checks run on</span><select class="field" id="epm-runner"><option value="github">GitHub Actions, in a private repo</option><option value="azure" disabled>Azure Automation (not connected)</option></select></div>
-                <div class="tglrow"><div><b id="epm-status-t">Not set up</b><small id="epm-status">&nbsp;</small></div><button class="btn sm primary" id="epm-setup">Sign in to GitHub</button></div>
+                <div class="tglrow"><div><b id="epm-status-t">Not set up</b><small id="epm-status">&nbsp;</small></div><button class="btn sm primary" id="epm-setup">Set up…</button></div>
                 <div id="epm-code-box" class="tglrow" hidden><div><b>Enter this code on GitHub</b><small>The sign-in page has opened in your browser. The sign-in is used once to set up the repo and is not kept.</small></div><span class="epm-code" id="epm-code"></span></div>
                 <div id="epm-apps"></div>
                 <details id="epm-add" style="padding:8px 0">
                   <summary class="linkbtn">Watch an app</summary>
                   <div style="padding-top:8px">
+                    <p class="bnote" style="margin:0 0 8px">Tell the check where this app's new versions are published and who must have signed the installer. A download signed by anyone else is reported as blocked.</p>
                     <label class="lbl" for="epm-name">Name</label><input class="field" id="epm-name" placeholder="PowerToys">
                     <label class="lbl" for="epm-source">Where releases come from</label><input class="field mono" id="epm-source" placeholder="microsoft/PowerToys, or a download link that always points to the latest">
                     <label class="lbl" for="epm-publisher">Approved publisher (the installer's signer)</label><input class="field" id="epm-publisher" placeholder="Microsoft Corporation">
@@ -1220,7 +1271,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     <div class="buildbar" id="buildbar" style="display:none">
       <div class="summary" id="build-summary">Select an installer to begin.</div>
       <button class="btn ghost" data-go="home">Cancel</button>
-      <button class="btn primary big" id="btn-build" disabled>Build package<kbd>Ctrl &#8629;</kbd></button>
+      <button class="btn primary big" id="btn-build" disabled><span id="btn-build-t">Build package</span><kbd>Ctrl &#8629;</kbd></button>
     </div>
     <div class="statusbar" id="statusbar"><span id="sb-winget"></span><span id="sb-cisa"></span><span id="sb-nvd"></span><span class="grow"></span><span id="sb-mode"></span><span id="sb-version"></span></div>
   </div>
@@ -1293,6 +1344,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (packaged && form.Mode !== 'simple') btn('segMode', 'simple').click();
     const epm = form.SimplePkgTarget === 'epm';
     sb.classList.toggle('epm', epm);
+    $('#btn-build-t').textContent = epm ? 'Create EPM rule' : 'Build package';
     sb.classList.toggle('simple', form.Mode === 'simple');
     $('#psadt-row').hidden = form.SimplePkgTarget !== 'psadt';
     $('#kindHint').textContent = printer ? 'Installs a printer and its driver. No installer file needed.' : 'An installer: exe, msi, msix/appx or a portable-app zip.';
@@ -1363,7 +1415,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse');
   });
   document.getElementById('drag-region').addEventListener('mousedown', (e) => {
-    if (e.target.closest('#win-minimize, #win-close') || e.target.closest('#pipe')) return;
+    if (e.target.closest('button, input, select, a, #pipe')) return;
     if (e.button !== 0) return;
     send('drag-window', {});
   });
@@ -1729,7 +1781,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       toast('Silent switch needed', 'AppUpdater does not recognise this installer. Enter its silent install switch first.', true); return;
     }
     if (form.Kind !== 'printer') {
-      const simpleOnly = form.Mode !== 'simple';
+      const simpleOnly = form.Mode !== 'simple' && form.SimplePkgTarget !== 'epm';
       if (/\.(msix|msixbundle|appx|appxbundle|zip)$/i.test(window._selectedInstaller || '') && (simpleOnly || form.SimplePkgTarget !== 'intunewin')) {
         toast('Simple .intunewin only', 'MSIX and zip packages build as a Simple Package with the .intunewin target.', true); return;
       }
@@ -1739,7 +1791,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       const minVersion = $('#f-detectversion').value.trim();
       if (!simpleOnly && minVersion && !/\d/.test(minVersion)) { toast('Minimum version', 'Enter a version number such as 8.6.9, or leave it empty.', true); return; }
       if (!simpleOnly && form.RemoveOlderVersions && !minVersion) { toast('Minimum version needed', 'Removing older versions needs the minimum version for detection. Run a local test to read it.', true); return; }
-      if (simpleOnly && form.BundleFolder) { toast('Folder bundling is Simple only', 'Switch off "Bundle the whole folder" or choose Simple Package.', true); return; }
+      if (simpleOnly && form.BundleFolder) { toast('Bundling needs "You push updates"', 'A self-updating package downloads only the installer. Switch off "Bundle the whole folder", or choose "You push updates" at the top.', true); return; }
       if (simpleOnly && $('#f-silentargs').value.includes('{pkg}')) { toast('{pkg} is Simple only', 'Runtime packages download the installer on their own, so {pkg} has no folder to point at.', true); return; }
     }
     goTo('progress');
@@ -1861,10 +1913,10 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           const folder = payload.folder;
           const bundleOk = folder && !folder.isRoot && !folder.tooMany;
           document.querySelector('.tgl[data-val="BundleFolder"]').disabled = !bundleOk;
-          $('#bundle-hint').textContent = !folder ? 'Include every file next to the installer (Simple packages only)'
+          $('#bundle-hint').textContent = !folder ? "Copies everything in the installer's folder into the package, not just the installer. Turn on when setup needs files beside it, such as a config, a licence or an .mst. Off for You push updates only."
             : folder.isRoot ? 'Not available: the installer is at the root of a drive'
             : folder.tooMany ? 'Not available: the folder holds more than 20,000 files'
-            : `Include all ${folder.files} file(s), ${(folder.bytes / 1048576).toFixed(1)} MB, next to the installer (Simple packages only)`;
+            : `Copies all ${folder.files} files in the installer's folder (${(folder.bytes / 1048576).toFixed(1)} MB) into the package, not just the installer. Turn on when setup needs files beside it, such as a config, a licence or an .mst.`;
           const m = payload.match;
           const chips = [];
           if (m) {
@@ -2079,19 +2131,31 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           $('#epm-add-msg').textContent = '';
           if (payload.ok) {
             renderEpm(payload.state);
+            if (wizStep === 3) wizRun();
             if (payload.saved) ['#epm-name', '#epm-source', '#epm-publisher', '#epm-winget', '#epm-asset', '#epm-vregex', '#epm-download'].forEach(id => { $(id).value = ''; });
           } else {
+            $('#epm-add').hidden = true;
             $('#epm-status-t').textContent = payload.noWorker ? 'Needs the Cloudflare worker' : 'Could not load';
             $('#epm-status').textContent = payload.noWorker ? 'Connect your worker in section 01 first; check results come back through it.' : payload.message;
           }
           break;
         case 'epm-code':
-          if (payload.ok) { $('#epm-code').textContent = payload.code; $('#epm-code-box').hidden = false; $('#epm-status').textContent = 'Waiting for you to approve on GitHub…'; }
-          else { $('#epm-setup').disabled = false; $('#epm-status').textContent = payload.message; }
+          if (payload.ok) { $('#epm-wiz-code').textContent = payload.code; $('#epm-wiz-code-box').hidden = false; $('#epm-wiz-msg').textContent = 'Waiting for you to approve on GitHub…'; }
+          else { $('#epm-wiz-next').disabled = false; $('#epm-wiz-msg').textContent = payload.message; }
+          break;
+        case 'epm-approved':
+          if ($('#epm-wiz').style.display !== 'flex') break;
+          if (payload.ok) wizShow(2);
+          else { $('#epm-wiz-code-box').hidden = true; wizShow(1); $('#epm-wiz-msg').textContent = payload.message; }
           break;
         case 'epm-setup':
-          $('#epm-code-box').hidden = true; $('#epm-setup').disabled = false;
-          if (payload.ok) { renderEpm(payload.state); toast('Release checks set up', 'The first run has started in ' + payload.state.cfg.repo + '.'); }
+          if (payload.ok) { renderEpm(payload.state); if ($('#epm-wiz').style.display === 'flex') wizShow(3); else toast('Release checks set up', 'The first run has started in ' + payload.state.cfg.repo + '.'); }
+          else if ($('#epm-wiz').style.display === 'flex') {
+            const step = wizStep === 2 ? 2 : 1;
+            wizShow(step);
+            if (step === 2) { $('#epm-wiz .wiz-progress li.now').className = 'bad'; $('#epm-wiz-msg2').textContent = payload.message; }
+            else { $('#epm-wiz-code-box').hidden = true; $('#epm-wiz-next').disabled = false; $('#epm-wiz-msg').textContent = payload.message; }
+          }
           else $('#epm-status').textContent = payload.message;
           break;
         case 'settings-data':
@@ -2201,7 +2265,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#epm-status').textContent = !cfg ? 'Sign in once and AppUpdater creates a private repo, appupdater-checks, in your GitHub account to run the checks.'
       : stale ? `Last run ${ago(last)}. GitHub pauses Actions when the monthly spending limit is reached, and resumes on the 1st.`
       : cfg.repo + (last ? ' · last run ' + ago(last) : '');
-    $('#epm-setup').textContent = cfg ? 'Set up again' : 'Sign in to GitHub';
+    $('#epm-setup').textContent = cfg ? 'Set up again' : 'Set up…';
+    $('#epm-add').hidden = !cfg;
     const apps = s.apps || [], res = s.results || {};
     $('#epm-apps').innerHTML = apps.map(a => {
       const r = res[a.id], src = a.source.type === 'github' ? a.source.repo : a.source.url.replace(/^https:\/\//, '');
@@ -2342,8 +2407,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     window._src = Object.assign(window._src || {}, { appid: 'last build', displayname: s.DisplayName ? 'last build' : (window._src || {}).displayname,
       registry: s.RegistryName ? 'last build' : (window._src || {}).registry, silent: s.SilentArgs ? 'last build' : (window._src || {}).silent });
     if (s.DownloadURL && $('#f-download-url')) $('#f-download-url').value = s.DownloadURL;
-    pickSeg('segMode', s.Mode);
-    pickSeg('segTarget', s.SimplePkgTarget);
+    // The output and delivery choices at the top are the user's for this build; a past build does not override them.
     if (s.PSADTVersion) pickSeg('segPsadtVersion', s.PSADTVersion);
     const prof = $('#f-profile');
     if (s.ProfileName !== undefined && prof && [...prof.options].some(o => o.value === s.ProfileName) && prof.value !== s.ProfileName) {
@@ -2628,7 +2692,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       groups.push({ t: 'Detection', p: 'Detection rules → Use a custom detection script, and upload this file from the folder.', rows: [['Detection', 'Custom script: ' + detect]] });
       if (runtime) groups.push({ t: 'If other apps depend on it', rows: [['As a dependency', 'Detection confirms the AppUpdater agent; its first update runs during install, so the app or printer is normally in place before Intune moves on', true]] });
       else if (psadt) groups.push({ t: 'If other apps depend on it', rows: [['As a dependency', form.allowDefer ? 'Turn off "Allow deferral": a deferred dependency blocks the app that needs it' : 'Ready - deferral is off', true]] });
-      if (!printer && form.Mode === 'simple') groups.push({ t: 'Standard users (optional)', p: 'For Endpoint Privilege Management, if users run this installer themselves.', rows: [['EPM elevation rules', 'EPM-rules.csv in the folder: installer hash and signer certificate; a local test adds the installed program and its updaters', true]] });
+      if (!printer && form.Mode === 'simple') groups.push({ t: 'Optional: EPM', p: 'Not needed for the Intune install above, which already runs as System. Only if standard users also run this installer themselves.', rows: [['EPM elevation rules', 'EPM-rules.csv in the folder: installer hash and signer certificate; a local test adds the installed program and its updaters', true]] });
     }
     const rows = [];
     $('#done-title').textContent = epm ? `EPM rule for ${name} is ready` : `${name} is ready`;
@@ -2649,8 +2713,14 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const watch = $('#done-sheet [data-done-action="epm-watch"]');
     if (watch) watch.addEventListener('click', () => $('#epm-watch-btn').click());
     // Testing installs a package; an EPM rule has none.
-    $('#done-step-test').hidden = epm;
-    if (epm) { $('#done-step-intune').className = 'now'; }
+    // An EPM rule can only be tried on an enrolled device after it is created, so its steps are worded for that.
+    const stepText = { 'done-step-test': ['Test it here', 'Runs the real package on this machine as Intune would, then checks detection.'],
+      'done-step-intune': ['Add it to Intune', 'Upload the package with the install, uninstall and detection values on the left. Each has a copy button.'] };
+    const epmText = { 'done-step-test': ['Create the rule in Intune', 'Use the policy name, file name and hash on the left. Each has a copy button.'],
+      'done-step-intune': ['Try it on a test device', 'Assign the policy to a small group first. Sign in there as a standard user and run the installer: it should open without an admin prompt (for a user-confirmed rule, from right-click > Run with elevated access).'] };
+    Object.entries(epm ? epmText : stepText).forEach(([id, [t, d]]) => { $('#' + id + ' b').textContent = t; $('#' + id + ' p').textContent = d; });
+    $('#done-test').hidden = epm;
+
   }
 
   let lastFleet = [];
@@ -2876,6 +2946,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   $('#f-displayname').addEventListener('input', applyContext);
   $('#epm-watch-btn').addEventListener('click', () => {
     goTo('worker');
+    if (epmState && !epmState.cfg) openEpmWizard();
     $('#epm-add').open = true;
     $('#epm-name').value = $('#f-displayname').value.trim();
     $('#epm-publisher').value = (window._identity && window._identity.publisher) || '';
@@ -2883,11 +2954,48 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#epm-section').scrollIntoView({ block: 'start' });
     $('#epm-source').focus();
   });
-  $('#epm-setup').addEventListener('click', function () {
-    this.disabled = true;
-    $('#epm-status').textContent = 'Asking GitHub for a sign-in code…';
-    send('epm-signin', {});
+  // Setup walkthrough: where checks run, GitHub sign-in, repo creation, first run.
+  let wizStep = 0, wizPoll = null;
+  function wizShow(n) {
+    wizStep = n;
+    $$('#epm-wiz [data-wiz]').forEach(el => { el.hidden = Number(el.dataset.wiz) !== n; });
+    $$('#epm-wiz-steps li').forEach((li, i) => { li.className = i < n ? 'done' : i === n ? 'on' : ''; });
+    $('#epm-wiz-count').textContent = `Step ${n + 1} of 4`;
+    const noWorker = !window._workerUrl;
+    $('#epm-wiz-noworker').hidden = !noWorker;
+    $('#epm-wiz-back').hidden = n === 0 || n >= 2;
+    const next = $('#epm-wiz-next');
+    next.hidden = n === 2;
+    next.disabled = (n === 0 && noWorker) || (n === 1 && !$('#epm-wiz-code-box').hidden);
+    next.textContent = n === 0 ? 'Next' : n === 1 ? 'Sign in to GitHub' : 'Watch an app';
+    clearInterval(wizPoll);
+    if (n === 3) { wizRun(); wizPoll = setInterval(() => send('epm-state', {}), 30000); }
+  }
+  function wizRun() {
+    const s = epmState || {}, last = s.last && s.last.at, li = $('#epm-wiz-run');
+    $('#epm-wiz-repo').textContent = s.cfg ? `Checks run in ${s.cfg.repo} on GitHub.` : '';
+    li.className = last ? 'done' : 'now';
+    li.textContent = last ? `First run finished ${ago(last)}` : 'First run in progress, usually a few minutes';
+  }
+  function openEpmWizard() {
+    $('#epm-wiz-code-box').hidden = true;
+    $('#epm-wiz-msg').textContent = '';
+    $('#epm-wiz').style.display = 'flex';
+    wizShow(0);
+  }
+  function closeEpmWizard() { clearInterval(wizPoll); $('#epm-wiz').style.display = 'none'; }
+  $('#epm-wiz-close').addEventListener('click', closeEpmWizard);
+  $('#epm-wiz-back').addEventListener('click', () => wizShow(wizStep - 1));
+  $('#epm-wiz-next').addEventListener('click', () => {
+    if (wizStep === 0) wizShow(1);
+    else if (wizStep === 1) { $('#epm-wiz-next').disabled = true; $('#epm-wiz-msg').textContent = 'Asking GitHub for a sign-in code…'; send('epm-signin', {}); }
+    else { closeEpmWizard(); goTo('worker'); $('#epm-add').open = true; $('#epm-section').scrollIntoView({ block: 'start' }); $('#epm-name').focus(); }
   });
+  $('#epm-wiz-copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('#epm-wiz-code').textContent); toast('Copied', 'Sign-in code on clipboard'); } catch (_) { }
+  });
+  $('#epm-wiz-reopen').addEventListener('click', () => send('epm-open-device', {}));
+  $('#epm-setup').addEventListener('click', openEpmWizard);
   $('#epm-apps').addEventListener('click', function (ev) {
     const b = ev.target.closest('[data-epm-remove]');
     if (!b || !epmState) return;
@@ -3821,15 +3929,33 @@ $chrome.ResizeBorderThickness = New-Object System.Windows.Thickness(5)
 Add-Type -Name Win32Drag -Namespace AppUpdater -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool ReleaseCapture();
 [DllImport("user32.dll")] public static extern int SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+[StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+[DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+[DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hWnd, int attr, out RECT rect, int size);
 '@
 
 $wv = New-Object Microsoft.Web.WebView2.Wpf.WebView2
 $window.Content = $wv
 [System.Windows.Shell.WindowChrome]::SetIsHitTestVisibleInChrome($wv, $true)
-# A maximized borderless window overhangs the screen by its resize frame, which would cut off the status bar.
-$window.Add_StateChanged({
-  $wv.Margin = if ($window.WindowState -eq 'Maximized') { [System.Windows.SystemParameters]::WindowResizeBorderThickness } else { New-Object System.Windows.Thickness(0) }
-})
+# Windows keeps an invisible resize frame around a borderless window (and pushes it off screen when
+# maximized); page content under it is not drawn. Inset the page by the frame DWM reports as invisible.
+function Update-PageInset {
+  try {
+    $hwnd = (New-Object System.Windows.Interop.WindowInteropHelper($window)).Handle
+    if ($window.WindowState -eq 'Maximized') { $wv.Margin = [System.Windows.SystemParameters]::WindowResizeBorderThickness; return }
+    $outer = New-Object AppUpdater.Win32Drag+RECT; $seen = New-Object AppUpdater.Win32Drag+RECT
+    if (-not [AppUpdater.Win32Drag]::GetWindowRect($hwnd, [ref]$outer)) { return }
+    # 9 = DWMWA_EXTENDED_FRAME_BOUNDS, the part of the window that is actually drawn.
+    if ([AppUpdater.Win32Drag]::DwmGetWindowAttribute($hwnd, 9, [ref]$seen, 16) -ne 0) { return }
+    $m = [System.Windows.PresentationSource]::FromVisual($window).CompositionTarget.TransformFromDevice
+    $wv.Margin = New-Object System.Windows.Thickness(
+      [Math]::Max(0, $seen.Left - $outer.Left) * $m.M11, [Math]::Max(0, $seen.Top - $outer.Top) * $m.M22,
+      [Math]::Max(0, $outer.Right - $seen.Right) * $m.M11, [Math]::Max(0, $outer.Bottom - $seen.Bottom) * $m.M22)
+  } catch { }
+}
+$window.Add_StateChanged({ Update-PageInset })
+$window.Add_SourceInitialized({ $window.Dispatcher.BeginInvoke([action]{ Update-PageInset }, 'Loaded') | Out-Null })
+$window.Add_DpiChanged({ Update-PageInset })
 
 $window.Add_Loaded({
 try {
@@ -4113,8 +4239,17 @@ $_result.device = [string]$c.device_code; $_result.interval = [int]$c.interval; 
                   # The device code stays in this process; the page only shows the user code.
                   $vars = $epmSetup.Clone(); $vars._device = $r.device; $vars._interval = $r.interval; $vars._expires = $r.expires; $r.Remove('device')
                   if ($r.uri -match '^https://github\.com/') { Start-Process $r.uri }
-                  Start-BackgroundAction -Wv $wv -Roots @('Wait-GitHubDeviceToken', 'Initialize-EpmRepo', 'Invoke-EpmWorker', 'Start-EpmRun') -Event 'epm-setup' -TimeoutSeconds ($r.expires + 120) -Variables $vars -Script @'
-$token = Wait-GitHubDeviceToken -ClientId $_cid -DeviceCode $_device -Interval $_interval -ExpiresIn $_expires
+                  Start-BackgroundAction -Wv $wv -Roots @('Wait-GitHubDeviceToken') -Event 'epm-approved' -TimeoutSeconds ($r.expires + 60) -Variables $vars -Script @'
+$_result.token = Wait-GitHubDeviceToken -ClientId $_cid -DeviceCode $_device -Interval $_interval -ExpiresIn $_expires
+$_result.ok = $true
+'@ -OnDone ({
+                    param($a)
+                    # The token goes to the setup job only; the page is told just that sign-in finished.
+                    $token = $a.token; $a.Remove('token')
+                    if (-not $a.ok -or -not $token) { return }
+                    $vars2 = $epmSetup.Clone(); $vars2._token = $token; $token = $null
+                    Start-BackgroundAction -Wv $wv -Roots @('Initialize-EpmRepo', 'Invoke-EpmWorker', 'Start-EpmRun') -Event 'epm-setup' -TimeoutSeconds 300 -Variables $vars2 -Script @'
+$token = $_token
 $repo = Initialize-EpmRepo -Token $token -Files $_files
 # The worker must trust the repo before the first run reports to it.
 $_result.state = Invoke-EpmWorker -WorkerUrl $_wurl -Token $_wtok -Body @{ cfg = @{ repo = $repo.repo; repoId = $repo.repoId; runner = 'github' } }
@@ -4122,9 +4257,11 @@ Start-EpmRun -Token $token -Repo $repo.repo -Branch $repo.branch
 $token = $null
 $_result.ok = $true
 '@
+                  }.GetNewClosure())
                 }.GetNewClosure())
               }
             }
+            'epm-open-device' { try { Start-Process 'https://github.com/login/device' } catch { } }
             'get-profiles' {
               $pd = Get-PackagingProfiles
               Send-ToPage $wv 'profiles-data' @{ profiles = $pd.Profiles; lastUsed = $pd.LastUsed }

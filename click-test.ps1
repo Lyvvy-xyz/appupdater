@@ -341,11 +341,12 @@ window.__errors = [];
     Invoke-Click '.nav-btn[data-go=worker]'
     Wait-Js "window.__msgs.indexOf('epm-state') >= 0"
     Assert ((Get-Text '#epm-status-t') -eq 'Needs the Cloudflare worker') 'Release checks ask for the worker first'
-    Eval-Js "window.__msgs = []" | Out-Null
+    Assert (Eval-Js "document.getElementById('epm-add').hidden") 'Apps can only be watched once checks are set up'
     Invoke-Click '#epm-setup'
-    Wait-Js "window.__msgs.indexOf('epm-code') >= 0"
-    Assert ((Get-Text '#epm-status') -like '*Cloudflare worker*') 'GitHub sign-in waits for the worker'
-    Assert (-not (Eval-Js "document.getElementById('epm-setup').disabled")) 'The sign-in button is usable again'
+    Assert (Eval-Js "document.getElementById('epm-wiz').style.display === 'flex'") 'Set up opens the walkthrough'
+    Assert (-not (Eval-Js "document.getElementById('epm-wiz-noworker').hidden")) 'The walkthrough asks for the worker first'
+    Assert (Eval-Js "document.getElementById('epm-wiz-next').disabled") 'The walkthrough cannot go on without the worker'
+    Invoke-Click '#epm-wiz-close'
   }
 
   Invoke-Flow 'Cloudflare connect' {
@@ -483,8 +484,11 @@ window.__errors = [];
       Invoke-Click '.nav-btn[data-go=build]'
       Write-Field '#f-appid' 'placeholder-id'
       Write-Field '#f-registryname' 'placeholder name'
+      Invoke-Click '#segTarget button[data-val=epm]'
       Select-TestInstaller
       Assert ((Get-ChipText) -like '*packaged before*') "The 'packaged before' chip is shown"
+      Assert (Eval-Js "document.querySelector('#segTarget button[data-val=epm]').classList.contains('on')") 'Picking a packaged-before installer keeps the chosen output'
+      Invoke-Click '#segTarget button[data-val=intunewin]'
       Assert ((Get-Value '#f-appid') -eq $script:appId) 'App ID is restored from the last build'
       Assert ((Get-Value '#f-registryname') -eq $script:registryName) 'Registry name is restored from the last build'
       if ($script:suggestedVersion) {
