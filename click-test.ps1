@@ -517,6 +517,26 @@ window.__errors = [];
       Save-Shot 'done-psadt-v3' '#done-sheet'
     }
 
+    Invoke-Flow 'EPM rule build' {
+      Invoke-Click '.nav-btn[data-go=build]'
+      Select-TestInstaller
+      Invoke-Click '#segTarget button[data-val=epm]'
+      Assert (Test-Shown '#sec-epm') 'Choosing an EPM rule shows the EPM section'
+      Assert (-not (Test-Shown '#choice-delivery') -and -not (Test-Shown '#sec-wrap') -and -not (Test-Shown '#sec-configure')) 'An EPM rule hides delivery and packaging options'
+      Assert ((Get-Value '#f-epm-policy') -like 'EPM*') 'An EPM rule suggests a policy name'
+      Save-Shot 'build-form-epm'
+      Invoke-Click '#btn-build'
+      Wait-Build 'EPM rule build'
+      $epmDir = Get-Text '#done-path'
+      Assert ($epmDir -like '*-EPM*') 'An EPM build writes its own folder'
+      if ($epmDir -and (Test-Path -LiteralPath $epmDir)) {
+        Assert (@(Import-Csv -LiteralPath (Join-Path $epmDir 'EPM-rules.csv')).Count -ge 1) 'The EPM folder holds a rule for the installer'
+        Assert (-not @(Get-ChildItem -LiteralPath $epmDir -Filter '*.intunewin').Count) 'An EPM build makes no Intune package'
+      }
+      Save-Shot 'done-epm' '#done-sheet'
+      Invoke-Click '#segTarget button[data-val=intunewin]'
+    }
+
     Invoke-Flow 'Runtime build' {
       Invoke-Click '.nav-btn[data-go=build]'
       Select-TestInstaller
@@ -667,8 +687,9 @@ window.__errors = [];
     Write-Field '#f-porthost' '127.0.0.1'
     Write-Field '#f-portnumber' '9100'
     Write-Field '#f-printerlocation' 'CI rack'
-    Invoke-Click '#segMode button[data-val=runtime]'
-    Invoke-Click '#segTarget button[data-val=intunewin]'
+    Assert (-not (Test-Shown '#choice-delivery')) 'A printer has no self-updating choice'
+    Assert ([bool](Eval-Js "document.querySelector('#segTarget button[data-val=epm]').disabled && document.querySelector('#segTarget button[data-val=psadt]').disabled")) 'A printer can only be an Intune app'
+    Assert (-not (Test-Shown '#runtime-url-row') -and -not (Test-Shown '#defer-row')) 'A printer hides the download link and postpone options'
     Save-Shot 'build-form-printer' '#printer-source-card'
     Invoke-Click '#btn-build'
     Wait-Build 'Printer package build'
@@ -682,11 +703,8 @@ window.__errors = [];
     Clear-AppFields
     Select-TestInstaller $portableZip
     Assert ((Get-ChipText) -like '*portable app*Tool\tool.exe*') "The zip shows the 'portable app' chip"
-    Invoke-Click '#segMode button[data-val=simple]'
-    Invoke-Click '#segTarget button[data-val=psadt]'
-    Test-BuildGuard 'Simple .intunewin only' 'A zip with the PSADT target'
-    Save-Shot 'guard-zip-psadt' -KeepToasts
-    Invoke-Click '#segTarget button[data-val=intunewin]'
+    Assert ([bool](Eval-Js "document.querySelector('#segTarget button[data-val=psadt]').disabled && document.querySelector('#segMode button[data-val=runtime]').disabled")) 'A zip can only be a Simple Intune app'
+    Assert ((Eval-Js "document.querySelector('#segTarget button.on').dataset.val") -eq 'intunewin') 'A zip switches the output to an Intune app'
     Assert (-not (Test-Shown '#scripts-wrap')) 'A zip hides the scripts section'
     Invoke-Click '#btn-build'
     Wait-Build 'Portable zip build'
