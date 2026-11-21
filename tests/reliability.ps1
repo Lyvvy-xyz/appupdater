@@ -66,6 +66,79 @@ $wingetMissing = @(foreach ($name in $wingetList) {
 }) | Sort-Object -Unique
 Assert (-not $wingetMissing.Count) "The winget lookup job loads every function its functions call: missing $($wingetMissing -join ', ')"
 Assert ($EpmWorkflow -match 'id-token: write' -and $EpmCheckScript -match 'Get-AuthenticodeSignature') 'The release-check job is embedded'
+& {
+  # Cloudflare actions against a recorded fake API.
+  $cf = [Collections.Generic.List[object]]::new(); $log = [Collections.Generic.List[string]]::new()
+  $script:cfReply = @{}
+  function Invoke-CF { param($Method, $Path, $Body, $ContentType, $RawBody) $cf.Add([pscustomobject]@{ Method = $Method; Path = $Path; Body = $Body })
+    $key = "$Method $($Path -replace '\?.*$', '')"; if ($script:cfReply[$key] -is [scriptblock]) { & $script:cfReply[$key] } else { $script:cfReply[$key] } }
+  function Write-Step { param($n, $m) $log.Add("step $m") }
+  function Write-OK { param($m) $log.Add("ok $m") }
+  function Write-Warn { param($m) $log.Add("warn $m") }
+  function Write-Info { param($m) $log.Add("info $m") }
+  function Write-AppLog { }
+  function Save-PersistedConfig { param($Config, $Path) $script:savedConfig = $Config.Clone(); $script:savedPath = $Path; $true }
+  $ConfigFile = 'C:\AppUpdater\.appupdater-config'
+  $KVNamespace = 'APP_MANIFEST'; $WorkerName = 'app-updater'; $WorkerSource = 'export default {}'; $XmlFile = Join-Path ([IO.Path]::GetTempPath()) 'missing-appVersions.xml'
+  $active = @{ result = @{ status = 'active' } }
+  $cfg = @{ AccountID = 'acc1'; WorkerURL = 'https://app-updater.x.workers.dev'; ManifestToken = '' }
+
+  Assert ((ConvertTo-WorkerCustomDomain 'https://status.example.com/') -eq 'status.example.com') 'A custom domain keeps its leading letters when https:// is stripped'
+  foreach ($bad in @('Updates.example.com', 'nodot', 'a_b.example.com', 'x.example.com/evil', '-x.example.com', '')) {
+    Assert-Throws { ConvertTo-WorkerCustomDomain $bad } "An invalid custom domain is refused: '$bad'"
+  }
+
+  $script:cfReply = @{ 'GET /user/tokens/verify' = $active; 'GET /zones' = @{ result = @(@{ id = 'z1' }) } }
+  Set-WorkerCustomDomainCore -Config $cfg -Domain 'updates.example.com'
+  $put = $cf | Where-Object Method -eq 'PUT' | Select-Object -First 1
+  Assert ($put.Path -eq '/accounts/acc1/workers/domains' -and $put.Body.hostname -eq 'updates.example.com' -and $put.Body.zone_id -eq 'z1' -and $put.Body.service -eq 'app-updater') 'A custom domain is routed to the worker in its zone'
+  Assert (($cf | Where-Object Path -like '/zones*').Path -eq '/zones?name=example.com') 'The zone is looked up by the root domain'
+  $script:cfReply['GET /zones'] = @{ result = @() }
+  Assert-Throws { Set-WorkerCustomDomainCore -Config $cfg -Domain 'updates.example.com' } 'A domain outside the Cloudflare account is reported'
+  $script:cfReply['GET /user/tokens/verify'] = @{ result = @{ status = 'disabled' } }
+  Assert-Throws { Set-WorkerCustomDomainCore -Config $cfg -Domain 'updates.example.com' } 'An inactive Cloudflare token stops the action'
+
+  $cf.Clear(); $log.Clear()
+  $script:cfReply = @{ 'GET /user/tokens/verify' = $active; 'GET /accounts/acc1/storage/kv/namespaces' = @{ result = @() } }
+  Assert-Throws { Invoke-WorkerRedeployCore -Config $cfg } 'Re-deploy stops when the KV namespace is gone'
+  Assert (-not ($cf | Where-Object Method -eq 'PUT')) 'Re-deploy uploads nothing without its KV namespace'
+  $script:cfReply['GET /accounts/acc1/storage/kv/namespaces'] = @{ result = @(@{ title = 'OTHER'; id = 'k0' }, @{ title = 'APP_MANIFEST'; id = 'k1' }) }
+  $cf.Clear(); $log.Clear()
+  Invoke-WorkerRedeployCore -Config $cfg
+  Assert (($cf | Where-Object Method -eq 'PUT').Path -join ',' -eq '/accounts/acc1/workers/scripts/app-updater,/accounts/acc1/storage/kv/namespaces/k1/values/evtsec') 'Re-deploy uploads the script and rotates the event secret in the right namespace'
+  Assert ($log -match 'skipping manifest push') 'Re-deploy without a manifest token says the manifest was not pushed'
+
+  $cf.Clear()
+  $script:cfReply = @{}
+  $newToken = New-WorkerAuthTokenCore -Config $cfg
+  $secret = $cf | Where-Object Method -eq 'PUT'
+  Assert ($newToken -match '^[0-9a-f]{64}$' -and $secret.Body.text -eq $newToken -and $secret.Body.name -eq 'AUTH_TOKEN' -and $secret.Path -eq '/accounts/acc1/workers/scripts/app-updater/secrets') 'Token rotation sets the new token as the worker secret'
+  Assert-Throws { New-WorkerAuthTokenCore -Config @{ AccountID = '' } } 'Token rotation needs a saved account'
+
+  $cf.Clear(); $log.Clear()
+  $script:cfReply = @{ 'GET /user/tokens/verify' = $active; 'GET /accounts/acc1/storage/kv/namespaces' = @{ result = @(@{ title = 'APP_MANIFEST'; id = 'k1' }) }
+    'DELETE /accounts/acc1/storage/kv/namespaces/k1' = { throw 'kv busy' } }
+  Assert (-not (Remove-CloudflareWorkerCore -Config $cfg)) 'A failed KV delete is reported as incomplete'
+  Assert ($cf | Where-Object { $_.Method -eq 'DELETE' -and $_.Path -eq '/accounts/acc1/workers/scripts/app-updater' }) 'The worker script is deleted even when the KV delete fails'
+  $script:cfReply.Remove('DELETE /accounts/acc1/storage/kv/namespaces/k1')
+  Assert (Remove-CloudflareWorkerCore -Config $cfg) 'A full delete is reported as complete'
+
+  $rest = [Collections.Generic.List[string]]::new()
+  function Invoke-RestMethod { param($Uri, $Method, $Headers, $Body, $ErrorAction) $rest.Add("$Method $Uri") }
+  $CF_API = 'https://api.cloudflare.com/client/v4'; $global:ApiToken = 'tok'
+  Reset-WorkerStatusPasswordCore -Config $cfg
+  Assert ($rest -join '|' -eq 'DELETE https://api.cloudflare.com/client/v4/accounts/acc1/storage/kv/namespaces/k1/values/auth_password|PUT https://api.cloudflare.com/client/v4/accounts/acc1/storage/kv/namespaces/k1/values/auth_session_secret') 'Password reset clears the password and signs out every session'
+  $global:ApiToken = $null
+
+  $c2 = @{ WorkerURL = 'https://app-updater.x.workers.dev'; WorkerDevURL = '' }
+  Assert-Throws { Set-WorkerUrl -Config $c2 -Url 'http://plain.example.com' } 'A plain http worker address is refused'
+  Assert ((Set-WorkerUrl -Config $c2 -Url 'updates.example.com/') -eq 'https://updates.example.com' -and $c2.WorkerDevURL -eq 'https://app-updater.x.workers.dev') 'A new worker address keeps the workers.dev address as fallback'
+  $ManifestTokenFile = Join-Path ([IO.Path]::GetTempPath()) 'no-such-token-file'
+  $c3 = @{ WorkerURL = 'https://a.example.com'; WorkerDevURL = 'https://b.example.com'; AccountID = 'acc1'; ManifestToken = 'secret' }
+  Clear-WorkerConnection -Config $c3
+  Assert (-not ($c3.WorkerURL + $c3.WorkerDevURL + $c3.AccountID + $c3.ManifestToken) -and $c3.OfflineMode -and $script:savedConfig.OfflineMode) 'Disconnecting clears and saves the worker settings'
+  Assert ($script:savedPath -eq $ConfigFile) 'Worker settings are saved to the config file by name'
+}
 function Invoke-TestWorker([string]$FunctionName, [hashtable]$Variables, [string]$Setup = '') {
   $definition = Get-Item "Function:\$FunctionName"
   $call = $definition.ScriptBlock.Ast.Find({ param($node)

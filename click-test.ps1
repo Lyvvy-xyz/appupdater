@@ -350,38 +350,43 @@ window.__errors = [];
   }
 
   Invoke-Flow 'Cloudflare connect' {
-    # The connect wizard is a native WPF window, so UI Automation finds and closes it.
-    Invoke-Click '.nav-btn[data-go=worker]'
-    Wait-Js "document.getElementById('btn-worker-connect').getClientRects().length > 0"
-    $label = Get-Text '#btn-worker-connect'
-    Invoke-Click '#btn-worker-connect'
+    # Every step runs in the page; no native window may open.
     Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
     $byProcess = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
-    $byTitle = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty, 'Worker Options')
-    $bySub = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty, 'Choose an action')
-    $dialog = $null
-    for ($i = 0; $i -lt 60 -and -not $dialog; $i++) {
-      Start-Sleep -Milliseconds 250
-      foreach ($w in [Windows.Automation.AutomationElement]::RootElement.FindAll('Children', $byProcess)) {
-        if ($w.FindFirst('Descendants', $byTitle)) { $dialog = $w }
-      }
-    }
-    Assert ([bool]$dialog) "'$label' opens the Worker Options window"
-    if (-not $dialog) { return }
-    Assert ([bool]$dialog.FindFirst('Descendants', $bySub)) "The Worker Options window shows 'Choose an action'"
-    try {
-      $r = $dialog.Current.BoundingRectangle
-      $bmp = New-Object Drawing.Bitmap ([int]$r.Width), ([int]$r.Height)
-      try {
-        $g = [Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen([int]$r.X, [int]$r.Y, 0, 0, $bmp.Size); $g.Dispose()
-        $script:shotCount++
-        $bmp.Save((Join-Path $shotDir ('{0:D2}-cloudflare-connect.png' -f $script:shotCount)), [Drawing.Imaging.ImageFormat]::Png)
-      } finally { $bmp.Dispose() }
-    } catch { Write-Host "Screenshot 'cloudflare-connect' failed: $($_.Exception.Message)" -ForegroundColor Yellow }
-    $dialog.GetCurrentPattern([Windows.Automation.WindowPattern]::Pattern).Close()
-    Wait-Js "document.getElementById('btn-worker-connect').textContent === $(ConvertTo-Json $label) && !document.getElementById('btn-worker-connect').disabled" 30
-    Assert ($proc -and -not $proc.HasExited) 'Closing the Worker Options window leaves the app running'
-    Save-Shot 'worker-after-connect-cancel'
+    $windowCount = { @([Windows.Automation.AutomationElement]::RootElement.FindAll('Children', $byProcess)).Count }
+    $before = & $windowCount
+    Invoke-Click '.nav-btn[data-go=worker]'
+    Wait-Js "document.getElementById('btn-worker-connect').getClientRects().length > 0"
+    Assert (-not (Test-Shown '#worker-on')) 'A PC without a worker shows no worker actions'
+    Assert ((Get-Text '#worker-off') -like '*report back*') 'Settings explains what a worker gives you'
+    Invoke-Click '#btn-worker-connect'
+    Wait-Js "!document.getElementById('ui-dlg').hidden"
+    Assert ((Get-Text '#ui-dlg-sub') -eq 'Step 1 of 4') 'Connect opens the in-app walkthrough'
+    Save-Shot 'cloudflare-connect'
+    Invoke-Click '#ui-dlg [data-ui=ok]'
+    Wait-Js "!!document.getElementById('ui-f-token')"
+    Write-Field '#ui-f-token' 'not-a-real-token'
+    Invoke-Click '#ui-dlg [data-ui=ok]'
+    Wait-Js "!document.getElementById('ui-dlg-log').hidden && !document.querySelector('#ui-dlg-foot [data-ui=close]').disabled" 60
+    Assert ((Get-Text '#ui-dlg-log').Length -gt 2) "A token Cloudflare rejects is reported: $(Get-Text '#ui-dlg-log')"
+    Assert ((& $windowCount) -eq $before) 'Connecting opens no native window'
+    Eval-Js "document.getElementById('ui-dlg').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))" | Out-Null
+    Wait-Js "document.getElementById('ui-dlg').hidden"
+    Assert ($proc -and -not $proc.HasExited) 'Closing the walkthrough leaves the app running'
+  }
+
+  Invoke-Flow 'In-app dialogs' {
+    Invoke-Click '#btn-export-recovery'
+    Wait-Js "!!document.getElementById('ui-f-pass')"
+    Write-Field '#ui-f-pass' 'abcdefgh'; Write-Field '#ui-f-again' 'abcdefgx'
+    Invoke-Click '#ui-dlg [data-ui=ok]'
+    Assert ((Get-Text '#ui-dlg-err') -like '*do not match*') 'Recovery passphrases must match'
+    Invoke-Click '#ui-dlg [data-ui=cancel]'
+    Invoke-Click '#docs-reset-onboarding'
+    Wait-Js "!document.getElementById('ui-dlg').hidden"
+    Assert ((Get-Text '#ui-dlg-title') -eq 'Reset the guide') 'Resetting the guide asks in the app'
+    Invoke-Click '#ui-dlg [data-ui=cancel]'
+    Wait-Js "document.getElementById('ui-dlg').hidden"
   }
 
   if ($installer) {
