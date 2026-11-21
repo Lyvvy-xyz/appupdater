@@ -2653,7 +2653,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (checks.length) groups.push({ t: 'Checks before deploying', p: 'Read these before you assign the app.', rows: checks });
     if (epm) {
       groups.push({ t: 'Create the rule in Intune', p: 'Endpoint security → Endpoint Privilege Management → Create an Elevation rules policy, then add one rule per row below.',
-        rows: [['Policy name', $('#f-epm-policy').value]].concat((payload.epm || []).flatMap(r => [
+        rows: [['Policy name', $('#f-epm-policy').value]].concat([].concat(payload.epm || []).flatMap(r => [
           ['File name', r.FileName], ['SHA-256', r.SHA256],
           ['Rule type', r.SuggestedRule + (r.CertificateFile ? ' (certificate file ' + r.CertificateFile + ' is in the folder)' : '')]])) });
       groups.push({ t: 'Keep it current', p: 'Each new version of the installer needs its own rule. Watching the vendor gets the next hash without downloading it here.', action: ['epm-watch', 'Watch for new versions…'] });
@@ -4762,7 +4762,7 @@ function Start-WingetLookupJob {
   param($Wv, [string]$InstallerPath, [hashtable]$Inspection, [bool]$UseWinget = $true)
   $functions = foreach ($name in @('Find-WingetInstaller','Invoke-WingetQuery','Get-WingetManifestPath','ConvertFrom-SimpleYaml',
                                    'Select-WingetInstallerEntry','ConvertTo-WingetSilentArgs','ConvertTo-WingetNormalName','ConvertTo-LooseVersion',
-                                   'Get-InstallerFolderInfo')) {
+                                   'Get-InstallerFolderInfo','Test-SafeHttpsUrl')) {
     "function $name {`n$((Get-Item "Function:\$name").ScriptBlock)`n}"
   }
   if ($UseWinget -and -not ((Test-Path -LiteralPath (Join-Path $WingetCacheDir 'index.db')) -and (Test-Path -LiteralPath (Join-Path $KevCacheDir 'kev.json')))) { Start-WingetIndexRefresh }
@@ -5267,7 +5267,8 @@ function Start-PackageBuildJob {
         $global:LastBuildDir = [string]$done.path
         $files = @(Get-ChildItem -LiteralPath $done.path -File -ErrorAction SilentlyContinue | ForEach-Object Name)
         $epmCsv = Join-Path $done.path 'EPM-rules.csv'
-        $epmRows = if ($FormData.SimplePkgTarget -eq 'epm' -and (Test-Path -LiteralPath $epmCsv)) { @(Import-Csv -LiteralPath $epmCsv | Select-Object FileName, SHA256, Signer, CertificateFile, SuggestedRule) } else { @() }
+        # @() outside the if: assigning an if statement unrolls a one-row array into a single object.
+        $epmRows = @(if ($FormData.SimplePkgTarget -eq 'epm' -and (Test-Path -LiteralPath $epmCsv)) { Import-Csv -LiteralPath $epmCsv | Select-Object FileName, SHA256, Signer, CertificateFile, SuggestedRule })
         Send-ToPage $Wv 'build-done' @{ path = $done.path; paths = $done.paths; warning = $done.warning; findings = @($done.findings); overridden = [bool]$FormData.OverrideRed; files = $files; epm = $epmRows }
         Write-AppLog "Build $($job.Id) succeeded in $([math]::Round($job.Started.Elapsed.TotalSeconds, 2))s" INFO
       } catch {

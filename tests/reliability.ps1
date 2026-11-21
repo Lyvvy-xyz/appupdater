@@ -1,4 +1,4 @@
-param([string]$HostPath = (Join-Path $PSScriptRoot '../host.ps1'))
+﻿param([string]$HostPath = (Join-Path $PSScriptRoot '../host.ps1'))
 $ErrorActionPreference = 'Stop'
 $hostSource = [IO.File]::ReadAllText((Resolve-Path $HostPath))
 $block = [regex]::Match($hostSource, '(?ms)^\$__CoreB64Chunks = @\(\r?\n(.*?)^\)').Groups[1].Value
@@ -57,6 +57,14 @@ foreach ($bad in @(
     '{"id":"x","name":"X","winget":"no spaces","source":{"type":"github","repo":"a/b"}}')) {
   Assert-Throws { ConvertTo-EpmApp (& $epmJson $bad) } "A malformed watched app is refused: $bad"
 }
+$wingetJob = (Get-Item Function:\Start-WingetLookupJob).ScriptBlock.Ast
+$wingetList = @($wingetJob.Find({ param($n) $n -is [Management.Automation.Language.ForEachStatementAst] }, $true).Condition.FindAll({ param($n) $n -is [Management.Automation.Language.StringConstantExpressionAst] }, $true) | ForEach-Object Value)
+$wingetMissing = @(foreach ($name in $wingetList) {
+  $fn = Get-Item "Function:\$name" -ErrorAction SilentlyContinue; if (-not $fn) { continue }
+  $fn.ScriptBlock.Ast.FindAll({ param($n) $n -is [Management.Automation.Language.CommandAst] }, $true) | ForEach-Object { $_.GetCommandName() } |
+    Where-Object { $_ -and $_ -notin $wingetList -and $_ -ne 'Write-AppLog' -and (Get-Item "Function:\$_" -ErrorAction SilentlyContinue) }
+}) | Sort-Object -Unique
+Assert (-not $wingetMissing.Count) "The winget lookup job loads every function its functions call: missing $($wingetMissing -join ', ')"
 Assert ($EpmWorkflow -match 'id-token: write' -and $EpmCheckScript -match 'Get-AuthenticodeSignature') 'The release-check job is embedded'
 function Invoke-TestWorker([string]$FunctionName, [hashtable]$Variables, [string]$Setup = '') {
   $definition = Get-Item "Function:\$FunctionName"
