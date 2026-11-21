@@ -30,6 +30,7 @@ $__UiHtml = @'
   --font-d:'Geist','Segoe UI',system-ui,sans-serif; --font-b:'Geist','Segoe UI',system-ui,sans-serif; --font-m:'Geist Mono','Cascadia Mono',Consolas,monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--void);color:var(--ink);font-family:var(--font-b);font-size:13.5px;line-height:1.5;overflow:hidden}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;
@@ -709,12 +710,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 
             <div class="bsec" id="sec-configure">
               <div class="bsec-h"><span class="bsec-n">03</span><span class="bsec-t">Configure</span><span class="bsec-rule"></span>
-                <button type="button" class="linkbtn" id="mode-explainer-toggle">What do these mean?</button>
               </div>
-              <div id="mode-explainer" style="display:none;margin-bottom:10px;padding:10px;border:1px solid var(--signal);border-radius:var(--r-sm);background:rgba(var(--signal-rgb),.08)">
-                    <div style="font-size:12.5px;line-height:1.6" id="mode-explainer-text"></div>
-                    <button type="button" class="btn ghost sm" id="mode-explainer-dismiss" style="margin-top:8px">Got it, stop guiding me</button>
-                  </div>
               <div class="brow app-only" id="runtime-url-row"><label for="f-download-url">Download URL</label><input class="field mono" id="f-download-url" type="url" placeholder="filled from winget when it knows this installer"><span class="bsrc" id="src-download">devices fetch updates</span></div>
               <div class="brow app-only" id="close-apps-row"><span class="blbl">Close before install</span>
                 <div class="procs" id="close-apps-hint">Detected process to close on install</div>
@@ -1386,11 +1382,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#buildbar').style.display = (id === 'build') ? 'flex' : 'none';
     if (id === 'build') {
       builderProgress();
-      if (!window._tourActive && !window._modeExplainerSeen && !window._modeExplainerShownThisSession) {
-        window._modeExplainerShownThisSession = true;
-        updateModeExplainerText();
-        $('#mode-explainer').style.display = 'block';
-      }
     }
     else if (id === 'progress') renderPipe(2, 2, 2);
     else if (id === 'done') renderPipe(4, 5);
@@ -1413,8 +1404,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       if (drAdd && drAdd.style.display === 'block') { drAdd.style.display = 'none'; return; }
       const ovPanel = $('#build-override-panel');
       if (ovPanel && ovPanel.style.display === 'block') { ovPanel.style.display = 'none'; window._overridePanelOpened = false; return; }
-      const explainer = $('#mode-explainer');
-      if (explainer && explainer.style.display === 'block') { explainer.style.display = 'none'; return; }
     }
   });
 
@@ -1506,38 +1495,10 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     });
   });
 
-  $('#mode-explainer-toggle').addEventListener('click', () => {
-    const el = $('#mode-explainer');
-    el.style.display = el.style.display === 'block' ? 'none' : 'block';
-  });
-  $('#mode-explainer-dismiss').addEventListener('click', () => {
-    $('#mode-explainer').style.display = 'none';
-    if (!window._modeExplainerSeen) {
-      window._modeExplainerSeen = true;
-      send('mark-mode-explainer-seen', {});
-    }
-  });
-  function updateModeExplainerText() {
-    const modeText = form.Mode === 'runtime'
-      ? '<b>AppUpdater Runtime</b> (selected) installs the app plus a small background task that keeps checking for new versions and updates it automatically - "set it and forget it".'
-      : '<b>Simple Package</b> (selected) just installs the app once, nothing extra - use this when something else (e.g. Intune\'s own update detection) will handle updates instead.';
-    const targetText = form.SimplePkgTarget === 'psadt'
-      ? '<b>PSADT package</b> (selected) wraps the install with PSAppDeployToolkit, adding a branded "please close these apps" prompt and the option to let users defer.'
-      : '<b>.intunewin</b> (selected) packages straight for Intune Win32 upload as-is, with no extra install-time prompts.';
-    $('#mode-explainer-text').innerHTML = modeText + '<br><br>' + targetText;
-  }
-  function guideToModeExplainer() {
-    updateModeExplainerText();
-    if (!window._tourActive && !window._modeExplainerSeen) {
-      window._modeExplainerShownThisSession = true;
-      $('#mode-explainer').style.display = 'block';
-    }
-  }
   segInit($('#segMode'), v => {
     form.Mode = v;
     applyContext();
     updateSummary();
-    guideToModeExplainer();
   });
   segInit($('#segTarget'), v => {
     form.SimplePkgTarget = v;
@@ -1547,7 +1508,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#bp-panel').style.display = (v === 'psadt' && window._bpExpanded) ? 'block' : 'none';
     if (v === 'psadt') updateBuildBrandingPreview();
     updateSummary();
-    guideToModeExplainer();
   });
   segInit($('#segPsadtVersion'), v => { form.PSADTVersion = v; updateBuildBrandingPreview(); });
   segInit($('#segBpSwap'), v => { window._bpSwapVersion = v; updateBuildBrandingPreview(); });
@@ -2821,7 +2781,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     card.style.top = cardTop + 'px';
     card.style.left = cardLeft + 'px';
   }
-  function showTourStep(i) {
+  function showTourStep(i, dir = 1) {
     const steps = tourStepsForCurrentNav();
     if (i < 0 || i >= steps.length) { endTour(true); return; }
     tourIndex = i;
@@ -2830,7 +2790,9 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       const delay = step.onShow ? step.onShow() : 0;
       const spotlight = () => {
         const target = document.querySelector(step.selector);
-        if (!target) { showTourStep(i + 1); return; }
+        // Hidden targets (a PSADT-only panel on an Intune build) have no box to point at.
+        if (!target || !target.getClientRects().length) { showTourStep(i + dir, dir); return; }
+        target.scrollIntoView({ block: 'center' });
         positionTourSpot(target);
         $('#tour-step-count').textContent = `Step ${i + 1} of ${steps.length}`;
         $('#tour-title').textContent = step.title;
@@ -2851,7 +2813,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (window._miniGuideActive) { endMiniGuide(); return; }
     showTourStep(tourIndex + 1);
   });
-  $('#tour-back').addEventListener('click', () => showTourStep(tourIndex - 1));
+  $('#tour-back').addEventListener('click', () => showTourStep(tourIndex - 1, -1));
   function showProfileGuide() {
     goTo('profiles');
     window._tourActive = true;
@@ -3014,6 +2976,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       const st = appState(a), id = escapeHtml(a.id);
       const primary = st.ask ? `<button class="btn sm primary" data-go="home">Answer</button>` : st.act ? actBtn(st.act, a.id) : '';
       const menu = [
+        a.outputDir ? `<button data-open-app="${id}">Open folder</button>` : '',
         a.outputDir && !(st.act && st.act[1] === 'data-test') ? `<button data-test="${id}">Test on this machine</button>` : '',
         st.act && st.act[1] === 'data-rebuild' ? '' : `<button data-rebuild="${id}">Rebuild</button>`,
         a.status !== 'deployed' && !(st.act && st.act[1] === 'data-mark-deployed') ? `<button data-mark-deployed="${id}">Mark deployed</button>` : '',
@@ -3091,6 +3054,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
         toast('Rebuild', 'Fields pre-filled - pick the installer again to continue.');
       }
     }
+    const oa = e.target.closest('[data-open-app]');
+    if (oa) send('open-folder', { which: 'app', id: oa.dataset.openApp });
     const bs = e.target.closest('[data-browse-script]');
     if (bs) send('browse-script', { field: bs.dataset.browseScript });
     const md = e.target.closest('[data-mark-deployed]');
@@ -3861,6 +3826,10 @@ Add-Type -Name Win32Drag -Namespace AppUpdater -MemberDefinition @'
 $wv = New-Object Microsoft.Web.WebView2.Wpf.WebView2
 $window.Content = $wv
 [System.Windows.Shell.WindowChrome]::SetIsHitTestVisibleInChrome($wv, $true)
+# A maximized borderless window overhangs the screen by its resize frame, which would cut off the status bar.
+$window.Add_StateChanged({
+  $wv.Margin = if ($window.WindowState -eq 'Maximized') { [System.Windows.SystemParameters]::WindowResizeBorderThickness } else { New-Object System.Windows.Thickness(0) }
+})
 
 $window.Add_Loaded({
 try {
@@ -4315,10 +4284,6 @@ $_result.ok = $true
               $config.OnboardingSeen = $true
               [void](Save-PersistedConfig -Config $config)
             }
-            'mark-mode-explainer-seen' {
-              $config.ModeExplainerSeen = $true
-              [void](Save-PersistedConfig -Config $config)
-            }
             'reset-onboarding' {
               $config.OnboardingSeen = $false
               $config.ModeExplainerSeen = $false
@@ -4334,6 +4299,11 @@ $_result.ok = $true
                   # Only a folder this session built, never a path from the page.
                   $dir = [string]$global:LastBuildDir
                   try { if ($dir -and (Test-Path -LiteralPath $dir -PathType Container)) { Start-Process explorer.exe $dir } else { Start-Process explorer.exe $global:OutputBase } } catch { }
+                }
+                'app'    {
+                  # The folder on record for that app, never a path from the page.
+                  $entry = (Get-DeployStatusStore)[[string]$msg.payload.id]
+                  try { if ($entry -and $entry.outputDir -and (Test-Path -LiteralPath $entry.outputDir -PathType Container)) { Start-Process explorer.exe $entry.outputDir } else { Start-Process explorer.exe $global:OutputBase } } catch { }
                 }
                 'cache'  { try { Start-Process explorer.exe $PSADTCacheDir } catch { } }
                 'log'    { try { Start-Process notepad.exe $global:LogFile } catch { } }
