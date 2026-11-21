@@ -62,7 +62,7 @@ $wingetList = @($wingetJob.Find({ param($n) $n -is [Management.Automation.Langua
 $wingetMissing = @(foreach ($name in $wingetList) {
   $fn = Get-Item "Function:\$name" -ErrorAction SilentlyContinue; if (-not $fn) { continue }
   $fn.ScriptBlock.Ast.FindAll({ param($n) $n -is [Management.Automation.Language.CommandAst] }, $true) | ForEach-Object { $_.GetCommandName() } |
-    Where-Object { $_ -and $_ -notin $wingetList -and $_ -ne 'Write-AppLog' -and (Get-Item "Function:\$_" -ErrorAction SilentlyContinue) }
+    Where-Object { $_ -and $_ -notin $wingetList -and $_ -ne 'Write-AppLog' -and @(Get-Item "Function:\$_" -ErrorAction SilentlyContinue | Where-Object { -not $_.ModuleName }).Count }
 }) | Sort-Object -Unique
 Assert (-not $wingetMissing.Count) "The winget lookup job loads every function its functions call: missing $($wingetMissing -join ', ')"
 Assert ($EpmWorkflow -match 'id-token: write' -and $EpmCheckScript -match 'Get-AuthenticodeSignature') 'The release-check job is embedded'
