@@ -2349,6 +2349,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           applyCfNavVisibility();
           renderFleet(lastFleet);
           renderGettingStarted();
+          window._intuneSuggested = !!payload.intuneSuggested;
           if (!payload.onboardingSeen && !window._tourAutoStarted) {
             window._tourAutoStarted = true;
             setTimeout(startTour, 600);
@@ -2926,6 +2927,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           ['File name', r.FileName], ['SHA-256', r.SHA256],
           ['Rule type', r.SuggestedRule + (r.CertificateFile ? ' (certificate file ' + r.CertificateFile + ' is in the folder)' : '')]])) });
       groups.push({ t: 'Keep it current', p: 'Each new version of the installer needs its own rule. Watching the vendor gets the next hash without downloading it here.', action: ['epm-watch', 'Watch for new versions…'] });
+      if (!intune.signedIn) groups.push({ t: 'Check it against Intune (optional)', p: 'Connect your Intune tenant to see whether this version is already allowed and which policy holds this app\u2019s rules. You can connect any time from the EPM screen or Settings \u203a 09 Intune for EPM.', action: ['intune-connect', 'Connect Intune\u2026'] });
     } else {
       groups.push({ t: 'Add it in Intune', p: 'Apps → Windows → Add → Windows app (Win32), then upload this file from the folder.', rows: [['Package file', pkgFile]] });
       let install, uninstall, detect;
@@ -2957,6 +2959,17 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     });
     const watch = $('#done-sheet [data-done-action="epm-watch"]');
     if (watch) watch.addEventListener('click', () => $('#epm-watch-btn').click());
+    const connect = $('#done-sheet [data-done-action="intune-connect"]');
+    if (connect) connect.addEventListener('click', openIntuneWizard);
+    // The first EPM rule built on this PC suggests connecting Intune once; after that the step above is enough.
+    if (epm && !intune.signedIn) {
+      const asked = window._intuneSuggested !== false;
+      window._intuneSuggested = true;
+      if (!asked) send('mark-intune-suggested', {});
+      if (!asked) setTimeout(() => uiDialog({ title: 'Connect Intune?', ok: 'Connect Intune\u2026', cancel: 'Later',
+        text: 'Your first EPM rule is ready. Connecting your Intune tenant lets AppUpdater show whether each version is already allowed, which policy holds an app\u2019s rules, and whether EPM is switched on for your devices.\n\nIt takes a minute and only reads. If you skip it now, it is on the EPM screen and in Settings \u203a 09 Intune for EPM.' })
+        .then(v => { if (v) openIntuneWizard(); else toast('Later', 'Connect Intune from the EPM screen or Settings \u203a 09.'); }), motionMs(500));
+    }
     // Testing installs a package; an EPM rule has none.
     // An EPM rule can only be tried on an enrolled device after it is created, so its steps are worded for that.
     const stepText = { 'done-step-test': ['Test it here', 'Runs the real package on this machine as Intune would, then checks detection.'],
@@ -4966,6 +4979,7 @@ catch {
                 showGettingStarted = -not [bool]$config.HideGettingStarted
                 showCloudflareNav = -not [bool]$config.HideCloudflareNav
                 onboardingSeen = [bool]$config.OnboardingSeen
+                intuneSuggested = [bool]$config.IntuneSuggested
                 modeExplainerSeen = [bool]$config.ModeExplainerSeen
                 version = $global:Version
                 newerAvailable = [bool]($global:_relCheck -and $global:_relCheck.Newer -and $global:_relCheck.Latest)
@@ -4998,6 +5012,10 @@ catch {
             }
             'dismiss-getting-started' {
               $config.HideGettingStarted = $true
+              [void](Save-PersistedConfig -Config $config)
+            }
+            'mark-intune-suggested' {
+              $config.IntuneSuggested = $true
               [void](Save-PersistedConfig -Config $config)
             }
             'mark-onboarding-seen' {
