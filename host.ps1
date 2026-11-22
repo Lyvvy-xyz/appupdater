@@ -948,12 +948,19 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           </div>
           <div class="grid-wrap" id="fleet-grid"><table class="grid" id="fleet-table"></table></div>
           <div id="fleet-epm" hidden>
+            <div id="epm-empty" hidden style="padding:8px 0">
+              <p class="wz-lead">EPM rules let standard users run specific installers elevated, through Intune Endpoint Privilege Management.</p>
+              <div style="display:flex;gap:8px;margin:0 0 8px"><button class="btn primary sm" id="epm-empty-setup">Set up&hellip;</button><button class="btn sm ghost" id="epm-empty-guide">How EPM rules work</button></div>
+              <p class="bnote">You can build an EPM rule without any setup: pick an installer in the builder and choose EPM rule.</p>
+            </div>
+            <div id="epm-main">
             <div class="tglrow" style="margin:0 0 6px"><div><b id="intune-status-t">Intune not connected</b><small id="intune-status">Connect your Intune tenant to see which versions your EPM policies already allow, and to add new ones once adding rules is on in Settings &rsaquo; 09.</small></div>
               <div style="display:flex;gap:8px"><button class="btn sm" id="intune-refresh" hidden>Refresh</button><button class="btn sm" id="intune-signout" hidden>Sign out</button>
                 <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button><button class="btn sm" id="epm-setup">Set up&hellip;</button><button class="btn sm ghost" id="epm-guide">How EPM rules work</button></div></div>
             <div id="epm-cover"></div>
-            <div class="bsec"><div class="bsec-h"><span class="bsec-t">EPM policies in Intune</span><span class="bsec-rule"></span></div>
-              <div id="intune-policies"><p class="bnote">Connect Intune to list them.</p></div></div>
+            <div class="bsec" id="intune-pol-sec"><div class="bsec-h"><span class="bsec-t">EPM policies in Intune</span><span class="bsec-rule"></span></div>
+              <div id="intune-policies"></div></div>
+            </div>
           </div>
         </div>
 
@@ -1763,13 +1770,13 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   // before moving on; the screen comes back after each one with a tick or the reason it did not pass.
   const epmStateNow = () => new Promise(res => { window._epmStateWait = res; send('epm-state', {}); });
   async function runEpmSetupItem(id) {
-    if (id === 'worker') {
-      await openConnectWizard();
-      if (!window._workerUrl) return 'The worker is not connected yet.';
-      const s = await epmStateNow();
-      return s.ok || !s.noWorker ? '' : 'The worker did not answer with this PC’s token.';
-    }
     if (id === 'checks') {
+      if (!window._workerUrl) {
+        await openConnectWizard();
+        if (!window._workerUrl) return 'Vendor checks need the Cloudflare worker, which is not connected yet.';
+        const w = await epmStateNow();
+        if (!w.ok && w.noWorker) return 'The worker did not answer with this PC\u2019s token.';
+      }
       goTo('worker');
       await openEpmWizard();
       const s = await epmStateNow();
@@ -1794,14 +1801,15 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     let started = false, failed = '', reason = '';
     for (;;) {
       const items = [
-        { id: 'worker', title: 'Cloudflare worker', done: !!window._workerUrl, todo: 'Where the vendor checks report. Needs a free Cloudflare account.', ok: 'Connected and answering.' },
-        { id: 'checks', title: 'Watch for new versions', done: !!(epmState && epmState.cfg), todo: 'A free cloud machine hashes each new release for you.', ok: `Running in ${epmState && epmState.cfg ? epmState.cfg.repo : ''}.` },
-        { id: 'intune', title: 'Connect Intune', done: intune.signedIn && intune.loaded, todo: 'See which versions your policies already allow.', ok: `Connected as ${intune.account}.` },
-        { id: 'write', title: 'Let AppUpdater add rules', done: !!(window._intuneWrite && intune.canWrite), todo: 'Add to Intune writes each new version and reads it back.', ok: 'On, with permission to change policies.' }];
+        { id: 'intune', title: 'Connect Intune', done: intune.signedIn && intune.loaded, todo: 'See which versions your EPM policies already allow.', ok: `Connected as ${intune.account}.` },
+        { id: 'write', title: 'Let AppUpdater add rules', done: !!(window._intuneWrite && intune.canWrite), todo: 'Add to Intune writes each new version and reads it back.', ok: 'On, with permission to change policies.' },
+        { id: 'checks', title: 'Watch for new versions (optional)', done: !!(epmState && epmState.cfg),
+          todo: window._workerUrl ? 'A free GitHub machine hashes each new release for you.' : 'A free GitHub machine hashes each new release for you. Its results come back through a free Cloudflare worker, which this step sets up first.',
+          ok: `Running in ${epmState && epmState.cfg ? epmState.cfg.repo : ''}.` }];
       const next = items.find(x => !x.done), doneCount = items.filter(x => x.done).length;
-      const v = await uiDialog({ title: 'Keep EPM rules current', sub: next ? `${doneCount} of 4 set up` : 'all set up',
+      const v = await uiDialog({ title: 'Keep EPM rules current', sub: next ? `${doneCount} of ${items.length} set up` : 'all set up',
         ok: !next ? 'Done' : started ? (failed ? 'Try again' : 'Continue') : 'Start', cancel: !next ? '' : started ? 'Stop here' : 'Skip setup',
-        walk: { lead: 'Each new version of an installer needs its own rule. Start sets these up one at a time and tests each one before moving on.',
+        walk: { lead: 'Each new version of an installer needs its own rule. Start sets these up one at a time and tests each one before moving on. Building EPM rules needs none of them.',
           rows: items.map((x, i) => [x.done ? '✓' : x.id === failed ? '!' : String(i + 1), x.title, x.done ? x.ok : x.id === failed ? reason : x.todo, x.done ? 'ok' : x.id === failed ? 'warn' : '']),
           note: next ? `Next: ${next.title}. You can also do each one later from App fleet › EPM or Settings.` : 'New versions now show up in App fleet › EPM, ready to add.' } });
       if (!v || !next) { if (!v && next) toast('Setup paused', 'Pick it up again from App fleet › EPM › Set up.'); return; }
@@ -3786,6 +3794,11 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const s = epmState || {}, apps = s.apps || [], res = s.results || {};
     const chip = $('[data-fleet-view="epm"] span');
     if (chip) chip.textContent = epmAppCount();
+    // Until something is connected or built, the view is one line and the setup button.
+    const empty = !intune.signedIn && !s.cfg && !apps.length && !lastFleet.some(a => a.type === 'epm');
+    $('#epm-empty').hidden = !empty; $('#epm-main').hidden = empty;
+    $('#intune-pol-sec').hidden = !intune.signedIn;
+    $('#epm-screen-watch').hidden = !s.cfg;
     $('#intune-signin').hidden = intune.signedIn; $('#intune-signout').hidden = $('#intune-refresh').hidden = !intune.signedIn;
     $('#intune-set-connect').hidden = intune.signedIn; $('#intune-set-out').hidden = $('#intune-set-open').hidden = !intune.signedIn;
     $('#intune-set-t').textContent = intune.signedIn ? `Connected as ${intune.account || 'your account'}` : 'Not connected';
@@ -3800,8 +3813,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       : 'Connect your Intune tenant to see which versions your EPM policies already allow, and to add new ones once adding rules is on in Settings \u203a 09.';
     const watchedNames = apps.map(a => lettersOf(a.name));
     const builtOnly = lastFleet.filter(a => a.type === 'epm' && !watchedNames.includes(lettersOf(a.name)));
-    $('#epm-cover').innerHTML = (!s.cfg && !apps.length
-      ? '<p class="bnote">Vendor release checks are not set up yet. They find each new version and its SHA-256 for you. <button class="linkbtn" data-epm-setup>Set up vendor checks\u2026</button></p>'
+    $('#epm-cover').innerHTML = (!apps.length ? ''
       : apps.map(app => {
         const r = res[app.id] || null, ok = r && r.status === 'ok', hash = ok ? String(r.sha256 || '').toUpperCase() : '';
         const found = ok ? `${r.version} verified, signed by ${r.signer}` : r ? (r.status === 'blocked' ? `${r.version || 'latest'} blocked: ${r.reason}` : `check failed: ${r.reason || 'unknown'}`) : 'waiting for the first check';
@@ -3846,6 +3858,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   $('#intune-signin').addEventListener('click', openIntuneWizard);
   $('#intune-set-connect').addEventListener('click', openIntuneWizard);
   $('#epm-setup').addEventListener('click', () => epmSetupHub());
+  $('#epm-empty-setup').addEventListener('click', () => epmSetupHub());
+  $('#epm-empty-guide').addEventListener('click', () => $('#epm-guide').click());
   $('#epm-guide').addEventListener('click', () => { goTo('build'); if (form.SimplePkgTarget !== 'epm') pickSeg('segTarget', 'epm'); epmWalkthrough(); });
   $('#tgl-intune-write').addEventListener('click', async () => {
     const on = !window._intuneWrite;
