@@ -481,6 +481,13 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 .badge.bad{color:var(--bad);border-color:var(--bad)}
 .epm-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule)}
 .epm-row small{display:block;color:var(--faint);font-size:11px;overflow-wrap:anywhere}
+.cov{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr) auto;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--rule)}
+.cov b{display:block;font-size:12.5px} .cov small{display:block;color:var(--faint);font-size:11.5px;overflow-wrap:anywhere}
+.cov .st{font-size:12px} .cov .st.ok{color:var(--ok)} .cov .st.warn{color:var(--warn)} .cov .st.dim{color:var(--faint)}
+.pol{border:1px solid var(--edge);border-radius:var(--r-sm);padding:10px 12px;margin:0 0 10px}
+.pol h3{margin:0;font:600 13px var(--font-b)} .pol .meta{color:var(--faint);font-size:11.5px;margin:2px 0 6px}
+.rule{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--rule);font-size:12px}
+.rule .mono{font-family:var(--font-m);font-size:11px;color:var(--dim);overflow-wrap:anywhere}
 .modal{position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:95;display:flex;align-items:center;justify-content:center}
 .ui-text{margin:0 0 10px;white-space:pre-line}
 .ui-field{margin:0 0 10px} .ui-field .field{height:32px;padding:0 10px} .ui-field small{display:block;color:var(--faint);font-size:11.5px;margin-top:3px}
@@ -552,6 +559,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     <button class="nav-btn on" data-go="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span class="nav-tip">Home</span></button>
     <button class="nav-btn" data-go="build"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7l8.7 5 8.7-5M12 22V12"/></svg><span class="nav-tip">Package builder</span></button>
     <button class="nav-btn" data-go="fleet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="7" height="7" rx="1.3"/><path d="M13 5h8M13 8.5h8M3 15h18M3 18.5h12"/></svg><span class="nav-tip">App fleet</span></button>
+    <button class="nav-btn" data-go="epm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 4.5-3.4 8.1-8 9-4.6-.9-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg><span class="nav-tip">EPM</span></button>
     <button class="nav-btn" data-go="profiles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="7" rx="1.5"/><rect x="14" y="15" width="7" height="7" rx="1.5"/></svg><span class="nav-tip">Client profiles</span></button>
     <button class="nav-btn" data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v5h5"/><path d="M3.05 13a9 9 0 1 0 2.13-7.83L3 8"/><path d="M12 7v5l4 2"/></svg><span class="nav-tip">History</span></button>
     <button class="nav-btn" data-go="worker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nav-tip">Worker &amp; settings</span></button>
@@ -998,6 +1006,20 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
               <button class="btn primary" id="test-modal-start">Start test</button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- ========== EPM ========== -->
+      <section class="screen page-flush" data-screen="epm" id="screen-epm">
+        <div class="page">
+          <div class="phead"><h2>EPM</h2><span class="pmeta">elevation rules that let standard users run installers</span><span class="grow"></span>
+            <button class="btn sm" id="intune-refresh" hidden>Refresh</button><button class="btn sm" id="intune-signout" hidden>Sign out</button>
+            <button class="btn sm primary" id="intune-signin">Sign in to Intune&hellip;</button></div>
+          <p class="bnote" id="intune-status" style="margin:0 0 14px">Sign in with your Intune admin account to see the EPM policies you already have. AppUpdater only reads them.</p>
+          <div class="bsec"><div class="bsec-h"><span class="bsec-t">Watched apps</span><span class="bsec-rule"></span><button type="button" class="linkbtn" id="epm-screen-watch">Watch an app&hellip;</button></div>
+            <div id="epm-cover"></div></div>
+          <div class="bsec"><div class="bsec-h"><span class="bsec-t">EPM policies in Intune</span><span class="bsec-rule"></span></div>
+            <div id="intune-policies"><p class="bnote">Sign in to list them.</p></div></div>
         </div>
       </section>
 
@@ -1562,7 +1584,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     this.classList.remove('spin'); void this.offsetWidth; this.classList.add('spin');
   });
 
-  const screens = ['home', 'build', 'progress', 'done', 'fleet', 'profiles', 'history', 'worker', 'docs'];
+  const screens = ['home', 'build', 'progress', 'done', 'fleet', 'epm', 'profiles', 'history', 'worker', 'docs'];
   const crumbs = { home: 'AppUpdater', build: 'Package builder', progress: 'Building', done: 'Package ready', fleet: 'App fleet', profiles: 'Client profiles', history: 'History', worker: 'Worker & settings', accessibility: 'Accessibility', docs: 'Docs & help' };
   function goTo(id) {
     screens.forEach(s => $('#screen-' + s).classList.toggle('on', s === id));
@@ -1578,6 +1600,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (id === 'fleet') send('get-fleet', {});
     if (id === 'profiles') { send('get-profiles', {}); if (!window._profileEditorInit) { window._profileEditorInit = true; openProfileEditor(null); } }
     if (id === 'history') send('get-history', {});
+    if (id === 'epm') { send('epm-state', {}); if (intune.signedIn) send('intune-read', {}); renderEpmScreen(); }
     if (id === 'worker') { send('get-config', {}); send('get-settings', {}); send('get-fleet', {}); send('epm-state', {}); send('get-worker', {}); }
   }
   document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) goTo(g.dataset.go); });
@@ -2267,6 +2290,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           $('#epm-add-msg').textContent = '';
           if (payload.ok) {
             renderEpm(payload.state);
+            renderEpmScreen();
             if (wizStep === 3) wizRun();
             if (payload.saved) ['#epm-name', '#epm-source', '#epm-publisher', '#epm-winget', '#epm-asset', '#epm-vregex', '#epm-download'].forEach(id => { $(id).value = ''; });
           } else {
@@ -2344,6 +2368,27 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
         case 'worker-data':
           window._worker = { url: payload.url || '', workerName: payload.workerName || 'app-updater', pendingDomain: payload.pendingDomain || '' };
           renderWorkerActs();
+          break;
+        case 'intune-code':
+          if (payload.ok) {
+            $('#ui-dlg-sub').textContent = 'waiting for you to approve';
+            $('#ui-dlg-body').innerHTML = `<p class="bnote">Microsoft's sign-in page has opened. Enter this code there and sign in with your Intune admin account:</p>`
+              + `<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><span class="epm-code">${escapeHtml(payload.code)}</span><button class="btn sm" data-intune-copy>Copy</button><button class="btn sm" data-intune-reopen>Open the page again</button></div>`
+              + `<p class="bnote">AppUpdater asks only to read device configuration policies and group names. The sign-in lasts for this session and is not saved.</p>`;
+            $('#ui-dlg-body [data-intune-copy]').addEventListener('click', async () => { try { await navigator.clipboard.writeText(payload.code); toast('Copied', 'Sign-in code on clipboard'); } catch (_) { } });
+            $('#ui-dlg-body [data-intune-reopen]').addEventListener('click', () => send('intune-open-device', {}));
+          } else uiProgressDone(false, payload.message || 'Microsoft did not return a sign-in code.');
+          break;
+        case 'intune-signed-in':
+          if (payload.ok) { intune.signedIn = true; intune.account = payload.account || ''; uiProgressDone(true, `Signed in as ${intune.account}. Reading your EPM policies…`); send('intune-read', {}); }
+          else uiProgressDone(false, payload.message || 'Sign-in did not finish.');
+          renderEpmScreen();
+          break;
+        case 'intune-data':
+          if (payload.ok) { intune.signedIn = true; intune.account = payload.account || intune.account; intune.policies = [].concat(payload.policies || []).map(p => Object.assign(p, { rules: [].concat(p.rules || []), assignments: [].concat(p.assignments || []) })); intune.loaded = true; }
+          else if (payload.signedOut) { intune = { signedIn: false, account: '', policies: [], loaded: false }; if (payload.message) toast('Sign in again', 'The Intune sign-in has expired.', true); }
+          else toast('Could not read Intune', payload.message || 'Graph request failed.', true);
+          renderEpmScreen();
           break;
         case 'cf-lookup-result':
           if (window._cfLookup) { const r = window._cfLookup; window._cfLookup = null; r(payload); }
@@ -3478,6 +3523,77 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     send('cf-connect', { token, accountId: acct.id, accountName: acct.name, orgName: d.orgName.trim(), password: d.pass });
     token = '';
   }
+
+  // EPM screen: what the vendor checks found next to the elevation rules already in Intune. Read-only.
+  let intune = { signedIn: false, account: '', policies: [], loaded: false };
+  const lettersOf = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const ruleType = t => ({ automatic: 'Automatic', self: 'User confirmed', supportarbitrated: 'Support approved', deny: 'Deny' })[String(t || '').toLowerCase()] || t || 'Unknown type';
+  const ruleMentions = (rule, app) => { const n = lettersOf(app.name); return n.length >= 3 && [rule.fileName, rule.product, rule.name, rule.internalName].some(f => lettersOf(f).includes(n)); };
+  function policyForApp(app, hash) {
+    const ps = intune.policies;
+    return ps.find(p => hash && p.rules.some(r => r.hash === hash)) || ps.find(p => p.name === `EPM · ${app.name}`) || ps.find(p => p.rules.some(r => ruleMentions(r, app))) || null;
+  }
+  const assignedText = p => !p.assignments.length ? 'not assigned' : 'assigned to ' + p.assignments.map(a => (a.exclude ? 'not ' : '') + (a.name || 'a group')).join(', ');
+  function renderEpmScreen() {
+    const s = epmState || {}, apps = s.apps || [], res = s.results || {};
+    $('#intune-signin').hidden = intune.signedIn; $('#intune-signout').hidden = $('#intune-refresh').hidden = !intune.signedIn;
+    $('#intune-status').textContent = intune.signedIn
+      ? `Signed in as ${intune.account || 'your account'}. ${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}. Adding rules to Intune is switched off until it has been tested against a real tenant.`
+      : 'Sign in with your Intune admin account to see the EPM policies you already have. AppUpdater only reads them.';
+    $('#epm-cover').innerHTML = !s.cfg && !apps.length
+      ? '<p class="bnote">Vendor release checks are not set up yet. They find each new version and its SHA-256 for you. <button class="linkbtn" data-epm-setup>Set up vendor checks…</button></p>'
+      : apps.map(app => {
+        const r = res[app.id] || null, ok = r && r.status === 'ok', hash = ok ? String(r.sha256 || '').toUpperCase() : '';
+        const found = ok ? `${r.version} verified, signed by ${r.signer}` : r ? (r.status === 'blocked' ? `${r.version || 'latest'} blocked: ${r.reason}` : `check failed: ${r.reason || 'unknown'}`) : 'waiting for the first check';
+        let st = ['dim', intune.signedIn ? 'nothing to compare yet' : 'sign in to compare'], act = '';
+        if (intune.signedIn && ok) {
+          const holding = intune.policies.filter(p => p.rules.some(x => x.hash === hash));
+          const pol = policyForApp(app, hash);
+          if (holding.length) st = ['ok', `${r.version} is in ${holding.map(p => p.name).join(', ')}`];
+          else if (pol && pol.rules.some(x => x.certificate && ruleMentions(x, app))) st = ['ok', `covered by a certificate rule in ${pol.name}`];
+          else { st = ['warn', `${r.version} is not in Intune yet` + (pol ? ` (its rules are in ${pol.name})` : '')]; act = `<button class="btn sm" data-epm-add="${escapeHtml(app.id)}">Add to Intune…</button>`; }
+        }
+        return `<div class="cov"><div><b>${escapeHtml(app.name)}</b><small>${escapeHtml(found)}</small></div><span class="st ${st[0]}">${escapeHtml(st[1])}</span>${act || '<span></span>'}</div>`;
+      }).join('') || '<p class="bnote">No apps watched yet.</p>';
+    if (!intune.signedIn) { $('#intune-policies').innerHTML = '<p class="bnote">Sign in to list them.</p>'; return; }
+    const watchedHashes = new Set(apps.map(a => res[a.id] && String(res[a.id].sha256 || '').toUpperCase()).filter(Boolean));
+    $('#intune-policies').innerHTML = intune.policies.map(p => `<div class="pol"><h3>${escapeHtml(p.name)}</h3><div class="meta">${escapeHtml(assignedText(p))} · ${p.rules.length} rule${p.rules.length === 1 ? '' : 's'}${p.rules.length >= 90 ? ' · near the 100-rule limit' : ''}</div>`
+      + p.rules.map((r, i) => {
+        const watched = watchedHashes.has(r.hash) || apps.some(a => ruleMentions(r, a));
+        return `<div class="rule"><div><b>${escapeHtml(r.name || r.fileName || 'Unnamed rule')}</b><div class="mono">${escapeHtml(r.fileName || '')}${r.hash ? ' · ' + escapeHtml(r.hash.slice(0, 16)) + '…' : r.certificate ? ' · certificate' : ''}</div></div>`
+          + `<span>${escapeHtml(ruleType(r.ruleType))}</span>`
+          + (watched ? '<span class="pmeta">watched</span>' : `<button class="linkbtn" data-epm-watch-rule="${escapeHtml(p.id)}:${i}">Watch…</button>`) + '</div>';
+      }).join('') + '</div>').join('') || '<p class="bnote">No elevation rules policies in this tenant yet.</p>';
+  }
+  $('#intune-signin').addEventListener('click', () => { uiProgress('Sign in to Intune', 'waiting for a code'); send('intune-signin', {}); });
+  $('#intune-signout').addEventListener('click', () => send('intune-signout', {}));
+  $('#intune-refresh').addEventListener('click', () => { $('#intune-status').textContent = 'Reading your EPM policies…'; send('intune-read', {}); });
+  $('#epm-screen-watch').addEventListener('click', () => { goTo('worker'); if (epmState && !epmState.cfg) openEpmWizard(); else { $('#epm-add').open = true; $('#epm-section').scrollIntoView({ block: 'start' }); } });
+  $('#screen-epm').addEventListener('click', e => {
+    if (e.target.closest('[data-epm-setup]')) { goTo('worker'); openEpmWizard(); return; }
+    const add = e.target.closest('[data-epm-add]');
+    if (add) {
+      const app = ((epmState || {}).apps || []).find(a => a.id === add.dataset.epmAdd), r = ((epmState || {}).results || {})[add.dataset.epmAdd];
+      if (!app || !r) return;
+      const pol = policyForApp(app, String(r.sha256).toUpperCase());
+      uiDialog({ title: `Add ${app.name} ${r.version} to Intune`, ok: 'Close', cancel: '',
+        text: `This is the rule AppUpdater would add:\n\n`
+          + `Policy: ${pol ? pol.name + ' (' + assignedText(pol) + ')' : 'EPM · ' + app.name + ' (new; you choose its group when it is created)'}\n`
+          + `Rule name: ${app.name} ${r.version}\nFile name: ${r.file || 'from the download'}\nSHA-256: ${String(r.sha256).toUpperCase()}\nSigned by: ${r.signer}\nType: user confirmed\n\n`
+          + `The previous version's rule stays; older ones are offered for removal.\n\nWriting to Intune is switched off until it has been tested against a real tenant.` });
+      return;
+    }
+    const w = e.target.closest('[data-epm-watch-rule]');
+    if (w) {
+      const [pid, idx] = w.dataset.epmWatchRule.split(':'), p = intune.policies.find(x => x.id === pid), r = p && p.rules[Number(idx)];
+      if (!r) return;
+      goTo('worker');
+      if (epmState && !epmState.cfg) { openEpmWizard(); return; }
+      $('#epm-add').open = true;
+      $('#epm-name').value = r.product || r.name || r.fileName.replace(/\.(exe|msi)$/i, '');
+      $('#epm-section').scrollIntoView({ block: 'start' }); $('#epm-source').focus();
+    }
+  });
   // Worker actions; each opens the in-app dialog and runs in the background with a live log.
   const CF_TOKEN = { id: 'token', label: 'Cloudflare API token', type: 'password', mono: true, hint: 'The token you set the worker up with. It is used for this action only and not saved.' };
   const needToken = v => (v.token || '').trim() ? '' : 'Enter your Cloudflare API token.';
@@ -3542,13 +3658,13 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   setInterval(() => send('get-status', {}), 60000);
 
   // Keyboard layer: number keys for the rail, Ctrl+O to pick an installer, Ctrl+Enter to build, Ctrl+K for every command.
-  $$('.rail .nav-btn[data-go]').forEach((b, i) => { if (i < 6) b.insertAdjacentHTML('beforeend', `<span class="nav-num" aria-hidden="true">${i + 1}</span>`); });
-  const railScreens = ['home', 'build', 'fleet', 'profiles', 'history', 'worker'];
+  $$('.rail .nav-btn[data-go]').forEach((b, i) => { if (i < 7) b.insertAdjacentHTML('beforeend', `<span class="nav-num" aria-hidden="true">${i + 1}</span>`); });
+  const railScreens = ['home', 'build', 'fleet', 'epm', 'profiles', 'history', 'worker'];
   const pickInstaller = () => { goTo('build'); if (form.Kind !== 'printer') send('browse-installer', {}); };
   const buildNow = () => { if (!$('#screen-build').classList.contains('on')) goTo('build'); else if (!$('#btn-build').disabled) $('#btn-build').click(); };
   const commands = [
-    ['Go', 'Home', () => goTo('home'), '1'], ['Go', 'Package builder', () => goTo('build'), '2'], ['Go', 'App fleet', () => goTo('fleet'), '3'],
-    ['Go', 'Client profiles', () => goTo('profiles'), '4'], ['Go', 'History', () => goTo('history'), '5'], ['Go', 'Worker & settings', () => goTo('worker'), '6'],
+    ['Go', 'Home', () => goTo('home'), '1'], ['Go', 'Package builder', () => goTo('build'), '2'], ['Go', 'App fleet', () => goTo('fleet'), '3'], ['Go', 'EPM', () => goTo('epm'), '4'],
+    ['Go', 'Client profiles', () => goTo('profiles'), '5'], ['Go', 'History', () => goTo('history'), '6'], ['Go', 'Worker & settings', () => goTo('worker'), '7'],
     ['Build', 'Pick an installer', pickInstaller, 'Ctrl O'], ['Build', 'Build package', buildNow, 'Ctrl \u21b5'],
     ['Build', 'Delivery: Simple', () => { goTo('build'); pickSeg('segMode', 'simple'); }], ['Build', 'Delivery: Runtime', () => { goTo('build'); pickSeg('segMode', 'runtime'); }],
     ['Build', 'Output: .intunewin', () => { goTo('build'); pickSeg('segTarget', 'intunewin'); }], ['Build', 'Output: PSADT', () => { goTo('build'); pickSeg('segTarget', 'psadt'); }], ['Build', 'Output: EPM rule', () => { goTo('build'); pickSeg('segTarget', 'epm'); }],
@@ -3583,7 +3699,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
     if (ctrl && e.key === 'Enter') { e.preventDefault(); buildNow(); }
     else if (ctrl && key === 'o') { e.preventDefault(); pickInstaller(); }
-    else if (!ctrl && !e.altKey && !typing && /^[1-6]$/.test(e.key) && $('#test-modal').style.display !== 'flex') goTo(railScreens[Number(e.key) - 1]);
+    else if (!ctrl && !e.altKey && !typing && /^[1-7]$/.test(e.key) && $('#test-modal').style.display !== 'flex') goTo(railScreens[Number(e.key) - 1]);
   });
 
   window._gotFleetData = false;
@@ -4641,6 +4757,49 @@ $_result.ok = $true
                 }.GetNewClosure())
               }
             }
+            'intune-signin' {
+              Start-BackgroundAction -Wv $wv -Roots @('Request-MsDeviceCode') -Event 'intune-code' -TimeoutSeconds 30 -Variables @{ _cid = $MsGraphClientId; _scope = $IntuneScopes } -Script @'
+$c = Request-MsDeviceCode -ClientId $_cid -Scope $_scope
+$_result.ok = $true; $_result.code = [string]$c.user_code
+$_result.device = [string]$c.device_code; $_result.interval = [int]$c.interval; $_result.expires = [int]$c.expires_in
+'@ -OnDone ({
+                param($r)
+                $device = $r.device; $r.Remove('device')
+                if (-not $r.ok) { return }
+                Start-Process 'https://microsoft.com/devicelogin'
+                Start-BackgroundAction -Wv $wv -Roots @('Wait-MsDeviceToken') -Event 'intune-signed-in' -TimeoutSeconds ($r.expires + 60) `
+                  -Variables @{ _cid = $MsGraphClientId; _device = $device; _interval = $r.interval; _expires = $r.expires } -Script @'
+$t = Wait-MsDeviceToken -ClientId $_cid -DeviceCode $_device -Interval $_interval -ExpiresIn $_expires
+$_result.token = $t.token; $_result.expiresIn = $t.expiresIn; $_result.ok = $true
+'@ -OnDone ({
+                  param($a)
+                  $token = $a.token; $a.Remove('token')
+                  if (-not $a.ok -or -not $token) { return }
+                  $claims = try { Get-JwtClaims $token } catch { @{} }
+                  $IntuneAuth.token = $token
+                  $IntuneAuth.expires = (Get-Date).AddSeconds([Math]::Max(60, $a.expiresIn - 120))
+                  $IntuneAuth.account = [string]$(if ($claims.upn) { $claims.upn } else { $claims.preferred_username })
+                  $a.account = $IntuneAuth.account
+                }.GetNewClosure())
+              }.GetNewClosure())
+            }
+            'intune-open-device' { Start-Process 'https://microsoft.com/devicelogin' }
+            'intune-signout' { $IntuneAuth.Clear(); Send-ToPage $wv 'intune-data' @{ ok = $false; signedOut = $true } }
+            'intune-read' {
+              if (-not $IntuneAuth.token -or (Get-Date) -ge $IntuneAuth.expires) { $IntuneAuth.Clear(); Send-ToPage $wv 'intune-data' @{ ok = $false; signedOut = $true } }
+              else {
+                Start-BackgroundAction -Wv $wv -Roots @('Get-IntuneEpmPolicies') -Event 'intune-data' -TimeoutSeconds 180 -Variables @{ _tok = $IntuneAuth.token; _acct = $IntuneAuth.account } -Script @'
+$_result.account = $_acct
+try { $_result.policies = @(Get-IntuneEpmPolicies -Token $_tok); $_result.ok = $true }
+catch {
+  $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+  $_result.ok = $false
+  if ($code -eq 401) { $_result.signedOut = $true }
+  $_result.message = if ($code -eq 403) { 'This account cannot read Intune device configuration. Sign in with an Intune administrator.' } else { $_.Exception.Message }
+}
+'@ -OnDone ({ param($r) if ($r.signedOut) { $IntuneAuth.Clear() } }.GetNewClosure())
+              }
+            }
             'epm-open-device' { try { Start-Process 'https://github.com/login/device' } catch { } }
             'get-profiles' {
               $pd = Get-PackagingProfiles
@@ -5314,6 +5473,10 @@ function Start-WingetLookupJob {
 
 # OAuth app used for the GitHub device sign-in. A client ID is public; device flow needs no secret.
 $GitHubClientId = ''
+$MsGraphClientId = '14d82eec-204b-4c2f-b7e8-296a70dab67e'
+# Read-only until writing EPM rules has been tested against a real tenant.
+$IntuneScopes = 'https://graph.microsoft.com/DeviceManagementConfiguration.Read.All https://graph.microsoft.com/Group.Read.All'
+$IntuneAuth = @{}
 $EpmCheckScript = @'
 # Finds new vendor releases (detect, Linux) and verifies them (verify, Windows): download to the runner,
 # Authenticode signer check, SHA-256, winget comparison. Only version, hash and signer leave the runner.
@@ -5546,6 +5709,113 @@ function Start-EpmRun([string]$Token, [string]$Repo, [string]$Branch) {
   for ($i = 0; $i -lt 5; $i++) {
     try { Invoke-GitHubApi -Token $Token -Method Post -Path "/repos/$Repo/actions/workflows/epm-check.yml/dispatches" -Body @{ ref = $Branch } | Out-Null; return }
     catch { if ($i -eq 4) { throw }; Start-Sleep -Seconds 3 }
+  }
+}
+
+# Intune sign-in uses Microsoft's own Graph PowerShell public client, so nothing is registered in the tenant.
+# The access token stays in this process for the session and is never saved.
+function Request-MsDeviceCode([string]$ClientId, [string]$Scope) {
+  Invoke-RestMethod -Method Post -Uri 'https://login.microsoftonline.com/organizations/oauth2/v2.0/devicecode' `
+    -Body @{ client_id = $ClientId; scope = $Scope } -TimeoutSec 20 -UseBasicParsing -ErrorAction Stop
+}
+
+function Wait-MsDeviceToken([string]$ClientId, [string]$DeviceCode, [int]$Interval, [int]$ExpiresIn) {
+  $deadline = (Get-Date).AddSeconds($ExpiresIn)
+  while ((Get-Date) -lt $deadline) {
+    Start-Sleep -Seconds ([Math]::Max($Interval, 5))
+    try {
+      $r = Invoke-RestMethod -Method Post -Uri 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token' -TimeoutSec 20 -UseBasicParsing -ErrorAction Stop `
+        -Body @{ grant_type = 'urn:ietf:params:oauth:grant-type:device_code'; client_id = $ClientId; device_code = $DeviceCode }
+      return @{ token = [string]$r.access_token; expiresIn = [int]$r.expires_in }
+    } catch {
+      $err = ''; try { $err = [string]($_.ErrorDetails.Message | ConvertFrom-Json).error } catch { }
+      if ($err -eq 'slow_down') { $Interval += 5 }
+      elseif ($err -ne 'authorization_pending') { throw "Microsoft sign-in failed: $(if ($err) { $err } else { $_.Exception.Message })" }
+    }
+  }
+  throw 'The sign-in code expired. Start again.'
+}
+
+function Get-JwtClaims([string]$Token) {
+  $part = ($Token -split '\.')[1]
+  if (-not $part) { return @{} }
+  $part = $part.Replace('-', '+').Replace('_', '/'); $part += '=' * ((4 - $part.Length % 4) % 4)
+  [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($part)) | ConvertFrom-Json
+}
+
+function Invoke-GraphGet([string]$Token, [string]$Path) {
+  # Returns the object, or writes every item of a collection across its pages; callers wrap it in @().
+  # Only Graph next-page links are followed.
+  $uri = "https://graph.microsoft.com/beta$Path"; $items = [Collections.Generic.List[object]]::new()
+  while ($uri) {
+    $r = Invoke-RestMethod -Uri $uri -Headers @{ Authorization = "Bearer $Token" } -TimeoutSec 60 -UseBasicParsing -ErrorAction Stop
+    if (-not ($r.PSObject.Properties.Name -contains 'value')) { return $r }
+    foreach ($v in @($r.value)) { $items.Add($v) }
+    $uri = [string]$r.'@odata.nextLink'
+    if ($uri -and $uri -notmatch '^https://graph\.microsoft\.com/') { throw 'Graph returned an unexpected next-page link.' }
+  }
+  $items.ToArray()
+}
+
+function ConvertFrom-EpmRuleSettings {
+  # Reads the elevation rules out of an EPM elevation rules policy's settings. Fields this code does not know are
+  # kept under 'other', so a format change shows up instead of being dropped.
+  param([object[]]$Settings)
+  $prefix = 'device_vendor_msft_policy_privilegemanagement_elevationrules_{elevationrulename}'
+  $known = @{ name = 'name'; filename = 'fileName'; filehash = 'hash'; filepath = 'filePath'; productname = 'product'; internalname = 'internalName'
+              ruletype = 'ruleType'; filedescription = 'fileDescription'; description = 'description'; appliesto = 'appliesTo'; fileversion = 'minVersion' }
+  foreach ($s in @($Settings)) {
+    $inst = $s.settingInstance
+    if ([string]$inst.settingDefinitionId -ne $prefix) { continue }
+    foreach ($ruleValue in @($inst.groupSettingCollectionValue)) {
+      $rule = @{ name = ''; fileName = ''; hash = ''; filePath = ''; product = ''; internalName = ''; ruleType = ''; certificate = $false; other = @{} }
+      $queue = [Collections.Generic.Queue[object]]::new()
+      # @($null) holds one $null, so absent child lists are filtered out rather than walked.
+      foreach ($c in @($ruleValue.children)) { if ($null -ne $c) { $queue.Enqueue($c) } }
+      while ($queue.Count) {
+        $c = $queue.Dequeue()
+        $key = ([string]$c.settingDefinitionId).Replace("${prefix}_", '')
+        $value = if ($c.simpleSettingValue) { [string]$c.simpleSettingValue.value }
+                 elseif ($c.choiceSettingValue) { ([string]$c.choiceSettingValue.value).Replace("${prefix}_$($key)_", '').Replace("${prefix}_", '') }
+                 else { $null }
+        $nested = @($c.choiceSettingValue) + @($c.groupSettingCollectionValue) + @($c.choiceSettingCollectionValue)
+        foreach ($n in $nested) { if ($null -ne $n) { foreach ($k in @($n.children)) { if ($null -ne $k) { $queue.Enqueue($k) } } } }
+        if ($null -eq $value) { continue }
+        if ($known.ContainsKey($key)) { $rule[$known[$key]] = $value }
+        else {
+          if ($key -match 'certificate' -and $value) { $rule.certificate = $true }
+          $rule.other[$key] = $value
+        }
+      }
+      $rule.hash = ([string]$rule.hash).ToUpperInvariant()
+      $rule
+    }
+  }
+}
+
+function Get-IntuneEpmPolicies([string]$Token) {
+  # Every EPM elevation rules policy with its assignments and rules.
+  $filter = [Uri]::EscapeDataString("templateReference/TemplateFamily eq 'endpointSecurityEndpointPrivilegeManagement'")
+  $all = @(Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies?`$filter=$filter&`$select=id,name,description,lastModifiedDateTime,templateReference")
+  $groupNames = @{}
+  foreach ($p in $all) {
+    # Elevation settings policies share the template family; only rules policies hold rules.
+    if (([string]$p.templateReference.templateId) -notlike 'cff02aad-51b1-498d-83ad-81161a393f56*') { continue }
+    if ([string]$p.id -notmatch '^[0-9a-fA-F-]{36}$') { continue }
+    $assignments = @(foreach ($a in @(Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies/$($p.id)/assignments")) {
+      $t = $a.target; $type = [string]$t.'@odata.type'
+      $name = switch -Wildcard ($type) { '*allDevices*' { 'All devices' } '*allLicensedUsers*' { 'All users' } default { '' } }
+      $gid = [string]$t.groupId
+      if (-not $name -and $gid -match '^[0-9a-fA-F-]{36}$') {
+        if (-not $groupNames.ContainsKey($gid)) {
+          $groupNames[$gid] = try { [string](Invoke-GraphGet -Token $Token -Path "/groups/$($gid)?`$select=displayName").displayName } catch { $gid }
+        }
+        $name = $groupNames[$gid]
+      }
+      @{ name = $name; exclude = $type -like '*exclusion*' }
+    })
+    @{ id = [string]$p.id; name = [string]$p.name; modified = [string]$p.lastModifiedDateTime; assignments = $assignments
+       rules = @(ConvertFrom-EpmRuleSettings @(Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies/$($p.id)/settings")) }
   }
 }
 

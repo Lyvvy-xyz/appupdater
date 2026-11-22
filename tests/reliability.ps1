@@ -139,6 +139,40 @@ Assert ($EpmWorkflow -match 'id-token: write' -and $EpmCheckScript -match 'Get-A
   Assert (-not ($c3.WorkerURL + $c3.WorkerDevURL + $c3.AccountID + $c3.ManifestToken) -and $c3.OfflineMode -and $script:savedConfig.OfflineMode) 'Disconnecting clears and saves the worker settings'
   Assert ($script:savedPath -eq $ConfigFile) 'Worker settings are saved to the config file by name'
 }
+& {
+  # EPM rules policy in the settings-catalog shape Graph returns.
+  $p = 'device_vendor_msft_policy_privilegemanagement_elevationrules_{elevationrulename}'
+  $simple = { param($k, $v) @{ settingDefinitionId = "${p}_$k"; simpleSettingValue = @{ value = $v } } }
+  $choice = { param($k, $v, $kids) @{ settingDefinitionId = "${p}_$k"; choiceSettingValue = @{ value = "${p}_$v"; children = @($kids) } } }
+  $settings = @(@{ settingInstance = @{ settingDefinitionId = $p; groupSettingCollectionValue = @(
+      @{ children = @((& $simple 'name' '7-Zip 26.06'), (& $simple 'filename' '7z2606-x64.exe'), (& $simple 'filehash' '9b697f65ecc2'),
+                      (& $choice 'ruletype' 'self' @(@{ settingDefinitionId = "${p}_ruletype_validation"; choiceSettingCollectionValue = @(@{ value = "${p}_ruletype_validation_1"; children = @() }) })),
+                      (& $choice 'appliesto' 'allusers' @())) },
+      @{ children = @((& $simple 'name' 'PowerToys'), (& $simple 'filename' 'PowerToysSetup.exe'), (& $choice 'ruletype' 'automatic' @()),
+                      (& $simple 'certificatefileupload' 'MIIB...'), (& $simple 'newfield' 'x')) }) } },
+    @{ settingInstance = @{ settingDefinitionId = 'device_vendor_msft_policy_privilegemanagement_elevationclientsettings'; simpleSettingValue = @{ value = 'on' } } })
+  $rules = @(ConvertFrom-EpmRuleSettings $settings)
+  Assert ($rules.Count -eq 2) 'Each elevation rule in a policy is read'
+  Assert ($rules[0].name -eq '7-Zip 26.06' -and $rules[0].fileName -eq '7z2606-x64.exe' -and $rules[0].hash -eq '9B697F65ECC2' -and $rules[0].ruleType -eq 'self' -and -not $rules[0].certificate) 'A hash rule keeps its name, file, upper-case hash and type'
+  Assert ($rules[1].ruleType -eq 'automatic' -and $rules[1].certificate -and $rules[1].other.newfield -eq 'x') 'A certificate rule is marked and unknown fields are kept'
+
+  $calls = [Collections.Generic.List[string]]::new()
+  function Invoke-GraphGet { param($Token, $Path) $calls.Add($Path)
+    if ($Path -match '^/deviceManagement/configurationPolicies\?') { return @(
+      @{ id = '11111111-1111-1111-1111-111111111111'; name = 'EPM · 7-Zip'; templateReference = @{ templateId = 'cff02aad-51b1-498d-83ad-81161a393f56_1' } },
+      @{ id = '22222222-2222-2222-2222-222222222222'; name = 'EPM settings'; templateReference = @{ templateId = 'e7dcaba4-959b-46ed-88f0-16ba39b14fd8_1' } }) }
+    if ($Path -like '*/assignments') { return @(@{ target = @{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = '33333333-3333-3333-3333-333333333333' } },
+                                                  @{ target = @{ '@odata.type' = '#microsoft.graph.exclusionGroupAssignmentTarget'; groupId = '33333333-3333-3333-3333-333333333333' } }) }
+    if ($Path -like '/groups/*') { return @{ displayName = 'IT-Devs' } }
+    if ($Path -like '*/settings') { return $settings }
+  }
+  $pols = @(Get-IntuneEpmPolicies -Token 't')
+  Assert ($pols.Count -eq 1 -and $pols[0].name -eq 'EPM · 7-Zip' -and @($pols[0].rules).Count -eq 2) 'Only elevation rules policies are listed, with their rules'
+  Assert ($pols[0].assignments[0].name -eq 'IT-Devs' -and -not $pols[0].assignments[0].exclude -and $pols[0].assignments[1].exclude) 'Policy assignments show group names and exclusions'
+  Assert (@($calls | Where-Object { $_ -like '/groups/*' }).Count -eq 1) 'Each group name is looked up once'
+  Assert (-not ($calls | Where-Object { $_ -like '*22222222*' })) 'Elevation settings policies are not read'
+  Assert ((Get-JwtClaims ('x.' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"upn":"admin@contoso.com"}')).TrimEnd('=').Replace('+', '-').Replace('/', '_') + '.y')).upn -eq 'admin@contoso.com') 'The signed-in account is read from the token'
+}
 function Invoke-TestWorker([string]$FunctionName, [hashtable]$Variables, [string]$Setup = '') {
   $definition = Get-Item "Function:\$FunctionName"
   $call = $definition.ScriptBlock.Ast.Find({ param($node)

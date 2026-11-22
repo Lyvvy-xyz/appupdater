@@ -1,4 +1,4 @@
-<#
+﻿<#
 Smoke-tests host.ps1 over the Chrome DevTools Protocol; UI Automation can't see inside WebView2.
 Usage: .\click-test.ps1 [-HostPath <path to host.ps1>] [-Port 9333] [-InstallerPath <real installer>]
 Without an installer the 7-Zip build flows are skipped; the printer, zip and MSIX flows use fixtures of their own.
@@ -373,6 +373,15 @@ window.__errors = [];
     Eval-Js "document.getElementById('ui-dlg').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))" | Out-Null
     Wait-Js "document.getElementById('ui-dlg').hidden"
     Assert ($proc -and -not $proc.HasExited) 'Closing the walkthrough leaves the app running'
+  }
+
+  Invoke-Flow 'EPM screen' {
+    Invoke-Click '.nav-btn[data-go=epm]'
+    Wait-Js "document.getElementById('screen-epm').classList.contains('on')"
+    Assert ((Get-Text '.nav-btn[data-go=epm] .nav-num') -eq '4') 'EPM is the fourth screen on the rail'
+    Assert (Test-Shown '#intune-signin') 'EPM offers the Intune sign-in'
+    Assert ((Get-Text '#intune-policies') -like '*Sign in to list*') 'No Intune data is shown before sign-in'
+    Save-Shot 'epm-screen'
   }
 
   Invoke-Flow 'In-app dialogs' {
