@@ -32,14 +32,17 @@ Builds deployment-ready packages from `.exe`, `.msi`, `.msix` and portable `.zip
 
 AppUpdater runs on an IT admin's Windows machine and turns any installer into a complete Intune Win32 deployment in minutes. It auto-downloads every tool it needs — including `IntuneWinAppUtil.exe` and `PSAppDeployToolkit` — so there is nothing to install beforehand.
 
-Each build produces three output files ready for Intune:
+Each app build gives you a **`.intunewin` package** for upload to the Intune portal plus its scripts. Which scripts depends on how the app stays up to date:
 
-- A **`.intunewin` package** for upload to the Intune portal
-- A **detection script** that checks for the app using scheduled task + file existence
-- A **deploy script** that provisions a self-updating agent on the target device — creating a scheduled task, log files with proper ACLs, and a desktop shortcut that any user can click without needing admin rights
+- **Updates itself** (Runtime) — a **deploy script** that sets up a self-updating agent on the device (a scheduled task, log files with locked-down permissions, and a desktop shortcut any user can click without admin rights) and a **detection script** that checks for that task and its script
+- **You push updates** (Simple) — **install**, **uninstall** and **detect** scripts; detection reads the app's Add/Remove Programs entry and, if you set one, its minimum version
+
+An **EPM rule** build makes no package at all, just the rule values (see [EPM](#endpoint-privilege-management-epm)).
 
 > [!TIP]
 > **Everything is self-contained.** AppUpdater downloads `IntuneWinAppUtil.exe` from Microsoft's official GitHub repository on first build, verifies the Authenticode signature, and reuses it from then on. PSAppDeployToolkit is cached the same way. You only need PowerShell 5.1 and admin rights.
+
+The file you download is `AppUpdater.ps1`; in this repository it is `host.ps1`. They are the same script.
 
 ### Feature Highlights
 
@@ -104,7 +107,7 @@ Each build produces three output files ready for Intune:
 | **Web dashboard** | `https://{worker}.workers.dev/status` | None |
 | **Token storage** | Windows Credential Manager (machine scope) | N/A |
 | **Setup** | Cloudflare API token, then a 4-step walkthrough inside the app | None |
-| **Launch** | `.\host.ps1`, then **Worker & settings → Connect** | `.\host.ps1` (the default until you connect) |
+| **Launch** | `.\AppUpdater.ps1`, then **Worker & settings → Connect** | `.\AppUpdater.ps1` (the default until you connect) |
 
 ---
 
@@ -167,11 +170,11 @@ Getting one third-party app into Intune as a Win32 app normally means stitching 
 
 ## How it works
 
-AppUpdater is one file, `host.ps1`, containing three layers:
+AppUpdater is one file (`AppUpdater.ps1`, `host.ps1` in this repo) containing three layers:
 
 ```mermaid
 flowchart LR
-    subgraph host.ps1
+    subgraph AppUpdater.ps1
       UI["HTML/CSS/JS UI<br/>(embedded string)"]
       Shell["WPF window + WebView2<br/>(PowerShell host)"]
       Engine["Packaging engine<br/>(embedded base64)"]
@@ -183,7 +186,7 @@ flowchart LR
     Engine -. optional .-> CF["Cloudflare Worker<br/>manifest · dashboard · telemetry"]
 ```
 
-1. **Startup** — `host.ps1` self-elevates, fetches the pinned WebView2 SDK from nuget.org into `wv2\` if missing (and installs the WebView2 Runtime if the machine lacks it), decodes the embedded engine to a temp file and dot-sources it so all packaging functions are in scope.
+1. **Startup** — the script self-elevates, fetches the pinned WebView2 SDK from nuget.org into `wv2\` if missing (and installs the WebView2 Runtime if the machine lacks it), decodes the embedded engine to a temp file and dot-sources it so all packaging functions are in scope.
 2. **UI** — a borderless WPF window hosts a WebView2 control; the UI is loaded with `NavigateToString`, so there are no loose HTML files to tamper with.
 3. **Bridge** — every button posts `{ action, payload }` to PowerShell (`build-package`, `get-fleet`, `browse-installer`, …). The host runs the matching handler and replies with `{ type, payload }` messages (`build-progress`, `build-log`, `build-done`, `fleet-data`, …) that the page renders.
 4. **Build** — the engine inspects the installer, writes the deploy and detect scripts, updates the manifest (local `appVersions.xml` or Cloudflare KV), and wraps the result as `.intunewin` or a PSADT package. Progress streams back live to the progress screen.
@@ -209,10 +212,10 @@ flowchart LR
 
 ```powershell
 # Right-click → Run with PowerShell, or from a console:
-.\host.ps1
+.\AppUpdater.ps1
 ```
 
-`host.ps1` re-launches itself elevated (UAC prompt), downloads the WebView2 SDK into `wv2\` on first run, and opens the app. Everything else — IntuneWinAppUtil, PSADT, the packaging engine — is either embedded or fetched on demand.
+It re-launches itself elevated (UAC prompt), downloads the WebView2 SDK into `wv2\` on first run, and opens the app. Everything else — IntuneWinAppUtil, PSADT, the packaging engine — is either embedded or fetched on demand.
 
 ### First Launch
 
@@ -232,7 +235,7 @@ On first run a **guided tour** walks through each screen (Escape / arrow keys / 
 
 ```mermaid
 flowchart TD
-    A([Run host.ps1]) --> B[Elevate · fetch WebView2 SDK · load engine]
+    A([Run AppUpdater.ps1]) --> B[Elevate · fetch WebView2 SDK · load engine]
     B --> C{First launch?}
     C -->|Yes| D[Guided tour]
     C -->|No| E[Home]
@@ -279,13 +282,12 @@ A borderless window with a left sidebar. Every screen is part of the same page, 
 | Screen | What it's for |
 |---|---|
 | **Home** | Fleet stats (total / deployed / updates / pending), recent activity, getting-started checklist, shortcut to build, and a card asking whether apps deployed since the last launch installed correctly |
-| **Package builder** | Drop or browse an installer (or switch to **Printer**), review auto-detected identity, choose **Intune app**, **EPM rule** or **PSADT app**, Runtime vs Simple, live v3/v4 branding preview, **Build**. Below 1240px wide the manifest panel moves under the form |
+| **Package builder** | Choose **An app** or **A printer**; for an app, **Intune app**, **EPM rule** or **PSADT app**, and whether it **updates itself** or **you push updates**. Drop or browse an installer, review the auto-detected identity, live PSADT v3/v4 branding preview, **Build**. Below 1240px wide the manifest panel moves under the form |
 | **App fleet** | Every app in the manifest with version, target, status badge and a note when winget has a newer version; filter, bulk-select, **Test locally** (with suggested fixes and a winget-pkgs contribution), **Mark deployed**, **Rebuild**, **Open folder**, **Remove**. The **EPM** filter shows EPM apps next to your Intune EPM policies, with **Add to Intune**, the vendor check **Runs** and **Set up** |
 | **Client profiles** | Named branding sets (org name, logo, banner, default target) applied per build — handy for MSPs |
 | **History** | Timeline of every build, deploy and removal |
-| **Worker & settings** | Connect Cloudflare and run every worker action, open the status dashboard, default org name, recovery bundle export/import, online lookups (release check, winget, CISA), the opt-in NIST vulnerability check, **08 Vendor release checks** (where checks run, expected cost, Remove from Azure) and **09 Intune for EPM** (connect, and the switch that lets AppUpdater add rules) |
-| **Accessibility** | Reduce motion, high contrast, colour-blind safe palette (Okabe-Ito + shape cues) |
-| **Docs & help** | Replay the guided tour, reset onboarding |
+| **Worker & settings** | Connect Cloudflare and run every worker action, open the status dashboard, default org name, recovery bundle export/import, online lookups (release check, winget, CISA), the opt-in NIST vulnerability check, display options (reduce motion, high contrast, colour-blind safe palette with shape cues), Home and tour options, **08 Vendor release checks** (where checks run, expected cost, Remove from Azure) and **09 Intune for EPM** (connect, and the switch that lets AppUpdater add rules) |
+| **Docs & help** | How AppUpdater works, a link to the source and issues, and **Replay tour** |
 
 Keyboard: <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> with a visible focus ring everywhere, <kbd>Esc</kbd> closes dialogs, arrow keys / <kbd>Enter</kbd> drive the tour, <kbd>Ctrl</kbd>+<kbd>K</kbd> opens the command search (every screen and action, including **Fleet: EPM apps and Intune**).
 
@@ -366,17 +368,24 @@ AppUpdater inspects the installer and pre-fills every field. All fields are edit
 
 </details>
 
-### Phase 4 — Output Delivery
+### Phase 4 — What you get
 
-Choose how to deliver the package after building:
+The two questions at the top of the builder decide the output. **What do you need?**
 
 | Option | What happens |
 |---|---|
-| **Create `.intunewin`** | Downloads `IntuneWinAppUtil.exe` from Microsoft's GitHub (first use only), verifies Authenticode signature, packages everything into a `.intunewin` ready for Intune upload |
-| **Run on this machine** | Executes the generated `Deploy-{AppID}.ps1` immediately on the admin machine as administrator |
-| **Save scripts only** | Writes `Detect-{AppID}.ps1` and `Deploy-{AppID}.ps1` to `C:\ProgramData\AppUpdater\_output\{AppID}\` |
-| **Export as PSADT** | Downloads and caches `PSAppDeployToolkit` from GitHub releases (first use only), wraps the deployment with v3 or v4 for close-apps prompts and enterprise UI |
+| **Intune app** | Downloads `IntuneWinAppUtil.exe` from Microsoft's GitHub (first use only), verifies its Authenticode signature, and wraps the package as a `.intunewin` ready for upload |
+| **PSADT app** | Downloads and caches `PSAppDeployToolkit` (first use only) and wraps the install in PSADT v3, v4 or both, with your branding, for close-apps prompts and the toolkit's end-user dialogs |
 | **EPM rule** | No package: writes `EPM-rules.csv` (file name, SHA-256, signer) to `_output\{AppID}-EPM\` and shows the values to copy into Intune, or **Add it to Intune for me** — see [Endpoint Privilege Management](#endpoint-privilege-management-epm) |
+
+**How does it stay up to date?**
+
+| Option | What happens |
+|---|---|
+| **Updates itself** (Runtime) | The package installs a small agent that checks the manifest and installs new versions, so the next version needs no new package |
+| **You push updates** (Simple) | The package installs this version only; build and upload a new one for the next version |
+
+Output lands under `C:\ProgramData\AppUpdater\_output\`, and **Open folder** in Fleet goes straight there.
 
 > [!NOTE]
 > `IntuneWinAppUtil.exe` is downloaded from `https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool` on first use, verified against Microsoft's Authenticode certificate, then reused from the script directory. **No manual download required.**
@@ -510,14 +519,19 @@ Each watched app names its source (a GitHub release, a redirect link or a vendor
 
 All files land in `C:\ProgramData\AppUpdater\_output\{AppID}\`:
 
-| File | Description |
-|---|---|
-| `{AppID}.intunewin` | Intune Win32 package — upload directly to the Intune portal |
-| `Detect-{AppID}.ps1` | Detection script — exits `0` if deployed, `1` if not |
-| `Deploy-{AppID}.ps1` | Deployment script — runs as SYSTEM via Intune |
-| `XMLEntry-{AppID}.xml` | Standalone manifest entry for this single app |
+| File | Package | Description |
+|---|---|---|
+| `{AppID}.intunewin` | Updates itself | Intune Win32 package — upload directly to the Intune portal |
+| `{AppID}-Simple.intunewin` | You push updates | The same, for a Simple package; PSADT builds go to their own `_output\{AppID}-Simple-PSADT-v3\` (or `-v4\`) folder |
+| `Detect-{AppID}.ps1` | Updates itself | Detection script — exits `0` if deployed, `1` if not |
+| `Deploy-{AppID}.ps1` | Updates itself | Deployment script — runs as SYSTEM via Intune |
+| `XMLEntry-{AppID}.xml` | Updates itself | Standalone manifest entry for this single app |
+| `install.ps1` · `uninstall.ps1` | You push updates | Install and uninstall commands for the Intune app |
+| `detect.ps1` | You push updates | Detection script — finds the Add/Remove Programs entry and checks the minimum version |
 
 ### Detection Logic
+
+For **Updates itself** packages:
 
 ```powershell
 # Detect-{AppID}.ps1 — generated by AppUpdater
@@ -529,10 +543,12 @@ if ($taskExists -and $scriptExists) { Write-Host 'Detected'; exit 0 } else { exi
 
 Both the **scheduled task** and the **script file** must exist for detection to pass.
 
+For **You push updates** packages, `detect.ps1` looks for the **Registry Display Name** under the machine and per-user uninstall keys. With a minimum version set, an older copy counts as not installed, so Intune upgrades it.
+
 ### Deploy Script — What it Does on the Device
 
 <details>
-<summary><strong>All 8 deploy phases — click to expand</strong></summary>
+<summary><strong>All 8 deploy phases (Updates itself packages) — click to expand</strong></summary>
 
 The generated `Deploy-{AppID}.ps1` runs as **SYSTEM** via Intune and performs these phases in order:
 
@@ -609,8 +625,8 @@ Creates `C:\Users\Public\Desktop\Update {DisplayName}.lnk`. Falls back to the cu
 
 ## Printer Packages
 
-Alongside the standard `.exe`/`.msi` installer path, the build wizard's **00 · kind** step
-also offers **Printer** — deploys a printer queue, driver, and port via native Windows
+Alongside the standard `.exe`/`.msi` installer path, the builder's **What are you packaging?**
+question also offers **A printer** — deploys a printer queue, driver, and port via native Windows
 printer cmdlets (`Add-PrinterDriver`, `Add-PrinterPort`, `Add-Printer`) instead of running
 an installer. No `.exe`/`.msi` needed at all.
 
@@ -657,7 +673,7 @@ to library*) seeds the library with 11 curated vendor families in one click:
 | `Detect-Printer.ps1` | Verifies Spooler is running, then that the printer exists with the expected driver/port — distinguishes "not installed" from "Spooler down" rather than throwing on both |
 | `Uninstall-Printer.ps1` | Removes the printer queue, and the port/driver too if nothing else on the device still uses them |
 
-These three scripts are static and embedded in `host.ps1` itself (not downloaded), so they
+These three scripts are static and embedded in `AppUpdater.ps1` itself (not downloaded), so they
 carry no separate Authenticode burden — only the driver *payload* they operate on is
 verified, inside `Install-Printer.ps1`.
 
@@ -747,7 +763,7 @@ After authenticating at `https://{your-worker}.workers.dev/status`:
 |---|---|---|---|
 | `GET` | `/health` | None | Liveness check — returns `200 OK` |
 | `GET` | `/login` | None | Render login page |
-| `POST` | `/login` | None | Submit password + TOTP (if enrolled). Rate-limited: 5 failures/IP/15 min |
+| `POST` | `/login` | None | Submit password + TOTP (if enrolled). Rate-limited: 15 attempts/IP/15 min |
 | `POST` | `/logout` | Session | Invalidate current session |
 | `POST` | `/logout-all` | Session | Invalidate **all** active sessions across all devices |
 | `GET` | `/set-password` | None | First-run password setup page |
@@ -784,7 +800,7 @@ AppUpdater was designed for environments where endpoint security matters. Every 
 | **Bearer token** | Windows Credential Manager, target `AppUpdater-ManifestToken`, LocalMachine scope — DPAPI-backed, readable only by SYSTEM and local Administrators |
 | **Dashboard password** | PBKDF2-SHA256, 100 000 iterations, stored only in Cloudflare KV (`auth_password`) — never transmitted in plaintext |
 | **Session cookie** | HMAC-SHA256 signed, `HttpOnly`, `Secure`, `SameSite=Strict`, 24-hour `Max-Age` |
-| **Login rate limiting** | 5 failures per IP per 15 minutes, then locked |
+| **Login rate limiting** | 15 attempts per IP per 15 minutes, then refused until the window passes. Manifest uploads with the bearer token don't count |
 | **TOTP** | RFC 6238 time-based OTP, secret stored in Cloudflare KV as `totp_secret` |
 | **Event telemetry secret** | 32-byte random base64, per-app, auto-rotates on every Worker re-deploy |
 | **Binary integrity** | Microsoft Authenticode signature verified before any downloaded `.exe` is executed |
@@ -873,12 +889,12 @@ Every binary AppUpdater downloads — `IntuneWinAppUtil.exe`, app installers, PS
 ### Script Parameters
 
 ```powershell
-.\host.ps1 [-Wv2AssemblyDir <string>]
+.\AppUpdater.ps1 [-Wv2AssemblyDir <string>]
 ```
 
 | Parameter / variable | Description |
 |---|---|
-| `-Wv2AssemblyDir` | Where the WebView2 SDK DLLs live (default `wv2\` next to `host.ps1`). Downloaded there automatically if missing |
+| `-Wv2AssemblyDir` | Where the WebView2 SDK DLLs live (default `wv2\` next to the script). Downloaded there automatically if missing |
 | `$env:APPUPDATER_DEBUG_PORT` | Opens a Chrome DevTools Protocol port on the WebView2 control — used by `click-test.ps1` |
 | `$env:APPUPDATER_NO_ELEVATE` | Skips the UAC self-elevation (unattended test runs only; admin-only actions will fail) |
 
@@ -953,10 +969,10 @@ Console output on the build machine uses consistent prefixes:
 | Prefix | Meaning |
 |---|---|
 | `[OK]` | Operation succeeded |
-| `[WARN]` | Non-fatal issue, continuing |
-| `[FAIL]` | Operation failed — check detail log |
-| `[INFO]` | Informational message |
-| `[STEP]` | Progress through a multi-phase operation |
+| `[!!]` | Non-fatal issue, continuing |
+| `[XX]` | Operation failed — check detail log |
+| `[--]` | Informational message |
+| `[2/5]` | Progress through a multi-phase operation |
 
 ---
 
@@ -981,7 +997,7 @@ It doesn't need admin rights. When it isn't elevated, it sets `APPUPDATER_NO_ELE
 ## Known Limitations
 
 - **No log rotation** — `AppUpdater.log` appends indefinitely; prune manually if disk space is a concern
-- **Single-instance mutex** — uses a global Windows mutex; a second instance on the same machine will fail to start
+- **One copy per machine** — a second copy says *AppUpdater is already running* and closes
 - **Windows-only** — depends on WPF, NTFS ACLs, DPAPI, and Windows Credential Manager; not portable to other platforms
 - **Cloud requires internet** — the offline build path is fully functional, but dashboard, telemetry, and manifest sync are unavailable without connectivity
 - **Generated scripts are not Authenticode-signed** — NTFS ACL enforcement is the only code integrity control on the deployment share
