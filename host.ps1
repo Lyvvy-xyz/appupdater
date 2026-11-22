@@ -5025,7 +5025,13 @@ try {
               }
             }
             'epm-state' {
-              if (-not $config.WorkerURL -or -not $config.ManifestToken) { Send-ToPage $wv 'epm-state' @{ ok = $false; noWorker = $true } }
+              $azSas = if ($config.EpmRunner -eq 'azure') { Get-EpmAzureSas } else { '' }
+              if ($config.EpmRunner -eq 'azure' -and $azSas -and $config.EpmAzure) {
+                Start-BackgroundAction -Wv $wv -Roots @('Get-EpmAzureState') -Event 'epm-state' -TimeoutSeconds 60 -Variables @{ _agent = ConvertTo-PlainHashtable $config.EpmAzure; _sas = $azSas; AzureEpmNames = $AzureEpmNames } -Script @'
+$_result.state = Get-EpmAzureState -Agent $_agent -Sas $_sas; $_result.ok = $true
+'@
+              }
+              elseif (-not $config.WorkerURL -or -not $config.ManifestToken) { Send-ToPage $wv 'epm-state' @{ ok = $false; noWorker = $true } }
               else {
                 Start-BackgroundAction -Wv $wv -Roots @('Invoke-EpmWorker') -Event 'epm-state' -TimeoutSeconds 60 -Variables @{ _url = $config.WorkerURL; _tok = $config.ManifestToken } -Script @'
 $_result.state = Invoke-EpmWorker -WorkerUrl $_url -Token $_tok; $_result.ok = $true
@@ -5034,11 +5040,20 @@ $_result.state = Invoke-EpmWorker -WorkerUrl $_url -Token $_tok; $_result.ok = $
             }
             'epm-save-apps' {
               try {
-                if (-not $config.WorkerURL -or -not $config.ManifestToken) { throw 'Connect your Cloudflare worker first.' }
                 $apps = @(foreach ($a in @($msg.payload.apps)) { ConvertTo-EpmApp $a })
+                $azSas = if ($config.EpmRunner -eq 'azure') { Get-EpmAzureSas } else { '' }
+                if ($azSas -and $config.EpmAzure) {
+                  Start-BackgroundAction -Wv $wv -Roots @('Set-EpmAzureApps', 'Get-EpmAzureState') -Event 'epm-state' -TimeoutSeconds 60 -Variables @{ _agent = ConvertTo-PlainHashtable $config.EpmAzure; _sas = $azSas; _apps = $apps; AzureEpmNames = $AzureEpmNames } -Script @'
+Set-EpmAzureApps -Agent $_agent -Sas $_sas -Apps $_apps
+$_result.state = Get-EpmAzureState -Agent $_agent -Sas $_sas; $_result.ok = $true; $_result.saved = $true
+'@
+                }
+                elseif (-not $config.WorkerURL -or -not $config.ManifestToken) { throw 'Connect your Cloudflare worker first.' }
+                else {
                 Start-BackgroundAction -Wv $wv -Roots @('Invoke-EpmWorker') -Event 'epm-state' -TimeoutSeconds 60 -Variables @{ _url = $config.WorkerURL; _tok = $config.ManifestToken; _apps = $apps } -Script @'
 $_result.state = Invoke-EpmWorker -WorkerUrl $_url -Token $_tok -Body @{ apps = @($_apps) }; $_result.ok = $true; $_result.saved = $true
 '@
+                }
               } catch { Send-ToPage $wv 'epm-state' @{ ok = $false; message = $_.Exception.Message } }
             }
             'epm-signin' {
@@ -5196,6 +5211,125 @@ catch {
                   if ($r.signedOut) { $IntuneAuth.Clear() }
                   # A read that was already running when the user signed out must not show the tenant again.
                   elseif (-not $IntuneAuth.token) { $r.Clear(); $r.ok = $false; $r.signedOut = $true }
+                }.GetNewClosure())
+              }
+            }
+            'open-azure-pricing' { try { Start-Process 'https://azure.microsoft.com/pricing/details/automation/' } catch { } }
+            'azure-signin' {
+              Start-BackgroundAction -Wv $wv -Roots @('Request-MsDeviceCode') -Event 'azure-code' -TimeoutSeconds 30 -Variables @{ _cid = $AzureCliClientId } -Script @'
+$c = Request-MsDeviceCode -ClientId $_cid -Scope 'https://management.azure.com/user_impersonation'
+$_result.ok = $true; $_result.code = [string]$c.user_code
+$_result.device = [string]$c.device_code; $_result.interval = [int]$c.interval; $_result.expires = [int]$c.expires_in
+'@ -OnDone ({
+                param($r)
+                $device = $r.device; $r.Remove('device')
+                if (-not $r.ok) { return }
+                Start-Process 'https://microsoft.com/devicelogin'
+                Start-BackgroundAction -Wv $wv -Roots @('Wait-MsDeviceToken', 'Invoke-Arm') -Event 'azure-signed-in' -TimeoutSeconds ($r.expires + 60) `
+                  -Variables @{ _cid = $AzureCliClientId; _device = $device; _interval = $r.interval; _expires = $r.expires } -Script @'
+$t = Wait-MsDeviceToken -ClientId $_cid -DeviceCode $_device -Interval $_interval -ExpiresIn $_expires
+$_result.token = $t.token; $_result.expiresIn = $t.expiresIn
+$_result.subscriptions = @(@((Invoke-Arm -Token $t.token -Path '/subscriptions' -Api '2022-12-01').value) | Where-Object { $_.state -eq 'Enabled' } | ForEach-Object { @{ id = [string]$_.subscriptionId; name = [string]$_.displayName } })
+$_result.ok = $true
+'@ -OnDone ({
+                  param($a)
+                  $token = $a.token; $a.Remove('token')
+                  if (-not $a.ok -or -not $token) { return }
+                  $AzureAuth.arm = $token; $AzureAuth.expires = (Get-Date).AddSeconds([Math]::Max(60, $a.expiresIn - 120))
+                  $claims = try { Get-JwtClaims $token } catch { @{} }
+                  $a.account = [string]$(if ($claims.upn) { $claims.upn } else { $claims.preferred_username })
+                  if (-not @($a.subscriptions).Count) { $a.ok = $false; $a.message = 'This account has no enabled Azure subscription. Create one (it needs a card) or sign in with another account.' }
+                }.GetNewClosure())
+              }.GetNewClosure())
+            }
+            'azure-create' {
+              $p = $msg.payload
+              if (-not $AzureAuth.arm -or (Get-Date) -ge $AzureAuth.expires) { Send-ToPage $wv 'azure-created' @{ ok = $false; message = 'The Azure sign-in has expired. Sign in again.' } }
+              elseif ([string]$p.subscriptionId -notmatch '^[0-9a-fA-F-]{36}$' -or [string]$p.location -notmatch '^[a-z0-9]{3,30}$') { Send-ToPage $wv 'azure-created' @{ ok = $false; message = 'Choose a subscription and a region.' } }
+              else {
+                $runbook = New-EpmAzureRunbook
+                Start-BackgroundAction -Wv $wv -Roots @('New-EpmAzureAgent') -Event 'azure-created' -LogEvent 'azure-log' -TimeoutSeconds 900 `
+                  -Variables @{ _tok = $AzureAuth.arm; _sub = [string]$p.subscriptionId; _loc = [string]$p.location; _rb = $runbook; AzureEpmNames = $AzureEpmNames } -Script @'
+$_result.agent = New-EpmAzureAgent -Token $_tok -SubscriptionId $_sub -Location $_loc -Runbook $_rb
+$_result.ok = $true
+'@ -OnDone ({
+                  param($r)
+                  $agent = $r.agent; $r.Remove('agent')
+                  if (-not $r.ok -or -not $agent) { return }
+                  try {
+                    if (-not [WinCredManager]::Write('AppUpdater-EpmAzureSas', 'AppUpdater', [string]$agent.sas)) { throw 'Windows Credential Manager did not store the container key.' }
+                    $agent.Remove('sas')
+                    $config.EpmAzure = $agent
+                    if (-not (Save-PersistedConfig -Config $config)) { throw 'The settings file could not be saved.' }
+                    $r.storageAccount = $agent.storageAccount
+                  } catch { $r.ok = $false; $r.message = $_.Exception.Message }
+                }.GetNewClosure())
+              }
+            }
+            'azure-grant' {
+              if (-not $config.EpmAzure) { Send-ToPage $wv 'azure-grant-code' @{ ok = $false; message = 'Create the Azure pieces first.' } }
+              else {
+                Start-BackgroundAction -Wv $wv -Roots @('Request-MsDeviceCode') -Event 'azure-grant-code' -TimeoutSeconds 30 -Variables @{ _cid = $MsGraphClientId } -Script @'
+$c = Request-MsDeviceCode -ClientId $_cid -Scope 'https://graph.microsoft.com/AppRoleAssignment.ReadWrite.All https://graph.microsoft.com/Application.Read.All'
+$_result.ok = $true; $_result.code = [string]$c.user_code
+$_result.device = [string]$c.device_code; $_result.interval = [int]$c.interval; $_result.expires = [int]$c.expires_in
+'@ -OnDone ({
+                  param($r)
+                  $device = $r.device; $r.Remove('device')
+                  if (-not $r.ok) { return }
+                  Start-Process 'https://microsoft.com/devicelogin'
+                  Start-BackgroundAction -Wv $wv -Roots @('Wait-MsDeviceToken', 'Grant-EpmAgentIntune') -Event 'azure-granted' -LogEvent 'azure-log' -TimeoutSeconds ($r.expires + 120) `
+                    -Variables @{ _cid = $MsGraphClientId; _device = $device; _interval = $r.interval; _expires = $r.expires; _pid = [string](ConvertTo-PlainHashtable $config.EpmAzure).principalId } -Script @'
+$t = Wait-MsDeviceToken -ClientId $_cid -DeviceCode $_device -Interval $_interval -ExpiresIn $_expires
+Grant-EpmAgentIntune -GraphToken $t.token -PrincipalId $_pid
+$_result.ok = $true
+'@
+                }.GetNewClosure())
+              }
+            }
+            'azure-test' {
+              $azSas = Get-EpmAzureSas
+              if (-not $AzureAuth.arm -or (Get-Date) -ge $AzureAuth.expires) { Send-ToPage $wv 'azure-tested' @{ ok = $false; message = 'The Azure sign-in has expired. Sign in again.' } }
+              elseif (-not $config.EpmAzure -or -not $azSas) { Send-ToPage $wv 'azure-tested' @{ ok = $false; message = 'Create the Azure pieces first.' } }
+              else {
+                # The first run checks the apps already watched through the worker, if there are any.
+                $seed = @()
+                if ($config.WorkerURL -and $config.ManifestToken) { try { $seed = @((Invoke-EpmWorker -WorkerUrl $config.WorkerURL -Token $config.ManifestToken).apps) } catch { } }
+                Start-BackgroundAction -Wv $wv -Roots @('Invoke-EpmAzureBlob', 'Set-EpmAzureApps', 'Start-EpmAzureRun', 'Get-EpmAzureState') -Event 'azure-tested' -LogEvent 'azure-log' -TimeoutSeconds 1200 `
+                  -Variables @{ _tok = $AzureAuth.arm; _agent = ConvertTo-PlainHashtable $config.EpmAzure; _sas = $azSas; _seed = $seed; AzureEpmNames = $AzureEpmNames } -Script @'
+Write-Step '1/3' 'Checking AppUpdater can reach the storage'
+$apps = Invoke-EpmAzureBlob -Account $_agent.storageAccount -Sas $_sas -Name 'apps.json'
+if (-not $apps) { Set-EpmAzureApps -Agent $_agent -Sas $_sas -Apps @($_seed); Write-OK "Watch list started with $(@($_seed).Count) app(s)" } else { Write-OK 'Storage reachable' }
+Write-Step '2/3' 'Running the check once now'
+Start-EpmAzureRun -Token $_tok -Agent $_agent
+Write-Step '3/3' 'Reading the result back'
+$state = Get-EpmAzureState -Agent $_agent -Sas $_sas
+if (-not @($state.runs).Count) { throw 'The run finished but wrote no result. Check its output under Jobs in the Azure portal.' }
+foreach ($i in @($state.runs[0].items)) { Write-Info "$($i.name): $($i.note)" }
+Write-OK 'Test passed: the result arrived'
+$_result.state = $state; $_result.ok = $true
+'@ -OnDone ({
+                  param($r)
+                  if (-not $r.ok) { return }
+                  $config.EpmRunner = 'azure'
+                  if (-not (Save-PersistedConfig -Config $config)) { $r.ok = $false; $r.message = 'The settings file could not be saved.' }
+                }.GetNewClosure())
+              }
+            }
+            'azure-remove' {
+              if (-not $AzureAuth.arm -or (Get-Date) -ge $AzureAuth.expires) { Send-ToPage $wv 'azure-removed' @{ ok = $false; needSignIn = $true } }
+              elseif (-not $config.EpmAzure) { Send-ToPage $wv 'azure-removed' @{ ok = $false; message = 'Nothing is set up on Azure.' } }
+              else {
+                $agent = ConvertTo-PlainHashtable $config.EpmAzure
+                Start-BackgroundAction -Wv $wv -Roots @('Invoke-Arm') -Event 'azure-removed' -TimeoutSeconds 120 -Variables @{ _tok = $AzureAuth.arm; _path = "/subscriptions/$($agent.subscriptionId)/resourceGroups/$($agent.resourceGroup)" } -Script @'
+Invoke-Arm -Token $_tok -Path $_path -Api '2021-04-01' -Method Delete | Out-Null
+$_result.ok = $true
+'@ -OnDone ({
+                  param($r)
+                  if (-not $r.ok) { return }
+                  $config.Remove('EpmAzure'); if ($config.EpmRunner -eq 'azure') { $config.EpmRunner = '' }
+                  try { [void][WinCredManager]::Delete('AppUpdater-EpmAzureSas') } catch { }
+                  [void](Save-PersistedConfig -Config $config)
                 }.GetNewClosure())
               }
             }
@@ -5882,6 +6016,7 @@ $MsGraphClientId = '14d82eec-204b-4c2f-b7e8-296a70dab67e'
 # Reading only; writing is added when the user switches it on in Settings (DeviceManagementConfiguration.ReadWrite.All).
 $IntuneScopes = 'https://graph.microsoft.com/DeviceManagementConfiguration.Read.All https://graph.microsoft.com/Group.Read.All'
 $IntuneAuth = @{}
+$AzureAuth = @{}
 $EpmCheckScript = @'
 # Finds new vendor releases (detect, Linux) and verifies them (verify, Windows): download to the runner,
 # Authenticode signer check, SHA-256, winget comparison. Only version, hash and signer leave the runner.
@@ -5968,6 +6103,29 @@ function Get-WingetCompare($App, [string]$Version, [string]$Sha256) {
   @{ status = $status; version = $latest }
 }
 
+function Test-EpmRelease($App, $Latest, [string]$TempDir) {
+  # Downloads one release, checks its signer and winget hash, and deletes it. Shared with the Azure runbook.
+  $r = [ordered]@{ id = $App.id; name = $App.name; version = $Latest.version; file = $Latest.file; url = $Latest.url; at = (Get-Date).ToUniversalTime().ToString('o') }
+  $tmp = Join-Path $TempDir ([guid]::NewGuid().ToString('n') + [IO.Path]::GetExtension($Latest.file))
+  try {
+    Invoke-WebRequest $Latest.url -OutFile $tmp -UserAgent 'Mozilla/5.0 appupdater-checks'
+    $r.sha256 = (Get-FileHash $tmp -Algorithm SHA256).Hash
+    $sig = Get-AuthenticodeSignature $tmp
+    $r.signer = if ($sig.SignerCertificate) { $sig.SignerCertificate.GetNameInfo('SimpleName', $false) } else { '' }
+    $r.thumbprint = if ($sig.SignerCertificate) { $sig.SignerCertificate.Thumbprint } else { '' }
+    $r.signature = [string]$sig.Status
+    $r.winget = Get-WingetCompare $App $Latest.version $r.sha256
+    $r.status = 'ok'
+    if ($sig.Status -eq 'NotSigned') { $r.status = 'blocked'; $r.reason = 'The installer is not signed.' }
+    elseif ($sig.Status -ne 'Valid') { $r.status = 'blocked'; $r.reason = "The signature is $($sig.Status): $($sig.StatusMessage)" }
+    elseif ($App.publisher -and $r.signer -ne $App.publisher) { $r.status = 'blocked'; $r.reason = "Signed by '$($r.signer)', not the approved publisher '$($App.publisher)'." }
+    elseif ($r.winget.status -eq 'hash-mismatch') { $r.status = 'blocked'; $r.reason = "winget lists $($Latest.version) with a different SHA-256. The vendor file may have been replaced." }
+  } catch {
+    $r.status = 'error'; $r.reason = $_.Exception.Message
+  } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+  $r
+}
+
 function Send-Results($Results) {
   if (-not $Results) { return }
   $body = ConvertTo-Json -Depth 6 -Compress -InputObject @{ results = @($Results) }
@@ -5996,26 +6154,8 @@ if ($Mode -eq 'detect') {
 }
 
 $results = foreach ($item in @($env:TODO | ConvertFrom-Json)) {
-  $app = $item.app; $latest = $item.latest
-  $r = [ordered]@{ id = $app.id; name = $app.name; version = $latest.version; file = $latest.file; url = $latest.url; at = (Get-Date).ToUniversalTime().ToString('o') }
-  $tmp = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString('n') + [IO.Path]::GetExtension($latest.file))
-  try {
-    Invoke-WebRequest $latest.url -OutFile $tmp -UserAgent 'Mozilla/5.0 appupdater-checks'
-    $r.sha256 = (Get-FileHash $tmp -Algorithm SHA256).Hash
-    $sig = Get-AuthenticodeSignature $tmp
-    $r.signer = if ($sig.SignerCertificate) { $sig.SignerCertificate.GetNameInfo('SimpleName', $false) } else { '' }
-    $r.thumbprint = if ($sig.SignerCertificate) { $sig.SignerCertificate.Thumbprint } else { '' }
-    $r.signature = [string]$sig.Status
-    $r.winget = Get-WingetCompare $app $latest.version $r.sha256
-    $r.status = 'ok'
-    if ($sig.Status -eq 'NotSigned') { $r.status = 'blocked'; $r.reason = 'The installer is not signed.' }
-    elseif ($sig.Status -ne 'Valid') { $r.status = 'blocked'; $r.reason = "The signature is $($sig.Status): $($sig.StatusMessage)" }
-    elseif ($app.publisher -and $r.signer -ne $app.publisher) { $r.status = 'blocked'; $r.reason = "Signed by '$($r.signer)', not the approved publisher '$($app.publisher)'." }
-    elseif ($r.winget.status -eq 'hash-mismatch') { $r.status = 'blocked'; $r.reason = "winget lists $($latest.version) with a different SHA-256. The vendor file may have been replaced." }
-  } catch {
-    $r.status = 'error'; $r.reason = $_.Exception.Message
-  } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
-  Write-Host "$($app.name) $($latest.version): $($r.status) $($r.reason)"
+  $r = Test-EpmRelease $item.app $item.latest $env:RUNNER_TEMP
+  Write-Host "$($item.app.name) $($item.latest.version): $($r.status) $($r.reason)"
   $r
 }
 Send-Results $results
@@ -6328,6 +6468,230 @@ function Confirm-IntuneEpmRule {
   $left = @($rules | Where-Object { $_.name -in $RemoveNames } | ForEach-Object name)
   if ($left.Count) { throw "Still in the policy after removal: $($left -join ', ')." }
   $rules.Count
+}
+
+# Azure agent for EPM vendor checks: an Automation account runs the same checks as the GitHub job, adds verified
+# versions to Intune with its own identity, and keeps apps.json, results.json and runs.json in a storage container.
+# AppUpdater keeps only a key limited to that container.
+$AzureCliClientId = '1950a258-227b-4e31-a9cf-717495945fc2'
+$AzureEpmNames = @{ resourceGroup = 'appupdater-epm'; automation = 'appupdater-epm'; container = 'epm'; runbook = 'epm-check'; schedule = 'every-6-hours' }
+
+function Invoke-Arm {
+  param([string]$Token, [string]$Path, [string]$Api, [string]$Method = 'GET', $Body, [string]$ContentType = 'application/json; charset=utf-8')
+  $p = @{ Uri = "https://management.azure.com$($Path)?api-version=$Api"; Method = $Method; Headers = @{ Authorization = "Bearer $Token" }; TimeoutSec = 90; UseBasicParsing = $true; ErrorAction = 'Stop' }
+  if ($null -ne $Body) {
+    $p.ContentType = $ContentType
+    $p.Body = if ($Body -is [string]) { [Text.Encoding]::UTF8.GetBytes($Body) } else { [Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -Depth 20 -Compress -InputObject $Body)) }
+  }
+  try { Invoke-RestMethod @p }
+  catch {
+    $detail = ''; try { $detail = [string](($_.ErrorDetails.Message | ConvertFrom-Json).error.message) } catch { }
+    throw "Azure refused $Method ${Path}: $(if ($detail) { $detail } else { $_.Exception.Message })"
+  }
+}
+
+function New-EpmAzureRunbook {
+  # The runbook is the check functions from the GitHub job plus the Intune rule functions, then the loop below.
+  $tokens = $null; $errs = $null
+  $ast = [Management.Automation.Language.Parser]::ParseInput($EpmCheckScript, [ref]$tokens, [ref]$errs)
+  $checks = @($ast.FindAll({ param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -in @('Compare-Version', 'Resolve-Latest', 'Get-WingetCompare', 'Test-EpmRelease') }, $true) | ForEach-Object { $_.Extent.Text })
+  $intune = Get-BuildFunctionSource -Roots @('Get-IntuneEpmPolicies', 'New-EpmRuleValue', 'Set-IntuneEpmPolicyRules', 'Confirm-IntuneEpmRule')
+  $main = @'
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$gh = @{ 'User-Agent' = 'appupdater-checks' }
+function Write-AppLog { param([string]$Message, [string]$Level) }
+function Get-MiToken([string]$Resource) {
+  (Invoke-RestMethod "$($env:IDENTITY_ENDPOINT)?resource=$Resource&api-version=2019-08-01" -Headers @{ 'X-IDENTITY-HEADER' = $env:IDENTITY_HEADER; Metadata = 'True' }).access_token
+}
+$account = Get-AutomationVariable -Name 'EpmStorageAccount'
+$blob = "https://$account.blob.core.windows.net/epm"
+$sh = @{ Authorization = "Bearer $(Get-MiToken 'https://storage.azure.com/')"; 'x-ms-version' = '2021-08-06' }
+function Read-Blob([string]$Name, $Default) {
+  try { Invoke-RestMethod "$blob/$Name" -Headers $sh } catch { if ([int]$_.Exception.Response.StatusCode -eq 404) { $Default } else { throw } }
+}
+function Write-Blob([string]$Name, $Value) {
+  Invoke-RestMethod "$blob/$Name" -Method Put -Headers ($sh + @{ 'x-ms-blob-type' = 'BlockBlob' }) -ContentType 'application/json' -Body (ConvertTo-Json -Depth 10 -Compress -InputObject $Value) | Out-Null
+}
+$letters = { param($v) ([string]$v).ToLowerInvariant() -replace '[^a-z0-9]', '' }
+$state = Read-Blob 'apps.json' ([pscustomobject]@{ apps = @(); known = [pscustomobject]@{} })
+$known = @{}; if ($state.known) { $state.known.PSObject.Properties | ForEach-Object { $known[$_.Name] = [string]$_.Value } }
+$results = @{}; $prev = Read-Blob 'results.json' $null; if ($prev) { $prev.PSObject.Properties | ForEach-Object { $results[$_.Name] = $_.Value } }
+$graph = Get-MiToken 'https://graph.microsoft.com/'
+$policies = $null
+$run = [ordered]@{ at = (Get-Date).ToUniversalTime().ToString('o'); runner = 'azure'; items = @() }
+foreach ($app in @($state.apps)) {
+  try { $latest = Resolve-Latest $app }
+  catch { $run.items += @{ id = $app.id; name = $app.name; status = 'source-error'; note = $_.Exception.Message }; continue }
+  if ($known[$app.id] -and (Compare-Version $latest.version $known[$app.id]) -le 0) {
+    $run.items += @{ id = $app.id; name = $app.name; status = 'unchanged'; version = $latest.version; note = "No new version ($($latest.version)); download skipped" }; continue
+  }
+  $r = Test-EpmRelease $app $latest $env:TEMP
+  $note = $r.reason
+  if ($r.status -eq 'ok') {
+    $known[$app.id] = $r.version
+    try {
+      if ($null -eq $policies) { $policies = @((Get-IntuneEpmPolicies -Token $graph).policies) }
+      $n = & $letters $app.name
+      $pol = @($policies | Where-Object { $_.rules | Where-Object { $_.hash -eq $r.sha256 } }) + @($policies | Where-Object { $_.name -eq "EPM · $($app.name)" }) +
+             @($policies | Where-Object { $n.Length -ge 3 -and ($_.rules | Where-Object { (& $letters "$($_.fileName) $($_.name) $($_.product)").Contains($n) }) }) | Select-Object -First 1
+      if (-not $pol) { $r.intune = @{ status = 'no-policy'; message = 'No policy holds this app yet. Add its first version from AppUpdater.' } }
+      elseif (@($pol.rules | Where-Object { $_.hash -eq $r.sha256 }).Count) { $r.intune = @{ status = 'already'; policy = $pol.name; message = "Already in $($pol.name)" } }
+      else {
+        $name = "$($app.name) $($r.version)"
+        $type = if ($app.ruleType -in @('self', 'automatic')) { $app.ruleType } else { 'self' }
+        $rule = New-EpmRuleValue -Name $name -FileName $r.file -Hash $r.sha256 -RuleType $type -Description "Signed by $($r.signer). Added by AppUpdater on Azure."
+        Set-IntuneEpmPolicyRules -Token $graph -PolicyId $pol.id -Rule $rule
+        [void](Confirm-IntuneEpmRule -Token $graph -PolicyId $pol.id -Name $name -FileName $r.file -Hash $r.sha256 -RuleType $type)
+        $r.intune = @{ status = 'added'; policy = $pol.name; message = "Added to $($pol.name) and read back" }
+      }
+    } catch { $r.intune = @{ status = 'failed'; message = $_.Exception.Message } }
+    $note = "$($r.version) verified, signed by $($r.signer); $($r.intune.message)"
+  }
+  $results[$app.id] = $r
+  $run.items += @{ id = $app.id; name = $app.name; status = $r.status; version = $r.version; note = $note }
+  Write-Output "$($app.name) $($r.version): $($r.status) $note"
+}
+$state.known = [pscustomobject]$known
+Write-Blob 'apps.json' $state
+Write-Blob 'results.json' ([pscustomobject]$results)
+$runs = @(Read-Blob 'runs.json' @())
+Write-Blob 'runs.json' (@([pscustomobject]$run) + @($runs | Select-Object -First 29))
+'@
+  ($checks -join "`n`n") + "`n`n" + $intune + "`n`n" + $main
+}
+
+function Wait-ArmProvisioned {
+  param([string]$Token, [string]$Path, [string]$Api, [int]$Seconds = 180)
+  $deadline = (Get-Date).AddSeconds($Seconds)
+  do {
+    $r = Invoke-Arm -Token $Token -Path $Path -Api $Api
+    $state = [string]$r.properties.provisioningState
+    if ($state -eq 'Succeeded' -or (-not $state -and $r.id)) { return $r }
+    if ($state -eq 'Failed') { throw "Azure could not create $Path." }
+    Start-Sleep -Seconds 5
+  } while ((Get-Date) -lt $deadline)
+  throw "Azure is still creating $Path; try again in a few minutes."
+}
+
+function New-EpmAzureAgent {
+  # Creates (or reuses) the resource group, storage, Automation account, runbook and schedule, and returns what
+  # AppUpdater keeps: names, the identity's id, and a key for the storage container only.
+  param([string]$Token, [string]$SubscriptionId, [string]$Location, [string]$Runbook)
+  $n = $AzureEpmNames
+  $sub = "/subscriptions/$SubscriptionId"; $rg = "$sub/resourceGroups/$($n.resourceGroup)"
+  Write-Step '1/7' 'Registering the Automation and Storage services on the subscription'
+  foreach ($ns in @('Microsoft.Automation', 'Microsoft.Storage')) { Invoke-Arm -Token $Token -Path "$sub/providers/$ns/register" -Api '2021-04-01' -Method Post | Out-Null }
+  Write-Step '2/7' "Resource group $($n.resourceGroup) in $Location"
+  Invoke-Arm -Token $Token -Path $rg -Api '2021-04-01' -Method Put -Body @{ location = $Location; tags = @{ 'created-by' = 'AppUpdater' } } | Out-Null
+  Write-Step '3/7' 'Storage for the watch list and results'
+  $existing = @((Invoke-Arm -Token $Token -Path "$rg/providers/Microsoft.Storage/storageAccounts" -Api '2023-01-01').value) | Where-Object { $_.name -like 'auepm*' } | Select-Object -First 1
+  $sa = if ($existing) { [string]$existing.name } else { 'auepm' + -join ((1..10) | ForEach-Object { 'abcdefghijklmnopqrstuvwxyz0123456789'[(Get-Random -Maximum 36)] }) }
+  $saPath = "$rg/providers/Microsoft.Storage/storageAccounts/$sa"
+  if (-not $existing) {
+    Invoke-Arm -Token $Token -Path $saPath -Api '2023-01-01' -Method Put -Body @{ location = $Location; kind = 'StorageV2'; sku = @{ name = 'Standard_LRS' }
+      properties = @{ allowBlobPublicAccess = $false; minimumTlsVersion = 'TLS1_2'; supportsHttpsTrafficOnly = $true; allowSharedKeyAccess = $true; accessTier = 'Hot' } } | Out-Null
+    [void](Wait-ArmProvisioned -Token $Token -Path $saPath -Api '2023-01-01')
+  }
+  Invoke-Arm -Token $Token -Path "$saPath/blobServices/default/containers/$($n.container)" -Api '2023-01-01' -Method Put -Body @{ properties = @{ publicAccess = 'None' } } | Out-Null
+  Write-OK "Storage $sa ready"
+  Write-Step '4/7' 'Automation account with its own identity'
+  $aa = "$rg/providers/Microsoft.Automation/automationAccounts/$($n.automation)"
+  $acct = Invoke-Arm -Token $Token -Path $aa -Api '2023-11-01' -Method Put -Body @{ location = $Location; identity = @{ type = 'SystemAssigned' }; properties = @{ sku = @{ name = 'Basic' }; publicNetworkAccess = $true } }
+  $principalId = [string]$acct.identity.principalId
+  if (-not $principalId) { $principalId = [string](Wait-ArmProvisioned -Token $Token -Path $aa -Api '2023-11-01').identity.principalId }
+  if ($principalId -notmatch '^[0-9a-fA-F-]{36}$') { throw 'Azure did not give the Automation account an identity.' }
+  Invoke-Arm -Token $Token -Path "$aa/variables/EpmStorageAccount" -Api '2023-11-01' -Method Put -Body @{ name = 'EpmStorageAccount'; properties = @{ value = (ConvertTo-Json $sa); isEncrypted = $false } } | Out-Null
+  Write-Step '5/7' 'The check runbook, every 6 hours'
+  Invoke-Arm -Token $Token -Path "$aa/runbooks/$($n.runbook)" -Api '2023-11-01' -Method Put -Body @{ location = $Location; properties = @{ runbookType = 'PowerShell72'; logProgress = $false; logVerbose = $false; description = 'EPM vendor release checks from AppUpdater' } } | Out-Null
+  Invoke-Arm -Token $Token -Path "$aa/runbooks/$($n.runbook)/draft/content" -Api '2023-11-01' -Method Put -Body $Runbook -ContentType 'text/powershell' | Out-Null
+  Invoke-Arm -Token $Token -Path "$aa/runbooks/$($n.runbook)/publish" -Api '2023-11-01' -Method Post | Out-Null
+  Invoke-Arm -Token $Token -Path "$aa/schedules/$($n.schedule)" -Api '2023-11-01' -Method Put -Body @{ name = $n.schedule; properties = @{ startTime = (Get-Date).ToUniversalTime().AddMinutes(30).ToString('o'); frequency = 'Hour'; interval = 6; timeZone = 'UTC' } } | Out-Null
+  $linked = @((Invoke-Arm -Token $Token -Path "$aa/jobSchedules" -Api '2023-11-01').value) | Where-Object { $_.properties.runbook.name -eq $n.runbook -and $_.properties.schedule.name -eq $n.schedule }
+  if (-not $linked) { Invoke-Arm -Token $Token -Path "$aa/jobSchedules/$([guid]::NewGuid())" -Api '2023-11-01' -Method Put -Body @{ properties = @{ schedule = @{ name = $n.schedule }; runbook = @{ name = $n.runbook } } } | Out-Null }
+  Write-OK 'Runbook published and scheduled'
+  Write-Step '6/7' 'Letting the identity use the storage'
+  $role = @{ properties = @{ roleDefinitionId = "$sub/providers/Microsoft.Authorization/roleDefinitions/ba92f5b4-2d11-453d-a403-e96b0029c9fe"; principalId = $principalId; principalType = 'ServicePrincipal' } }
+  # A new identity can take a minute to reach Azure's role service.
+  for ($try = 1; ; $try++) {
+    try { Invoke-Arm -Token $Token -Path "$saPath/providers/Microsoft.Authorization/roleAssignments/$([guid]::NewGuid())" -Api '2022-04-01' -Method Put -Body $role | Out-Null; break }
+    catch { if ($_.Exception.Message -match 'already exists') { break }; if ($try -ge 8) { throw }; Start-Sleep -Seconds 10 }
+  }
+  Write-Step '7/7' 'A key for AppUpdater, limited to that container'
+  $sas = Invoke-Arm -Token $Token -Path "$saPath/ListServiceSas" -Api '2023-01-01' -Method Post -Body @{ canonicalizedResource = "/blob/$sa/$($n.container)"; signedResource = 'c'; signedPermission = 'rwl'
+    signedExpiry = (Get-Date).ToUniversalTime().AddYears(1).ToString('yyyy-MM-ddTHH:mm:ssZ'); signedProtocol = 'https' }
+  if (-not $sas.serviceSasToken) { throw 'Azure did not return a key for the container.' }
+  Write-OK 'Azure pieces created'
+  @{ subscriptionId = $SubscriptionId; resourceGroup = $n.resourceGroup; automationAccount = $n.automation; storageAccount = $sa; principalId = $principalId; sas = [string]$sas.serviceSasToken; location = $Location }
+}
+
+function Grant-EpmAgentIntune {
+  # Gives the Automation account's identity Microsoft Graph DeviceManagementConfiguration.ReadWrite.All, nothing else.
+  param([string]$GraphToken, [string]$PrincipalId)
+  $graphSp = @(Invoke-GraphGet -Token $GraphToken -Path "/servicePrincipals?`$filter=$([Uri]::EscapeDataString("appId eq '00000003-0000-0000-c000-000000000000'"))&`$select=id,appRoles") | Select-Object -First 1
+  $roleId = [string](@($graphSp.appRoles) | Where-Object { $_.value -eq 'DeviceManagementConfiguration.ReadWrite.All' } | Select-Object -First 1).id
+  if (-not $roleId) { throw 'Microsoft Graph did not list the Intune configuration permission.' }
+  try { Invoke-GraphWrite -Token $GraphToken -Method Post -Path "/servicePrincipals/$PrincipalId/appRoleAssignments" -Body @{ principalId = $PrincipalId; resourceId = [string]$graphSp.id; appRoleId = $roleId } | Out-Null }
+  catch { if ($_.Exception.Message -notmatch 'already exists') { throw } }
+  Write-OK 'The identity may change Intune device configuration'
+}
+
+function Start-EpmAzureRun {
+  # Starts the runbook now and waits for it to finish.
+  param([string]$Token, [hashtable]$Agent, [int]$Seconds = 900)
+  $aa = "/subscriptions/$($Agent.subscriptionId)/resourceGroups/$($Agent.resourceGroup)/providers/Microsoft.Automation/automationAccounts/$($Agent.automationAccount)"
+  $id = [guid]::NewGuid().ToString()
+  Invoke-Arm -Token $Token -Path "$aa/jobs/$id" -Api '2023-11-01' -Method Put -Body @{ properties = @{ runbook = @{ name = $AzureEpmNames.runbook } } } | Out-Null
+  Write-Info 'Waiting for a hosted machine and the run (usually 2 to 5 minutes)'
+  $deadline = (Get-Date).AddSeconds($Seconds)
+  do {
+    Start-Sleep -Seconds 15
+    $status = [string](Invoke-Arm -Token $Token -Path "$aa/jobs/$id" -Api '2023-11-01').properties.status
+    if ($status -in @('Completed', 'Failed', 'Stopped', 'Suspended')) { break }
+  } while ((Get-Date) -lt $deadline)
+  if ($status -ne 'Completed') { throw "The test run ended as '$(if ($status) { $status } else { 'still running' })'. Its log is in the Azure portal under the Automation account's Jobs." }
+  Write-OK 'Test run completed'
+}
+
+function Invoke-EpmAzureBlob {
+  # Reads or writes one JSON file in the agent's container with AppUpdater's container key.
+  param([string]$Account, [string]$Sas, [string]$Name, $Value, [switch]$Write)
+  if ($Account -notmatch '^[a-z0-9]{3,24}$' -or $Name -notmatch '^[a-z]+\.json$') { throw 'Unexpected storage name.' }
+  $uri = "https://$Account.blob.core.windows.net/$($AzureEpmNames.container)/$($Name)?$($Sas.TrimStart('?'))"
+  $h = @{ 'x-ms-version' = '2021-08-06' }
+  if ($Write) {
+    $h['x-ms-blob-type'] = 'BlockBlob'
+    Invoke-RestMethod -Uri $uri -Method Put -Headers $h -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -Depth 10 -Compress -InputObject $Value))) -TimeoutSec 30 -UseBasicParsing -ErrorAction Stop | Out-Null
+    return
+  }
+  try { Invoke-RestMethod -Uri $uri -Headers $h -TimeoutSec 30 -UseBasicParsing -ErrorAction Stop }
+  catch { if ([int]$_.Exception.Response.StatusCode -eq 404) { $null } else { throw } }
+}
+
+function Get-EpmAzureState {
+  # The same shape the worker returns, so the EPM screens treat both runners alike.
+  param([hashtable]$Agent, [string]$Sas)
+  $apps = Invoke-EpmAzureBlob -Account $Agent.storageAccount -Sas $Sas -Name 'apps.json'
+  $results = Invoke-EpmAzureBlob -Account $Agent.storageAccount -Sas $Sas -Name 'results.json'
+  $runs = @(Invoke-EpmAzureBlob -Account $Agent.storageAccount -Sas $Sas -Name 'runs.json' | ForEach-Object { $_ } | Where-Object { $_ })
+  @{ cfg = @{ runner = 'azure'; repo = "Azure · $($Agent.resourceGroup)"; subscriptionId = $Agent.subscriptionId }
+     apps = @(if ($apps) { $apps.apps }); results = $(if ($results) { $results } else { @{} }); runs = $runs
+     last = $(if ($runs.Count) { @{ at = [string]$runs[0].at } } else { $null }) }
+}
+
+function Set-EpmAzureApps {
+  param([hashtable]$Agent, [string]$Sas, [object[]]$Apps)
+  $current = Invoke-EpmAzureBlob -Account $Agent.storageAccount -Sas $Sas -Name 'apps.json'
+  $known = if ($current -and $current.known) { $current.known } else { @{} }
+  Invoke-EpmAzureBlob -Account $Agent.storageAccount -Sas $Sas -Name 'apps.json' -Write -Value @{ apps = @($Apps); known = $known }
+}
+
+function Get-EpmAzureSas { try { [string][WinCredManager]::Read('AppUpdater-EpmAzureSas') } catch { '' } }
+
+function ConvertTo-PlainHashtable($Value) {
+  # Config read back from JSON is a PSCustomObject; background jobs and functions here take hashtables.
+  if ($Value -is [hashtable]) { return $Value.Clone() }
+  $h = @{}; if ($Value) { $Value.PSObject.Properties | ForEach-Object { $h[$_.Name] = $_.Value } }; $h
 }
 
 function Invoke-EpmWorker {

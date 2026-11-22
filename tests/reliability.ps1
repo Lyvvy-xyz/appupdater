@@ -18,7 +18,7 @@ foreach ($source in @($coreSource, $hostSource)) {
       . ([scriptblock]::Create($node.Extent.Text))
     }
     if ($node -is [Management.Automation.Language.AssignmentStatementAst] -and
-        $node.Left.Extent.Text -match '^\$(script:(Install|Detect|Uninstall)PrinterScriptSrc|EpmCheckScript|EpmWorkflow)$') {
+        $node.Left.Extent.Text -match '^\$(script:(Install|Detect|Uninstall)PrinterScriptSrc|EpmCheckScript|EpmWorkflow|AzureEpmNames)$') {
       . ([scriptblock]::Create($node.Extent.Text))
     }
   }
@@ -214,6 +214,88 @@ Assert ($EpmWorkflow -match 'id-token: write' -and $EpmCheckScript -match 'Get-A
   Assert-Throws { Confirm-IntuneEpmRule -Token 't' -PolicyId 'p' -Name '7-Zip 26.07' -FileName '7z2607-x64.exe' -Hash ('CD' * 32) -RuleType 'self' } 'Read-back fails when the hash differs'
   Assert-Throws { Confirm-IntuneEpmRule -Token 't' -PolicyId 'p' -Name 'Missing 1.0' -FileName 'a.exe' -Hash $hash -RuleType 'self' } 'Read-back fails when the rule is missing'
   Assert-Throws { Confirm-IntuneEpmRule -Token 't' -PolicyId 'p' -Name '7-Zip 26.07' -FileName '7z2607-x64.exe' -Hash $hash -RuleType 'self' -RemoveNames @('7-Zip 26.07') } 'Read-back fails when a removed rule is still there'
+}
+& {
+  # Azure agent, against a fake Azure Resource Manager and Graph.
+  $runbook = New-EpmAzureRunbook
+  $rbErrors = $null; [void][Management.Automation.Language.Parser]::ParseInput($runbook, [ref]$null, [ref]$rbErrors)
+  Assert (-not $rbErrors) "The Azure runbook parses: $($rbErrors.Message -join '; ')"
+  Assert ($runbook -match 'function Test-EpmRelease' -and $runbook -match 'function Resolve-Latest' -and $runbook -match 'function Set-IntuneEpmPolicyRules' -and $runbook -match "Get-AutomationVariable -Name 'EpmStorageAccount'") 'The runbook carries the shared checks and the Intune rule functions'
+  Assert ($EpmCheckScript -match 'Test-EpmRelease \$item\.app') 'The GitHub check uses the same release check as Azure'
+
+  $arm = [Collections.Generic.List[object]]::new()
+  function Start-Sleep { }
+  function Write-Step { } ; function Write-OK { } ; function Write-Info { }
+  function Invoke-Arm { param($Token, $Path, $Api, $Method = 'GET', $Body, $ContentType)
+    $arm.Add([pscustomobject]@{ Method = $Method; Path = $Path; Api = $Api; Body = $Body; ContentType = $ContentType })
+    if ($Path -like '*/storageAccounts' -and $Method -eq 'GET') { return @{ value = @() } }
+    if ($Path -like '*/storageAccounts/*' -and $Method -eq 'GET') { return @{ id = 'sa'; properties = @{ provisioningState = 'Succeeded' } } }
+    if ($Path -like '*/automationAccounts/appupdater-epm' -and $Method -eq 'Put') { return @{ identity = @{ principalId = '55555555-5555-5555-5555-555555555555' } } }
+    if ($Path -like '*/jobSchedules' -and $Method -eq 'GET') { return @{ value = @() } }
+    if ($Path -like '*/ListServiceSas') { return @{ serviceSasToken = 'sv=2023&sig=abc' } }
+    if ($Path -like '*/roleAssignments/*' -and -not $script:roleTried) { $script:roleTried = $true; throw 'Azure refused: Principal 5555 does not exist in the directory' }
+  }
+  $agent = New-EpmAzureAgent -Token 't' -SubscriptionId '11111111-2222-3333-4444-555555555555' -Location 'uksouth' -Runbook 'Write-Output hi'
+  $puts = @($arm | Where-Object Method -eq 'Put' | ForEach-Object { ($_.Path -split '/')[-2..-1] -join '/' })
+  Assert ($agent.sas -eq 'sv=2023&sig=abc' -and $agent.principalId -eq '55555555-5555-5555-5555-555555555555' -and $agent.storageAccount -match '^auepm[a-z0-9]{10}$') 'Setup returns the identity, storage account and container key'
+  Assert ((@($arm | Where-Object { $_.Path -like '*/providers/Microsoft.Automation/register' -or $_.Path -like '*/providers/Microsoft.Storage/register' }).Count -eq 2) -and $arm[0].Method -eq 'Post') 'Setup registers the Automation and Storage services first'
+  Assert (($puts -join ',') -match 'resourceGroups/appupdater-epm.*containers/epm.*automationAccounts/appupdater-epm.*variables/EpmStorageAccount.*runbooks/epm-check.*draft/content.*schedules/every-6-hours.*jobSchedules') 'Setup creates the group, storage, account, runbook and schedule in order'
+  $rb = $arm | Where-Object { $_.Path -like '*/runbooks/epm-check' -and $_.Method -eq 'Put' }
+  Assert ($rb.Body.properties.runbookType -eq 'PowerShell72' -and ($arm | Where-Object { $_.Path -like '*/draft/content' }).ContentType -eq 'text/powershell') 'The runbook is PowerShell 7.2 and its text is uploaded as PowerShell'
+  $sa = $arm | Where-Object { $_.Path -match '/storageAccounts/auepm[a-z0-9]+$' -and $_.Method -eq 'Put' }
+  Assert ($sa.Body.properties.allowBlobPublicAccess -eq $false -and $sa.Body.sku.name -eq 'Standard_LRS') 'Storage is private and the cheapest kind'
+  $roles = @($arm | Where-Object { $_.Path -like '*/roleAssignments/*' })
+  Assert ($roles.Count -eq 2 -and $roles[1].Body.properties.roleDefinitionId -like '*/ba92f5b4-2d11-453d-a403-e96b0029c9fe' -and $roles[1].Body.properties.principalId -eq $agent.principalId) 'The storage role is retried until the new identity is known'
+  $sasCall = $arm | Where-Object { $_.Path -like '*/ListServiceSas' }
+  Assert ($sasCall.Body.signedResource -eq 'c' -and $sasCall.Body.signedPermission -eq 'rwl' -and $sasCall.Body.canonicalizedResource -eq "/blob/$($agent.storageAccount)/epm") 'AppUpdater''s key reaches only the epm container'
+
+  $gw = [Collections.Generic.List[object]]::new()
+  function Invoke-GraphGet { param($Token, $Path) @{ id = 'graph-sp'; appRoles = @(@{ value = 'DeviceManagementConfiguration.Read.All'; id = 'r-read' }, @{ value = 'DeviceManagementConfiguration.ReadWrite.All'; id = 'r-write' }) } }
+  function Invoke-GraphWrite { param($Token, $Method, $Path, $Body) $gw.Add([pscustomobject]@{ Path = $Path; Body = $Body }) }
+  Grant-EpmAgentIntune -GraphToken 'g' -PrincipalId '55555555-5555-5555-5555-555555555555'
+  Assert ($gw[0].Path -eq '/servicePrincipals/55555555-5555-5555-5555-555555555555/appRoleAssignments' -and $gw[0].Body.appRoleId -eq 'r-write' -and $gw[0].Body.resourceId -eq 'graph-sp') 'The identity gets only the Intune configuration write permission'
+
+  function Invoke-EpmAzureBlob { param($Account, $Sas, $Name, $Value, [switch]$Write)
+    switch ($Name) { 'apps.json' { @{ apps = @(@{ id = '7zip'; name = '7-Zip' }); known = @{} } } 'results.json' { @{ '7zip' = @{ status = 'ok'; version = '26.07' } } } 'runs.json' { , @(@{ at = '2026-11-22T12:17:00Z'; items = @() }) } } }
+  $st = Get-EpmAzureState -Agent @{ storageAccount = 'auepmabc'; resourceGroup = 'appupdater-epm'; subscriptionId = 's' } -Sas 'x'
+  Assert ($st.cfg.runner -eq 'azure' -and @($st.apps).Count -eq 1 -and $st.results.'7zip'.version -eq '26.07' -and $st.last.at -eq '2026-11-22T12:17:00Z' -and @($st.runs).Count -eq 1) 'Azure results read back in the same shape as the worker''s, with runs'
+}
+Assert-Throws { Invoke-EpmAzureBlob -Account 'Bad Name' -Sas 'x' -Name 'apps.json' } 'A storage account name outside Azure''s rules is refused'
+Assert-Throws { Invoke-EpmAzureBlob -Account 'auepmabc' -Sas 'x' -Name '../secret.json' } 'Only the agent''s own JSON files can be read'
+& {
+  # The runbook's main loop, with the vendor, storage and Intune faked.
+  $main = $runbookMain = (New-EpmAzureRunbook)
+  $main = $main.Substring($main.IndexOf("`$ErrorActionPreference = 'Stop'"))
+  $cmpAst = [Management.Automation.Language.Parser]::ParseInput($runbookMain, [ref]$null, [ref]$null).Find({ param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Compare-Version' }, $true)
+  . ([scriptblock]::Create($cmpAst.Extent.Text))
+  $env:IDENTITY_ENDPOINT = 'http://identity.local/token'; $env:IDENTITY_HEADER = 'h'
+  $puts = @{}; $changes = [Collections.Generic.List[object]]::new()
+  function Get-AutomationVariable { param($Name) 'auepmtest' }
+  function Invoke-RestMethod { param($Uri, $Method = 'GET', $Headers, $ContentType, $Body)
+    if ($Uri -like 'http://identity.local/*') { return @{ access_token = 'mi-token' } }
+    $name = ($Uri -split '/')[-1]
+    if ($Method -eq 'Put') { $puts[$name] = ConvertFrom-Json $Body; return }
+    switch ($name) {
+      'apps.json' { return ConvertFrom-Json '{"apps":[{"id":"7zip","name":"7-Zip","publisher":"Igor Pavlov"},{"id":"pt","name":"PowerToys"},{"id":"npp","name":"Notepad++","publisher":"Notepad++"}],"known":{"7zip":"26.06","pt":"0.102.3101"}}' }
+      default { $e = [Net.WebException]::new('not found'); throw [Management.Automation.RuntimeException]::new('404', $e) }
+    }
+  }
+  function Resolve-Latest($App) { @{ '7zip' = @{ version = '26.07'; file = '7z2607-x64.exe'; url = 'https://x/7z.exe' }; 'pt' = @{ version = '0.102.3101'; file = 'p.exe'; url = 'https://x/p.exe' }; 'npp' = @{ version = '8.7'; file = 'npp.exe'; url = 'https://x/n.exe' } }[$App.id] }
+  function Test-EpmRelease($App, $Latest, $TempDir) {
+    if ($App.id -eq 'npp') { return [ordered]@{ id = 'npp'; name = $App.name; version = '8.7'; status = 'blocked'; reason = "Signed by 'Unknown Ltd', not the approved publisher 'Notepad++'." } }
+    [ordered]@{ id = $App.id; name = $App.name; version = $Latest.version; file = $Latest.file; sha256 = ('AB' * 32); signer = 'Igor Pavlov'; status = 'ok' } }
+  function Get-IntuneEpmPolicies { param($Token) @{ policies = @(@{ id = '11111111-1111-1111-1111-111111111111'; name = 'Dev Tools EPM'; rules = @(@{ name = '7-Zip 26.06'; fileName = '7z2606-x64.exe'; hash = 'CD' * 32 }) }) } }
+  function Set-IntuneEpmPolicyRules { param($Token, $PolicyId, $Rule, $RemoveNames) $changes.Add($PolicyId) }
+  function Confirm-IntuneEpmRule { param($Token, $PolicyId, $Name, $FileName, $Hash, $RuleType) 1 }
+  # The runbook's helper functions return 404s as defaults by status code; this fake signals 404 by message.
+  $main = $main.Replace("if ([int]`$_.Exception.Response.StatusCode -eq 404)", "if (`$_.Exception.Message -eq '404' -or [int]`$_.Exception.Response.StatusCode -eq 404)")
+  . ([scriptblock]::Create($main)) | Out-Null
+  $items = @($puts['runs.json'])[0].items
+  Assert ($changes.Count -eq 1 -and $changes[0] -eq '11111111-1111-1111-1111-111111111111') 'A new verified version is added to the policy that holds the app''s rules'
+  Assert ($puts['results.json'].'7zip'.intune.status -eq 'added' -and $puts['results.json'].'7zip'.intune.policy -eq 'Dev Tools EPM') 'The result says where the rule went'
+  Assert ((@($items | Where-Object id -eq 'pt')[0].status) -eq 'unchanged' -and (@($items | Where-Object id -eq 'pt')[0].note) -like '*download skipped*') 'An unchanged version is skipped without downloading'
+  Assert ((@($items | Where-Object id -eq 'npp')[0].status) -eq 'blocked' -and -not $puts['results.json'].npp.intune) 'A blocked version never reaches Intune'
+  Assert ($puts['apps.json'].known.'7zip' -eq '26.07' -and -not $puts['apps.json'].known.npp) 'Only verified versions are remembered as known'
 }
 function Invoke-TestWorker([string]$FunctionName, [hashtable]$Variables, [string]$Setup = '') {
   $definition = Get-Item "Function:\$FunctionName"
