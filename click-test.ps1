@@ -385,6 +385,8 @@ window.__errors = [];
     Assert (-not (Test-Shown '#fleet-grid')) 'The EPM chip swaps the app table for EPM apps'
     Assert ((Get-Text '#intune-status-t') -eq 'Intune not connected') 'The EPM view says Intune is not connected yet'
     Assert ((Get-Text '#intune-policies') -like '*Connect Intune to list*') 'No Intune data is shown before connecting'
+    Assert ((Get-Text '#intune-status') -like '*Settings*09*') 'The EPM view says where adding rules is switched on'
+    Assert (-not (Test-On '#tgl-intune-write')) 'Adding rules to Intune is off until switched on'
     Save-Shot 'fleet-epm'
     Invoke-Click '[data-fleet-view=all]'
   }

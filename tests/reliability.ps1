@@ -174,6 +174,47 @@ Assert ($EpmWorkflow -match 'id-token: write' -and $EpmCheckScript -match 'Get-A
   Assert (-not ($calls | Where-Object { $_ -like '*22222222*' })) 'Elevation settings policies are not read'
   Assert ((Get-JwtClaims ('x.' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"upn":"admin@contoso.com"}')).TrimEnd('=').Replace('+', '-').Replace('/', '_') + '.y')).upn -eq 'admin@contoso.com') 'The signed-in account is read from the token'
 }
+& {
+  # Writing EPM rules, against a fake Graph.
+  $hash = 'AB' * 32
+  $first = New-EpmRuleValue -Name '7-Zip 26.07' -FileName '7z2607-x64.exe' -Hash $hash.ToLower() -Description 'Signed by Igor Pavlov.' -First
+  $json = ConvertTo-Json -Depth 30 -Compress -InputObject @{ groupSettingCollectionValue = @($first) }
+  Assert ($json -match '"groupSettingCollectionValue":\[\{' -and $json -match 'e4436e2c-1584-4fba-8e38-78737cbbbfdf' -and $json -match '"children":\[\]') 'A first rule serialises as a list with Intune''s template references'
+  $later = New-EpmRuleValue -Name 'x' -FileName 'x.exe' -Hash $hash -RuleType automatic
+  Assert ((ConvertTo-Json -Depth 30 -Compress -InputObject $later) -notmatch 'TemplateId') 'Later rules carry no template references'
+  $prefix = 'device_vendor_msft_policy_privilegemanagement_elevationrules_{elevationrulename}'
+  $roundTrip = @(ConvertFrom-EpmRuleSettings @(@{ settingInstance = (ConvertFrom-Json (ConvertTo-Json -Depth 30 -InputObject @{ settingDefinitionId = $prefix; groupSettingCollectionValue = @($first, $later) })) }))
+  Assert ($roundTrip.Count -eq 2 -and $roundTrip[0].name -eq '7-Zip 26.07' -and $roundTrip[0].fileName -eq '7z2607-x64.exe' -and $roundTrip[0].hash -eq $hash -and $roundTrip[0].ruleType -eq 'self' -and $roundTrip[1].ruleType -eq 'automatic') 'A written rule reads back with the same name, file, hash and type'
+
+  $existing = @(1..4 | ForEach-Object { New-EpmRuleValue -Name "7-Zip 26.0$_" -FileName "7z260$_.exe" -Hash $hash -First:($_ -eq 1) })
+  $policyJson = ConvertTo-Json -Depth 30 -InputObject ([ordered]@{ id = '11111111-1111-1111-1111-111111111111'; name = 'Dev Tools EPM'; description = 'd'; platforms = 'windows10'; technologies = 'endpointPrivilegeManagement'
+    roleScopeTagIds = @('0'); templateReference = @{ templateId = 'cff02aad-51b1-498d-83ad-81161a393f56_1' }; settings = @(@{ id = '0'; settingInstance = @{ settingDefinitionId = $prefix; groupSettingCollectionValue = $existing } }) })
+  $writes = [Collections.Generic.List[object]]::new()
+  function Invoke-GraphGet { param($Token, $Path) ConvertFrom-Json $policyJson }
+  function Invoke-GraphWrite { param($Token, $Method, $Path, $Body) $writes.Add([pscustomobject]@{ Method = $Method; Path = $Path; Body = ConvertFrom-Json (ConvertTo-Json -Depth 30 -Compress -InputObject $Body) }); if ($Method -eq 'Post' -and $Path -notlike '*/assign') { @{ id = '22222222-2222-2222-2222-222222222222' } } }
+  Set-IntuneEpmPolicyRules -Token 't' -PolicyId '11111111-1111-1111-1111-111111111111' -Rule $later -RemoveNames @('7-Zip 26.01', '7-Zip 26.02')
+  $put = $writes[0]; $names = @($put.Body.settings[0].settingInstance.groupSettingCollectionValue | ForEach-Object { Get-EpmRuleName $_ })
+  Assert ($put.Method -eq 'Put' -and $put.Path -eq '/deviceManagement/configurationPolicies/11111111-1111-1111-1111-111111111111') 'Adding a rule replaces the policy it belongs to'
+  Assert (($names -join ',') -eq '7-Zip 26.03,7-Zip 26.04,x') 'The new rule is added after the kept ones and the removed ones are gone'
+  Assert ($put.Body.name -eq 'Dev Tools EPM' -and $put.Body.templateReference.templateId -like 'cff02aad*' -and @($put.Body.roleScopeTagIds)[0] -eq '0' -and -not $put.Body.PSObject.Properties['id']) 'The policy keeps its name, template and scope tags'
+  $existing = @(1..100 | ForEach-Object { New-EpmRuleValue -Name "r$_" -FileName 'r.exe' -Hash $hash })
+  $policyJson = ConvertTo-Json -Depth 30 -InputObject ([ordered]@{ name = 'Full'; settings = @(@{ settingInstance = @{ settingDefinitionId = $prefix; groupSettingCollectionValue = $existing } }) })
+  Assert-Throws { Set-IntuneEpmPolicyRules -Token 't' -PolicyId '11111111-1111-1111-1111-111111111111' -Rule $later } 'A policy at 100 rules is not written past the limit'
+
+  $writes.Clear()
+  $newId = New-IntuneEpmPolicy -Token 't' -Name 'EPM · 7-Zip' -Rule $first -Target '33333333-3333-3333-3333-333333333333'
+  Assert ($newId -eq '22222222-2222-2222-2222-222222222222' -and $writes[0].Body.technologies -eq 'endpointPrivilegeManagement' -and @($writes[0].Body.settings[0].settingInstance.groupSettingCollectionValue).Count -eq 1) 'A new policy is created with the one rule'
+  Assert ($writes[1].Path -eq '/deviceManagement/configurationPolicies/22222222-2222-2222-2222-222222222222/assign' -and $writes[1].Body.assignments[0].target.groupId -eq '33333333-3333-3333-3333-333333333333') 'A new policy is assigned to the chosen group'
+  $writes.Clear(); [void](New-IntuneEpmPolicy -Token 't' -Name 'n' -Rule $first -Target 'allUsers')
+  Assert ($writes[1].Body.assignments[0].target.'@odata.type' -eq '#microsoft.graph.allLicensedUsersAssignmentTarget') 'A new policy can be assigned to all users'
+
+  $readBack = ConvertTo-Json -Depth 30 -InputObject @(@{ settingInstance = @{ settingDefinitionId = $prefix; groupSettingCollectionValue = @($first) } })
+  function Invoke-GraphGet { param($Token, $Path) ConvertFrom-Json $readBack }
+  Assert ((Confirm-IntuneEpmRule -Token 't' -PolicyId 'p' -Name '7-Zip 26.07' -FileName '7z2607-x64.exe' -Hash $hash -RuleType 'self') -eq 1) 'Read-back confirms a rule written exactly'
+  Assert-Throws { Confirm-IntuneEpmRule -Token 't' -PolicyId 'p' -Name '7-Zip 26.07' -FileName '7z2607-x64.exe' -Hash ('CD' * 32) -RuleType 'self' } 'Read-back fails when the hash differs'
+  Assert-Throws { Confirm-IntuneEpmRule -Token 't' -PolicyId 'p' -Name 'Missing 1.0' -FileName 'a.exe' -Hash $hash -RuleType 'self' } 'Read-back fails when the rule is missing'
+  Assert-Throws { Confirm-IntuneEpmRule -Token 't' -PolicyId 'p' -Name '7-Zip 26.07' -FileName '7z2607-x64.exe' -Hash $hash -RuleType 'self' -RemoveNames @('7-Zip 26.07') } 'Read-back fails when a removed rule is still there'
+}
 function Invoke-TestWorker([string]$FunctionName, [hashtable]$Variables, [string]$Setup = '') {
   $definition = Get-Item "Function:\$FunctionName"
   $call = $definition.ScriptBlock.Ast.Find({ param($node)

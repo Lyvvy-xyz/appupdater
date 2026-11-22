@@ -939,7 +939,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           </div>
           <div class="grid-wrap" id="fleet-grid"><table class="grid" id="fleet-table"></table></div>
           <div id="fleet-epm" hidden>
-            <div class="tglrow" style="margin:0 0 6px"><div><b id="intune-status-t">Intune not connected</b><small id="intune-status">Connect your Intune tenant to see which versions your EPM policies already allow. AppUpdater only reads them.</small></div>
+            <div class="tglrow" style="margin:0 0 6px"><div><b id="intune-status-t">Intune not connected</b><small id="intune-status">Connect your Intune tenant to see which versions your EPM policies already allow, and to add new ones once adding rules is on in Settings &rsaquo; 09.</small></div>
               <div style="display:flex;gap:8px"><button class="btn sm" id="intune-refresh" hidden>Refresh</button><button class="btn sm" id="intune-signout" hidden>Sign out</button>
                 <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button></div></div>
             <div id="epm-cover"></div>
@@ -1067,6 +1067,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                 <p class="bnote" style="margin:4px 0 6px">Connect your own Intune tenant to see your Endpoint Privilege Management policies next to the versions the vendor checks find. Any Intune administrator can connect; nothing is installed in the tenant.</p>
                 <div class="tglrow"><div><b id="intune-set-t">Not connected</b><small id="intune-set-s">Needs EPM licensed in the tenant and an Intune Administrator or Endpoint Security Manager account.</small></div>
                   <div style="display:flex;gap:8px"><button class="btn sm" id="intune-set-open" hidden>Open EPM</button><button class="btn sm" id="intune-set-out" hidden>Sign out</button><button class="btn sm primary" id="intune-set-connect">Connect Intune&hellip;</button></div></div>
+                <div class="tglrow"><div><b>Let AppUpdater add rules to Intune</b><small>Adds each verified version to the app&rsquo;s EPM policy when you choose Add to Intune, and checks it by reading the policy back. Sign-in then also asks to change device configuration policies.</small></div><button class="tgl" id="tgl-intune-write" aria-label="Let AppUpdater add rules to Intune"></button></div>
               </div>
             </div>
           </div>
@@ -1396,6 +1397,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   const uiDlg = () => $('#ui-dlg');
   function uiFieldHtml(f) {
     const id = 'ui-f-' + f.id;
+    if (f.type === 'checks') return `<fieldset class="ui-choice" data-field="${f.id}">${f.label ? `<legend class="lbl">${escapeHtml(f.label)}</legend>` : ''}`
+      + f.options.map(o => `<label class="ui-opt"><input type="checkbox" name="${id}" value="${escapeHtml(o.value)}"${o.checked ? ' checked' : ''}><span><b>${escapeHtml(o.label)}</b></span></label>`).join('') + '</fieldset>';
     if (f.type === 'choice') return `<fieldset class="ui-choice" data-field="${f.id}">${f.label ? `<legend class="lbl">${escapeHtml(f.label)}</legend>` : ''}`
       + f.options.map((o, n) => `<label class="ui-opt${o.danger ? ' danger' : ''}"><input type="radio" name="${id}" value="${escapeHtml(o.value)}"${(f.value ? f.value === o.value : n === 0) ? ' checked' : ''}>`
         + `<span><b>${escapeHtml(o.label)}</b>${o.desc ? `<small>${escapeHtml(o.desc)}</small>` : ''}</span></label>`).join('') + '</fieldset>';
@@ -1406,7 +1409,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   function uiValues() {
     const v = {};
     uiDlgFields.forEach(f => {
-      if (f.type === 'choice') { const c = uiDlg().querySelector(`input[name="ui-f-${f.id}"]:checked`); v[f.id] = c ? c.value : ''; }
+      if (f.type === 'checks') v[f.id] = [...uiDlg().querySelectorAll(`input[name="ui-f-${f.id}"]:checked`)].map(c => c.value);
+      else if (f.type === 'choice') { const c = uiDlg().querySelector(`input[name="ui-f-${f.id}"]:checked`); v[f.id] = c ? c.value : ''; }
       else v[f.id] = $('#ui-f-' + f.id).value;
     });
     return v;
@@ -1732,7 +1736,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       text: 'An EPM rule lets standard users run this installer elevated through Intune Endpoint Privilege Management. No package is built.\n\n'
         + 'After you pick the installer, AppUpdater gives you everything the rule needs: the file name, its SHA-256 and who signed it, with copy buttons, plus a CSV.\n\n'
         + (intune.signedIn ? 'Intune is connected, so App fleet \u203a EPM shows whether this version is already allowed.'
-          : 'Connecting your Intune tenant lets AppUpdater show whether each version is already allowed and which policy holds an app\u2019s rules. It only reads, and takes a minute. You can also do it later from App fleet \u203a EPM or Settings \u203a 09 Intune for EPM.') })
+          : 'Connecting your Intune tenant lets AppUpdater show whether each version is already allowed and which policy holds an app\u2019s rules. With adding rules switched on in Settings \u203a 09, Add to Intune also puts each new version into the app\u2019s policy and checks it. You can connect later from App fleet \u203a EPM or Settings \u203a 09.') })
       .then(v => { if (v && !intune.signedIn) openIntuneWizard(); else if (!v && !intune.signedIn) toast('Later', 'Connect Intune from App fleet \u203a EPM or Settings \u203a 09.'); });
   }
   segInit($('#segPsadtVersion'), v => { form.PSADTVersion = v; updateBuildBrandingPreview(); });
@@ -2358,6 +2362,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           renderFleet(lastFleet);
           renderGettingStarted();
           window._intuneSuggested = !!payload.intuneSuggested;
+          window._intuneWrite = !!payload.intuneWrite;
+          $('#tgl-intune-write').classList.toggle('on', window._intuneWrite);
           if (form.SimplePkgTarget === 'epm' && $('#screen-build').classList.contains('on')) adviseEpmOnce();
           if (!payload.onboardingSeen && !window._tourAutoStarted) {
             window._tourAutoStarted = true;
@@ -2390,14 +2396,14 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
             $('#ui-dlg-sub').textContent = 'waiting for you to approve';
             $('#ui-dlg-body').innerHTML = `<p class="bnote">Microsoft's sign-in page has opened. Enter this code there and sign in with your Intune admin account:</p>`
               + `<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><span class="epm-code">${escapeHtml(payload.code)}</span><button class="btn sm" data-intune-copy>Copy</button><button class="btn sm" data-intune-reopen>Open the page again</button></div>`
-              + `<p class="bnote">AppUpdater asks only to read device configuration policies and group names. The sign-in lasts for this session and is not saved.</p>`;
+              + `<p class="bnote">AppUpdater asks to ${window._intuneWrite ? 'read and change device configuration policies (to add EPM rules)' : 'read device configuration policies'} and read group names. The sign-in lasts for this session and is not saved.</p>`;
             $('#ui-dlg-body [data-intune-copy]').addEventListener('click', async () => { try { await navigator.clipboard.writeText(payload.code); toast('Copied', 'Sign-in code on clipboard'); } catch (_) { } });
             $('#ui-dlg-body [data-intune-reopen]').addEventListener('click', () => send('intune-open-device', {}));
           } else uiProgressDone(false, payload.message || 'Microsoft did not return a sign-in code.');
           break;
         case 'intune-signed-in':
           if (payload.ok) {
-            intune.signedIn = true; intune.account = payload.account || '';
+            intune.signedIn = true; intune.account = payload.account || ''; intune.canWrite = !!payload.canWrite;
             $('#ui-dlg-body').innerHTML = ''; $('#ui-dlg-sub').textContent = 'Step 3 of 3';
             uiProgressLine('ok', `Signed in as ${intune.account}`); uiProgressLine('step', 'Checking your tenant\u2026');
             send('intune-read', {});
@@ -2406,7 +2412,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           break;
         case 'intune-data':
           if (payload.ok) {
-            intune.signedIn = true; intune.account = payload.account || intune.account; intune.settingsPolicies = Number(payload.settingsPolicies) || 0;
+            intune.signedIn = true; intune.account = payload.account || intune.account; intune.settingsPolicies = Number(payload.settingsPolicies) || 0; intune.canWrite = !!payload.canWrite;
             intune.policies = [].concat(payload.policies || []).map(p => Object.assign(p, { rules: [].concat(p.rules || []), assignments: [].concat(p.assignments || []) })); intune.loaded = true;
             if (intuneWizard) {
               intuneWizard = false;
@@ -2420,6 +2426,16 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           else if (payload.signedOut) { intune = { signedIn: false, account: '', policies: [], loaded: false }; if (payload.message) toast('Sign in again', 'The Intune sign-in has expired.', true); }
           else toast('Could not read Intune', payload.message || 'Graph request failed.', true);
           renderEpmScreen();
+          break;
+        case 'intune-groups':
+          if (window._intuneGroups) { const r = window._intuneGroups; window._intuneGroups = null; r(payload); }
+          break;
+        case 'intune-apply-log':
+          uiProgressLine(payload.tone, payload.text);
+          break;
+        case 'intune-apply-done':
+          uiProgressDone(payload.ok, payload.ok ? `${payload.name} is in Intune and was checked by reading the policy back.` : (payload.message || 'Intune did not accept the change.'));
+          if (payload.ok) send('intune-read', {});
           break;
         case 'cf-lookup-result':
           if (window._cfLookup) { const r = window._cfLookup; window._cfLookup = null; r(payload); }
@@ -2934,7 +2950,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       groups.push({ t: 'Create the rule in Intune', p: 'Endpoint security → Endpoint Privilege Management → Create an Elevation rules policy, then add one rule per row below.',
         rows: [['Policy name', $('#f-epm-policy').value]].concat([].concat(payload.epm || []).flatMap(r => [
           ['File name', r.FileName], ['SHA-256', r.SHA256],
-          ['Rule type', r.SuggestedRule + (r.CertificateFile ? ' (certificate file ' + r.CertificateFile + ' is in the folder)' : '')]])) });
+          ['Rule type', r.SuggestedRule + (r.CertificateFile ? ' (certificate file ' + r.CertificateFile + ' is in the folder)' : '')]])), action: ['intune-add-build', 'Add it to Intune for me\u2026'] });
       groups.push({ t: 'Keep it current', p: 'Each new version of the installer needs its own rule. Watching the vendor gets the next hash without downloading it here.', action: ['epm-watch', 'Watch for new versions…'] });
       if (!intune.signedIn) groups.push({ t: 'Check it against Intune (optional)', p: 'Connect your Intune tenant to see whether this version is already allowed and which policy holds this app\u2019s rules. You can connect any time from App fleet \u203a EPM or Settings \u203a 09 Intune for EPM.', action: ['intune-connect', 'Connect Intune\u2026'] });
     } else {
@@ -2968,6 +2984,11 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     });
     const watch = $('#done-sheet [data-done-action="epm-watch"]');
     if (watch) watch.addEventListener('click', () => $('#epm-watch-btn').click());
+    const addBuilt = $('#done-sheet [data-done-action="intune-add-build"]');
+    if (addBuilt) addBuilt.addEventListener('click', () => {
+      const r = [].concat(payload.epm || [])[0];
+      if (r) addToIntune({ source: 'build', name: $('#f-displayname').value.trim() || id, version: window._selectedVersion || '', file: r.FileName, hash: r.SHA256, signer: r.Signer });
+    });
     const connect = $('#done-sheet [data-done-action="intune-connect"]');
     if (connect) connect.addEventListener('click', openIntuneWizard);
     // Testing installs a package; an EPM rule has none.
@@ -3566,6 +3587,62 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     token = '';
   }
 
+
+  // Add to Intune: find or create the app's policy, choose who a new policy applies to, offer older versions for
+  // removal, preview, then write and read back. The backend takes the hash from its own records, not from here.
+  async function pickIntuneTarget(policyName) {
+    for (;;) {
+      const q = await uiDialog({ title: `Who gets ${policyName}?`, text: 'A new policy is assigned once. Later versions go into the same policy.', ok: 'Next',
+        fields: [{ id: 'who', type: 'choice', options: [{ value: 'group', label: 'A group', desc: 'Search for an Entra group by name.' }, { value: 'allUsers', label: 'All users' }, { value: 'allDevices', label: 'All devices' }] },
+          { id: 'q', label: 'Group name starts with', showIf: v => v.who === 'group' }],
+        validate: v => v.who === 'group' && (v.q || '').trim().length < 2 ? 'Type at least two letters of the group name.' : '' });
+      if (!q) return null;
+      if (q.who !== 'group') return { id: q.who, label: q.who === 'allUsers' ? 'all users' : 'all devices' };
+      uiProgress('Finding groups', 'searching Entra');
+      const r = await new Promise(res => { window._intuneGroups = res; send('intune-groups', { q: q.q.trim() }); });
+      uiClose(null);
+      const groups = [].concat(r.groups || []);
+      if (!r.ok || !groups.length) { await uiDialog({ title: 'No groups found', text: r.message || `No group name starts with "${q.q.trim()}".`, ok: 'Search again', cancel: '' }); continue; }
+      const g = await uiDialog({ title: 'Choose the group', ok: 'Use this group', fields: [{ id: 'g', type: 'choice', options: groups.map(x => ({ value: x.id, label: x.name, desc: x.description || '' })) }] });
+      if (!g) return null;
+      const grp = groups.find(x => x.id === g.g);
+      return { id: grp.id, label: grp.name };
+    }
+  }
+  async function addToIntune(item) {
+    if (!window._intuneWrite) {
+      const v = await uiDialog({ title: 'Adding rules is switched off', ok: 'Open Settings', cancel: 'Close',
+        text: 'AppUpdater can add this rule to the app’s EPM policy and check it by reading the policy back. Switch it on in Settings › 09 Intune for EPM. Until then, copy the values into Intune yourself.' });
+      if (v) { goTo('worker'); $('#intune-section').scrollIntoView({ block: 'start' }); }
+      return;
+    }
+    if (!intune.signedIn || !intune.canWrite) {
+      const v = await uiDialog({ title: 'Connect Intune first', ok: 'Connect Intune…',
+        text: intune.signedIn ? 'The current sign-in can only read. Connect again and approve adding rules.' : 'Connect your Intune tenant so AppUpdater can add the rule.' });
+      if (v) { if (intune.signedIn) send('intune-signout', {}); openIntuneWizard(); }
+      return;
+    }
+    const hash = String(item.hash || '').toUpperCase(), app = { name: item.name };
+    const holding = intune.policies.find(p => p.rules.some(r => r.hash === hash));
+    if (holding) { toast('Already in Intune', `${item.name} ${item.version} is in ${holding.name}.`); return; }
+    const pol = policyForApp(app, hash);
+    let target = null;
+    const policyName = pol ? pol.name : `EPM · ${item.name}`;
+    if (!pol) { target = await pickIntuneTarget(policyName); if (!target) return; }
+    // Keep the newest existing rule as the previous version; offer the older ones for removal.
+    const mine = pol ? pol.rules.filter(r => r.name && ruleMentions(r, app)) : [];
+    const older = mine.slice(0, Math.max(0, mine.length - 1));
+    const fields = [{ id: 'ruleType', type: 'choice', label: 'When a standard user runs it', options: [
+      { value: 'self', label: 'They confirm it', desc: 'Windows asks for a business reason before it runs elevated.' },
+      { value: 'automatic', label: 'It runs elevated straight away', desc: 'No prompt. Use only for installers you fully trust.' }] }];
+    if (older.length) fields.push({ id: 'remove', type: 'checks', label: 'Remove older versions (the previous one stays)', options: older.map(r => ({ value: r.name, label: r.name, checked: true })) });
+    const v = await uiDialog({ title: `Add ${item.name} ${item.version} to Intune`, ok: 'Add to Intune', fields,
+      text: `Policy: ${pol ? `${pol.name} (${assignedText(pol)})` : `${policyName} (new, assigned to ${target.label})`}\nRule: ${item.name} ${item.version}\nFile name: ${item.file}\nSHA-256: ${hash}\nSigned by: ${item.signer || 'not signed'}\n\nAfterwards AppUpdater reads the policy back and checks every value.` });
+    if (!v) return;
+    uiProgress(`Adding ${item.name} ${item.version}`, 'writing to Intune');
+    send('intune-apply', { source: item.source, appId: item.appId || '', appName: item.name, version: item.version, policyId: pol ? pol.id : '', policyName,
+      target: target ? target.id : '', ruleType: v.ruleType, removeNames: v.remove || [] });
+  }
   // App fleet's EPM view: what the vendor checks found next to the elevation rules already in Intune. Read-only.
   let intune = { signedIn: false, account: '', policies: [], loaded: false };
   const lettersOf = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -3589,8 +3666,9 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#intune-status-t').textContent = intune.signedIn ? `Intune: connected as ${intune.account || 'your account'}` : 'Intune not connected';
     $('#intune-status').textContent = intune.signedIn
       ? `${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}.`
-        + (intune.settingsPolicies === 0 ? ' No elevation settings policy turns EPM on for devices yet.' : '') + ' Adding rules from AppUpdater is not available yet.'
-      : 'Connect your Intune tenant to see which versions your EPM policies already allow. AppUpdater only reads them.';
+        + (intune.settingsPolicies === 0 ? ' No elevation settings policy turns EPM on for devices yet.' : '')
+        + (intune.canWrite ? ' New versions can be added from here.' : window._intuneWrite ? ' Connect again to allow adding rules.' : ' Adding rules is off (Settings \u203a 09).')
+      : 'Connect your Intune tenant to see which versions your EPM policies already allow, and to add new ones once adding rules is on in Settings \u203a 09.';
     const watchedNames = apps.map(a => lettersOf(a.name));
     const builtOnly = lastFleet.filter(a => a.type === 'epm' && !watchedNames.includes(lettersOf(a.name)));
     $('#epm-cover').innerHTML = (!s.cfg && !apps.length
@@ -3624,7 +3702,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   let intuneWizard = false;
   async function openIntuneWizard() {
     const v = await uiDialog({ title: 'Connect Intune for EPM', sub: 'Step 1 of 3', ok: 'Sign in\u2026',
-      text: 'AppUpdater reads your Endpoint Privilege Management policies to show which installer versions are already allowed, and which new ones still need a rule.\n\n'
+      text: 'AppUpdater reads your Endpoint Privilege Management policies to show which installer versions are already allowed, and which new ones still need a rule.' + (window._intuneWrite ? ' Adding rules is on, so it will also ask to change those policies.' : ' With adding rules switched on in Settings \u203a 09, it can also add new versions for you.') + '\n\n'
         + 'You need:\n\u2022 Endpoint Privilege Management licensed in your tenant: Intune Suite, the EPM add-on, or its free 90-day trial (Intune admin center \u203a Tenant administration \u203a Intune add-ons)\n'
         + '\u2022 An account with the Intune Administrator or Endpoint Security Manager role\n\n'
         + 'Sign-in uses Microsoft\u2019s own "Microsoft Graph Command Line Tools" app, so nothing is added to your tenant. The first time, Microsoft may ask an administrator to approve read access to device configuration and group names. The sign-in lasts for this session only.' });
@@ -3635,6 +3713,14 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   }
   $('#intune-signin').addEventListener('click', openIntuneWizard);
   $('#intune-set-connect').addEventListener('click', openIntuneWizard);
+  $('#tgl-intune-write').addEventListener('click', async () => {
+    const on = !window._intuneWrite;
+    if (on && !(await uiConfirm('Let AppUpdater add rules?', 'Add to Intune will then write rules into your EPM policies: the new version is added, older ones you tick are removed, and each change is read back and checked.\n\nThis has not been tried against every tenant yet. Try it on a test tenant first if you can. Connect Intune again afterwards so the sign-in includes permission to change policies.', 'Switch on'))) return;
+    window._intuneWrite = on;
+    $('#tgl-intune-write').classList.toggle('on', on);
+    send('set-intune-write', { on });
+    flashSaved();
+  });
   $('#intune-set-out').addEventListener('click', () => send('intune-signout', {}));
   $('#intune-set-open').addEventListener('click', () => showFleetEpm(false));
   $('#intune-signout').addEventListener('click', () => send('intune-signout', {}));
@@ -3645,13 +3731,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const add = e.target.closest('[data-epm-add]');
     if (add) {
       const app = ((epmState || {}).apps || []).find(a => a.id === add.dataset.epmAdd), r = ((epmState || {}).results || {})[add.dataset.epmAdd];
-      if (!app || !r) return;
-      const pol = policyForApp(app, String(r.sha256).toUpperCase());
-      uiDialog({ title: `Add ${app.name} ${r.version} to Intune`, ok: 'Close', cancel: '',
-        text: `This is the rule AppUpdater would add:\n\n`
-          + `Policy: ${pol ? pol.name + ' (' + assignedText(pol) + ')' : 'EPM · ' + app.name + ' (new; you choose its group when it is created)'}\n`
-          + `Rule name: ${app.name} ${r.version}\nFile name: ${r.file || 'from the download'}\nSHA-256: ${String(r.sha256).toUpperCase()}\nSigned by: ${r.signer}\nType: user confirmed\n\n`
-          + `The previous version's rule stays; older ones are offered for removal.\n\nWriting to Intune is switched off until it has been tested against a real tenant.` });
+      if (app && r) addToIntune({ source: 'watched', appId: app.id, name: app.name, version: r.version, file: r.file, hash: r.sha256, signer: r.signer });
       return;
     }
     const built = e.target.closest('[data-epm-watch-built]');
@@ -4839,7 +4919,8 @@ $_result.ok = $true
               }
             }
             'intune-signin' {
-              Start-BackgroundAction -Wv $wv -Roots @('Request-MsDeviceCode') -Event 'intune-code' -TimeoutSeconds 30 -Variables @{ _cid = $MsGraphClientId; _scope = $IntuneScopes } -Script @'
+              $scope = if ($config.IntuneWriteEnabled) { $IntuneScopes.Replace('DeviceManagementConfiguration.Read.All', 'DeviceManagementConfiguration.ReadWrite.All') } else { $IntuneScopes }
+              Start-BackgroundAction -Wv $wv -Roots @('Request-MsDeviceCode') -Event 'intune-code' -TimeoutSeconds 30 -Variables @{ _cid = $MsGraphClientId; _scope = $scope } -Script @'
 $c = Request-MsDeviceCode -ClientId $_cid -Scope $_scope
 $_result.ok = $true; $_result.code = [string]$c.user_code
 $_result.device = [string]$c.device_code; $_result.interval = [int]$c.interval; $_result.expires = [int]$c.expires_in
@@ -4860,17 +4941,88 @@ $_result.token = $t.token; $_result.expiresIn = $t.expiresIn; $_result.ok = $tru
                   $IntuneAuth.token = $token
                   $IntuneAuth.expires = (Get-Date).AddSeconds([Math]::Max(60, $a.expiresIn - 120))
                   $IntuneAuth.account = [string]$(if ($claims.upn) { $claims.upn } else { $claims.preferred_username })
-                  $a.account = $IntuneAuth.account
+                  $IntuneAuth.canWrite = ([string]$claims.scp) -match 'DeviceManagementConfiguration\.ReadWrite\.All'
+                  $a.account = $IntuneAuth.account; $a.canWrite = $IntuneAuth.canWrite
                 }.GetNewClosure())
               }.GetNewClosure())
+            }
+            'intune-groups' {
+              $q = ([string]$msg.payload.q).Trim()
+              if (-not $IntuneAuth.token -or $q.Length -lt 2 -or $q.Length -gt 60) { Send-ToPage $wv 'intune-groups' @{ ok = $false; message = 'Type at least two letters of the group name.' } }
+              else {
+                $filter = [Uri]::EscapeDataString("startswith(displayName,'$($q.Replace("'", "''"))')")
+                Start-BackgroundAction -Wv $wv -Roots @('Invoke-GraphGet') -Event 'intune-groups' -TimeoutSeconds 60 -Variables @{ _tok = $IntuneAuth.token; _path = "/groups?`$filter=$filter&`$select=id,displayName,description&`$top=20" } -Script @'
+$_result.groups = @(@(Invoke-GraphGet -Token $_tok -Path $_path) | ForEach-Object { @{ id = [string]$_.id; name = [string]$_.displayName; description = [string]$_.description } })
+$_result.ok = $true
+'@
+              }
+            }
+            'intune-apply' {
+              $p = $msg.payload
+              $fail = { param($m) Send-ToPage $wv 'intune-apply-done' @{ ok = $false; message = $m } }
+              $remove = @(@($p.removeNames) | ForEach-Object { [string]$_ } | Where-Object { $_ })
+              if (-not $config.IntuneWriteEnabled) { & $fail 'Adding rules is switched off. Turn it on in Settings › 09 Intune for EPM.' }
+              elseif (-not $IntuneAuth.token -or (Get-Date) -ge $IntuneAuth.expires) { & $fail 'The Intune sign-in has expired. Connect Intune again.' }
+              elseif (-not $IntuneAuth.canWrite) { & $fail 'This sign-in can only read. Sign out and connect Intune again to allow adding rules.' }
+              elseif ([string]$p.policyId -and [string]$p.policyId -notmatch '^[0-9a-fA-F-]{36}$') { & $fail 'Unknown policy.' }
+              elseif (-not [string]$p.policyId -and ([string]$p.target -notmatch '^([0-9a-fA-F-]{36}|allUsers|allDevices)$' -or ([string]$p.policyName).Length -notin 1..120)) { & $fail 'Choose who the new policy applies to.' }
+              elseif ([string]$p.ruleType -notin @('self', 'automatic')) { & $fail 'Unknown rule type.' }
+              else {
+                # The hash, file and version come from this PC's own records, never from the page.
+                $src = $null
+                if ($p.source -eq 'build') {
+                  $csv = if ($global:LastBuildDir) { Join-Path $global:LastBuildDir 'EPM-rules.csv' } else { '' }
+                  $row = if ($csv -and (Test-Path -LiteralPath $csv)) { @(Import-Csv -LiteralPath $csv)[0] } else { $null }
+                  if ($row) { $src = @{ name = [string]$p.appName; version = [string]$p.version; file = [string]$row.FileName; sha256 = [string]$row.SHA256; signer = [string]$row.Signer } }
+                }
+                $job = @{ _tok = $IntuneAuth.token; _src = $src; _appId = [string]$p.appId; _wurl = [string]$config.WorkerURL; _wtok = [string]$config.ManifestToken
+                          _policyId = [string]$p.policyId; _policyName = [string]$p.policyName; _target = [string]$p.target; _ruleType = [string]$p.ruleType; _remove = $remove }
+                Start-BackgroundAction -Wv $wv -Roots @('Invoke-EpmWorker', 'New-EpmRuleValue', 'Set-IntuneEpmPolicyRules', 'New-IntuneEpmPolicy', 'Confirm-IntuneEpmRule') `
+                  -Event 'intune-apply-done' -LogEvent 'intune-apply-log' -TimeoutSeconds 300 -Variables $job -Script @'
+$src = $_src
+if (-not $src) {
+  if (-not $_wurl) { throw 'Vendor checks need the Cloudflare worker.' }
+  $state = Invoke-EpmWorker -WorkerUrl $_wurl -Token $_wtok
+  $r = $state.results.$_appId
+  if (-not $r -or $r.status -ne 'ok') { throw 'There is no verified version of this app to add.' }
+  $app = @($state.apps) | Where-Object { $_.id -eq $_appId } | Select-Object -First 1
+  $src = @{ name = [string]$app.name; version = [string]$r.version; file = [string]$r.file; sha256 = [string]$r.sha256; signer = [string]$r.signer }
+}
+if ($src.sha256 -notmatch '^[0-9A-Fa-f]{64}$') { throw 'The recorded SHA-256 is not valid.' }
+if (-not $src.file -or $src.file -match '[\\/:*?"<>|]') { throw 'The recorded file name is not valid.' }
+$name = "$($src.name) $($src.version)".Trim()
+$rule = New-EpmRuleValue -Name $name -FileName $src.file -Hash $src.sha256 -RuleType $_ruleType -Description "Signed by $($src.signer). Added by AppUpdater." -First:(-not $_policyId)
+if ($_policyId) {
+  Write-Step '1/2' "Adding $name to the policy"
+  Set-IntuneEpmPolicyRules -Token $_tok -PolicyId $_policyId -Rule $rule -RemoveNames $_remove
+  $policyId = $_policyId
+} else {
+  Write-Step '1/2' "Creating $_policyName with $name"
+  $policyId = New-IntuneEpmPolicy -Token $_tok -Name $_policyName -Rule $rule -Target $_target
+  Write-OK 'Policy created and assigned'
+}
+Write-Step '2/2' 'Reading the policy back to check it'
+$count = Confirm-IntuneEpmRule -Token $_tok -PolicyId $policyId -Name $name -FileName $src.file -Hash $src.sha256 -RuleType $_ruleType -RemoveNames $_remove
+Write-OK "$name is in the policy exactly as written ($count rules)"
+if ($_remove.Count) { Write-OK "Removed $($_remove -join ', ')" }
+$_result.name = $name; $_result.ok = $true
+'@
+              }
+            }
+            'set-intune-write' {
+              $config.IntuneWriteEnabled = [bool]$msg.payload.on
+              [void](Save-PersistedConfig -Config $config)
+              # A sign-in made with the other set of permissions no longer matches.
+              $IntuneAuth.Clear()
+              Send-ToPage $wv 'intune-data' @{ ok = $false; signedOut = $true }
             }
             'intune-open-device' { Start-Process 'https://microsoft.com/devicelogin' }
             'intune-signout' { $IntuneAuth.Clear(); Send-ToPage $wv 'intune-data' @{ ok = $false; signedOut = $true } }
             'intune-read' {
               if (-not $IntuneAuth.token -or (Get-Date) -ge $IntuneAuth.expires) { $IntuneAuth.Clear(); Send-ToPage $wv 'intune-data' @{ ok = $false; signedOut = $true } }
               else {
-                Start-BackgroundAction -Wv $wv -Roots @('Get-IntuneEpmPolicies') -Event 'intune-data' -TimeoutSeconds 180 -Variables @{ _tok = $IntuneAuth.token; _acct = $IntuneAuth.account } -Script @'
-$_result.account = $_acct
+                Start-BackgroundAction -Wv $wv -Roots @('Get-IntuneEpmPolicies') -Event 'intune-data' -TimeoutSeconds 180 -Variables @{ _tok = $IntuneAuth.token; _acct = $IntuneAuth.account; _canWrite = [bool]$IntuneAuth.canWrite } -Script @'
+$_result.account = $_acct; $_result.canWrite = $_canWrite
 try { $epm = Get-IntuneEpmPolicies -Token $_tok; $_result.policies = @($epm.policies); $_result.settingsPolicies = $epm.settingsPolicies; $_result.ok = $true }
 catch {
   $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch { }
@@ -5009,6 +5161,7 @@ catch {
                 showCloudflareNav = -not [bool]$config.HideCloudflareNav
                 onboardingSeen = [bool]$config.OnboardingSeen
                 intuneSuggested = [bool]$config.IntuneSuggested
+                intuneWrite = [bool]$config.IntuneWriteEnabled
                 modeExplainerSeen = [bool]$config.ModeExplainerSeen
                 version = $global:Version
                 newerAvailable = [bool]($global:_relCheck -and $global:_relCheck.Newer -and $global:_relCheck.Latest)
@@ -5565,7 +5718,7 @@ function Start-WingetLookupJob {
 # OAuth app used for the GitHub device sign-in. A client ID is public; device flow needs no secret.
 $GitHubClientId = ''
 $MsGraphClientId = '14d82eec-204b-4c2f-b7e8-296a70dab67e'
-# Read-only until writing EPM rules has been tested against a real tenant.
+# Reading only; writing is added when the user switches it on in Settings (DeviceManagementConfiguration.ReadWrite.All).
 $IntuneScopes = 'https://graph.microsoft.com/DeviceManagementConfiguration.Read.All https://graph.microsoft.com/Group.Read.All'
 $IntuneAuth = @{}
 $EpmCheckScript = @'
@@ -5909,6 +6062,111 @@ function Get-IntuneEpmPolicies([string]$Token) {
        rules = @(ConvertFrom-EpmRuleSettings @(Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies/$($p.id)/settings")) }
   })
   @{ policies = $policies; settingsPolicies = $all.Count - $rulesPolicies.Count }
+}
+
+function Invoke-GraphWrite([string]$Token, [string]$Method, [string]$Path, $Body) {
+  $p = @{ Uri = "https://graph.microsoft.com/beta$Path"; Method = $Method; Headers = @{ Authorization = "Bearer $Token" }; TimeoutSec = 60; UseBasicParsing = $true; ErrorAction = 'Stop' }
+  if ($null -ne $Body) { $p.ContentType = 'application/json; charset=utf-8'; $p.Body = [Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -Depth 30 -Compress -InputObject $Body)) }
+  try { Invoke-RestMethod @p }
+  catch {
+    # Graph puts the reason in the response body; the exception text alone only says "Bad Request".
+    $detail = ''; try { $detail = [string](($_.ErrorDetails.Message | ConvertFrom-Json).error.message) } catch { }
+    throw "Intune refused $Method ${Path}: $(if ($detail) { $detail } else { $_.Exception.Message })"
+  }
+}
+
+function New-EpmRuleValue {
+  # One elevation rule in the settings-catalog shape Intune stores. Only the first rule of a policy carries
+  # template references; later ones carry nulls. RuleType 'self' is user confirmed with a business justification.
+  param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][string]$FileName, [Parameter(Mandatory)][string]$Hash,
+        [ValidateSet('self', 'automatic')][string]$RuleType = 'self', [string]$Description = '', [switch]$First)
+  $p = 'device_vendor_msft_policy_privilegemanagement_elevationrules_{elevationrulename}'
+  $ref = { param($inst, $val, [switch]$Choice)
+    if (-not $First) { return @{ inst = $null; val = $null } }
+    $v = [ordered]@{ settingValueTemplateId = $val }; if (-not $Choice) { $v.useTemplateDefault = $false }
+    @{ inst = [ordered]@{ settingInstanceTemplateId = $inst }; val = $v } }
+  $simple = { param($key, $value, $inst, $val) $r = & $ref $inst $val
+    [ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance'; settingDefinitionId = "${p}_$key"; settingInstanceTemplateReference = $r.inst
+                simpleSettingValue = [ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = $value; settingValueTemplateReference = $r.val } } }
+  $applies = & $ref '0cde1c42-c701-44b1-94b7-438dd4536128' '2ec26569-c08f-434c-af3d-a50ac4a1ce26'
+  $type = & $ref 'bc5a31ac-95b5-4ec6-be1f-50a384bb165f' 'cb2ea689-ebc3-42ea-a7a4-c704bb13e3ad' -Choice
+  $typeChildren = if ($RuleType -eq 'self') { @([ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingCollectionInstance'; settingDefinitionId = "${p}_ruletype_validation"
+      choiceSettingCollectionValue = @([ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = "${p}_ruletype_validation_0"; children = @() }) }) } else { @() }
+  [ordered]@{ settingValueTemplateReference = $null; children = @(
+    [ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = "${p}_appliesto"; settingInstanceTemplateReference = $applies.inst
+                choiceSettingValue = [ordered]@{ value = "${p}_allusers"; settingValueTemplateReference = $applies.val; children = @() } }
+    (& $simple 'description' $Description 'b3714f3a-ead8-4682-a16f-ffa264c9d58f' '5e82a1e9-ef4f-43ea-8031-93aace2ad14d')
+    (& $simple 'filehash' $Hash.ToUpperInvariant() 'e4436e2c-1584-4fba-8e38-78737cbbbfdf' '1adcc6f7-9fa4-4ce3-8941-2ce22cf5e404')
+    [ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = "${p}_ruletype"; settingInstanceTemplateReference = $type.inst
+                choiceSettingValue = [ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = "${p}_$RuleType"; settingValueTemplateReference = $type.val; children = $typeChildren } }
+    (& $simple 'name' $Name 'fdabfcf9-afa4-4dbf-a4ef-d5c1549065e1' '03f003e5-43ef-4e7e-bf30-57f00781fdcc')
+    (& $simple 'filename' $FileName '0c1ceb2b-bbd4-46d4-9ba5-9ee7abe1f094' 'a165327c-f0e5-4c7d-9af1-d856b02191f7')) }
+}
+
+function Get-EpmRuleName($RuleValue) {
+  $c = @($RuleValue.children) | Where-Object { [string]$_.settingDefinitionId -like '*_{elevationrulename}_name' } | Select-Object -First 1
+  if ($c) { [string]$c.simpleSettingValue.value } else { '' }
+}
+
+function Set-IntuneEpmPolicyRules {
+  # Adds one rule to an existing elevation rules policy and drops the named older ones, keeping everything else
+  # in the policy as Intune returned it. Settings catalog policies are updated by replacing the whole policy.
+  param([string]$Token, [string]$PolicyId, $Rule, [string[]]$RemoveNames = @())
+  $prefix = 'device_vendor_msft_policy_privilegemanagement_elevationrules_{elevationrulename}'
+  $pol = Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies/$($PolicyId)?`$expand=settings"
+  $ruleCount = 0
+  $settings = @(foreach ($s in @($pol.settings)) {
+    $inst = $s.settingInstance
+    if ([string]$inst.settingDefinitionId -eq $prefix) {
+      $kept = @(@($inst.groupSettingCollectionValue) | Where-Object { $null -ne $_ -and (Get-EpmRuleName $_) -notin $RemoveNames })
+      $inst.groupSettingCollectionValue = @($kept) + @($Rule)
+      $ruleCount = $inst.groupSettingCollectionValue.Count
+    }
+    [ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = $inst }
+  })
+  if (-not @($settings | Where-Object { [string]$_.settingInstance.settingDefinitionId -eq $prefix }).Count) { throw "$($pol.name) holds no elevation rules list to add to." }
+  if ($ruleCount -gt 100) { throw "$($pol.name) would hold $ruleCount rules; Intune allows 100. Remove older versions first." }
+  Invoke-GraphWrite -Token $Token -Method Put -Path "/deviceManagement/configurationPolicies/$PolicyId" -Body ([ordered]@{
+    name = [string]$pol.name; description = [string]$pol.description; platforms = [string]$pol.platforms; technologies = [string]$pol.technologies
+    roleScopeTagIds = @($pol.roleScopeTagIds | Where-Object { $_ }); templateReference = @{ templateId = [string]$pol.templateReference.templateId }; settings = $settings }) | Out-Null
+}
+
+function New-IntuneEpmPolicy {
+  # Creates an elevation rules policy holding one rule and assigns it to one target.
+  param([string]$Token, [string]$Name, $Rule, [string]$Target)
+  $prefix = 'device_vendor_msft_policy_privilegemanagement_elevationrules_{elevationrulename}'
+  $created = Invoke-GraphWrite -Token $Token -Method Post -Path '/deviceManagement/configurationPolicies' -Body ([ordered]@{
+    name = $Name; description = 'Elevation rules added by AppUpdater after each new version is verified.'; platforms = 'windows10'; technologies = 'endpointPrivilegeManagement'
+    templateReference = @{ templateId = 'cff02aad-51b1-498d-83ad-81161a393f56_1' }
+    settings = @([ordered]@{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = [ordered]@{
+      '@odata.type' = '#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance'; settingDefinitionId = $prefix
+      settingInstanceTemplateReference = @{ settingInstanceTemplateId = 'ee3d2e5f-6b3d-4cb1-af9b-37b02d3dbae2' }; groupSettingCollectionValue = @($Rule) } }) })
+  $id = [string]$created.id
+  if ($id -notmatch '^[0-9a-fA-F-]{36}$') { throw 'Intune did not return the new policy.' }
+  $targetBody = switch ($Target) {
+    'allUsers' { @{ '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget' } }
+    'allDevices' { @{ '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget' } }
+    default { @{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = $Target } }
+  }
+  Invoke-GraphWrite -Token $Token -Method Post -Path "/deviceManagement/configurationPolicies/$id/assign" -Body @{ assignments = @(@{ target = $targetBody }) } | Out-Null
+  $id
+}
+
+function Confirm-IntuneEpmRule {
+  # Reads the policy back and checks the rule is there exactly as written and the removed ones are gone.
+  param([string]$Token, [string]$PolicyId, [string]$Name, [string]$FileName, [string]$Hash, [string]$RuleType, [string[]]$RemoveNames = @())
+  $rules = @(ConvertFrom-EpmRuleSettings @(Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies/$PolicyId/settings"))
+  $found = @($rules | Where-Object { $_.name -eq $Name })
+  if ($found.Count -ne 1) { throw "Read back $($found.Count) rules named '$Name' in the policy." }
+  $r = $found[0]
+  $diff = @(
+    if ($r.fileName -ne $FileName) { "file name is '$($r.fileName)'" }
+    if ($r.hash -ne $Hash.ToUpperInvariant()) { "hash is '$($r.hash)'" }
+    if ($r.ruleType -ne $RuleType) { "rule type is '$($r.ruleType)'" })
+  if ($diff.Count) { throw "The rule read back differs: $($diff -join '; ')." }
+  $left = @($rules | Where-Object { $_.name -in $RemoveNames } | ForEach-Object name)
+  if ($left.Count) { throw "Still in the policy after removal: $($left -join ', ')." }
+  $rules.Count
 }
 
 function Invoke-EpmWorker {
