@@ -580,6 +580,9 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 .pf-ctx label+.seg{margin-left:-2px}
 @media (max-width:1100px){.split{grid-template-columns:1fr}.cols2{grid-template-columns:1fr}
   .pf-layout{grid-template-columns:220px minmax(0,1fr)}.pf-list{grid-row:span 2}.pf-form{border-right:0;border-bottom:1px solid var(--edge)}}
+.crumb,.cmd-btn{white-space:nowrap}
+/* Below this the manifest column is too narrow to read, and five step labels push the window buttons off. */
+@media (max-width:1240px){.builder{grid-template-columns:minmax(0,1fr)}.plabel{display:none}.pnode.live .plabel{display:inline}}
 </style>
 </head>
 <body>
@@ -1080,8 +1083,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
               </div>
               <div class="bsec" id="epm-section">
                 <div class="bsec-h"><span class="bsec-n">08</span><span class="bsec-t">Vendor release checks</span><span class="bsec-rule"></span></div>
-                <p class="bnote" style="margin:4px 0 6px">Watches each vendor for a new installer, then downloads it on a throwaway GitHub runner, checks who signed it and takes its SHA-256 for EPM rules. Nothing is downloaded to this PC; only the version, hash and signer come back, through your Cloudflare worker.</p>
-                <div class="srow2"><span class="k">Checks run on</span><select class="field" id="epm-runner"><option value="github">GitHub Actions, in a private repo</option><option value="azure" disabled>Azure Automation (not connected)</option></select></div>
+                <p class="bnote" style="margin:4px 0 6px">Watches each vendor for a new installer, then downloads it on a throwaway hosted machine (GitHub Actions or Azure Automation), checks who signed it and takes its SHA-256 for EPM rules. Nothing is downloaded to this PC; only the version, hash and signer come back.</p>
                 <div class="tglrow"><div><b id="epm-status-t">Not set up</b><small id="epm-status">&nbsp;</small><small id="epm-cost" hidden></small></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn sm" id="epm-azure-pricing" hidden>Azure pricing</button><button class="btn sm danger" id="epm-azure-remove" hidden>Remove from Azure&hellip;</button><button class="btn sm primary" id="epm-setup">Set up…</button></div></div>
                 <div id="epm-code-box" class="tglrow" hidden><div><b>Enter this code on GitHub</b><small>The sign-in page has opened in your browser. The sign-in is used once to set up the repo and is not kept.</small></div><span class="epm-code" id="epm-code"></span></div>
                 <div id="epm-apps"></div>
@@ -1601,6 +1603,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const id = ($('#f-appid') && $('#f-appid').value.trim()) || 'App';
     const source = form.Kind === 'printer' ? 'printer' : (window._selectedInstaller ? window._selectedInstaller.split(/[\\/]/).pop() : 'installer');
     const psadt = form.SimplePkgTarget === 'psadt';
+    if (form.Kind !== 'printer' && form.SimplePkgTarget === 'epm') return [source, 'SHA-256', 'Signer', 'EPM-rules.csv', 'Intune EPM'];
     const detect = form.Kind === 'printer' ? 'Detect-Printer.ps1' : form.Mode === 'runtime' ? `Detect-${id}.ps1` : 'detect.ps1';
     const install = form.Kind === 'printer' ? 'Install-Printer.ps1' : psadt ? 'Deploy-Application.ps1' : form.Mode === 'runtime' ? `Deploy-${id}.ps1` : 'install.ps1';
     return [source, detect, install, psadt ? `${id}-PSADT` : `${id}.intunewin`, 'Intune'];
@@ -1655,7 +1658,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   function goTo(id) {
     screens.forEach(s => $('#screen-' + s).classList.toggle('on', s === id));
     $$('.nav-btn[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === id || (['build','progress','done'].includes(id) && b.dataset.go === 'build')));
-    $('#crumb').textContent = crumbs[id] || 'AppUpdater';
+    $('#crumb').textContent = id === 'done' && form.SimplePkgTarget === 'epm' ? 'Rule ready' : crumbs[id] || 'AppUpdater';
     $('#buildbar').style.display = (id === 'build') ? 'flex' : 'none';
     if (id === 'build') {
       builderProgress();
@@ -2003,6 +2006,10 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const file = window._selectedInstaller ? window._selectedInstaller.split(/[\\/]/).pop() : '-';
     const sw = $('#f-silentargs').value.trim(), reg = $('#f-registryname').value.trim() || '-', min = $('#f-detectversion').value.trim();
     const isMsi = /\.msi$/i.test(file), isMsix = window._installerType === 'MSIX', isZip = window._installerType === 'Zip';
+    if (form.SimplePkgTarget === 'epm') {
+      return [['rule', `${name}${window._selectedVersion ? ' ' + window._selectedVersion : ''}`], ['file', file, 'str'], ['match', 'publisher certificate and file name if signed, else SHA-256'],
+        ['policy', `EPM · ${name}`, 'str'], ['package', 'none: standard users run the installer themselves', 'dim'], ['output', `${id}-EPM/EPM-rules.csv`, 'str']];
+    }
     const lines = [['package', `${id}  \u00b7  ${name}${window._selectedVersion ? ' ' + window._selectedVersion : ''}`], ['source', file, 'str']];
     if (runtime) lines.push(['agent', `downloads ${$('#f-download-url').value.trim() || '[download URL]'}`, 'str'], ['  checks', 'on a schedule, installs newer versions', 'dim']);
     if (isMsix) lines.push(['install', 'Add-AppxProvisionedPackage, all users']);
@@ -3945,8 +3952,11 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       ${checks.map((_, i) => stop('gh', i, 52)).join('')}${checks.map((_, i) => stop('az', i, 202)).join('')}
       ${main('vendor', 48, 'Vendor', 'new release', true)}${main('au', 588, 'AppUpdater', 'App fleet › EPM, Runs')}${main('intune', 698, 'Intune', az ? 'added by Azure, read back' : 'you click Add, read back')}${main('dev', 888, 'Devices', 'elevated if hash matches')}
       <div class="sw-bubble"><b></b><span></span></div><div class="sw-train"></div></div></div>`;
-    const inner = host.querySelector('.sw-in'), w = host.clientWidth;
-    if (w && w < 948) { inner.style.transform = `scale(${w / 948})`; host.firstElementChild.style.height = (280 * w / 948) + 'px'; }
+    const inner = host.querySelector('.sw-in');
+    // Measured once the dialog has its size; the map is drawn at 948px and scaled down to fit.
+    const fit = () => { const w = host.clientWidth, k = w && w < 948 ? w / 948 : 1; inner.style.transform = k < 1 ? `scale(${k})` : ''; host.firstElementChild.style.height = (280 * k) + 'px'; };
+    requestAnimationFrame(fit);
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(host);
     const y = az ? 212 : 62, cx = i => 210 + i * 72, line = az ? 'az' : 'gh';
     const into = [{ x: 60, y: 137, stop: 'vendor' }, { x: 160, y: 137 }, { x: 160, y }];
     const scenes = [

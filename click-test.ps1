@@ -572,6 +572,8 @@ window.__errors = [];
         Assert (@(Import-Csv -LiteralPath (Join-Path $epmDir 'EPM-rules.csv')).Count -ge 1) 'The EPM folder holds a rule for the installer'
         Assert (-not @(Get-ChildItem -LiteralPath $epmDir -Filter '*.intunewin').Count) 'An EPM build makes no Intune package'
       }
+      $pipe = Get-Text '#pipe'
+      Assert ($pipe -like '*EPM-rules.csv*' -and $pipe -notlike '*.intunewin*' -and $pipe -notlike '*install.ps1*') "The EPM progress bar names the rule, not package files: $pipe"
       Save-Shot 'done-epm' '#done-sheet'
       Invoke-Click '#segTarget button[data-val=intunewin]'
     }
