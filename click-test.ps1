@@ -510,7 +510,7 @@ window.__errors = [];
       Write-Field '#f-registryname' 'placeholder name'
       Invoke-Click '#segTarget button[data-val=epm]'
       Wait-Js "document.getElementById('tour-overlay').style.display === 'block' && document.getElementById('tour-title').textContent === 'EPM rule'"
-      Assert ((Get-Text '#tour-step-count') -like '*1 of 6*') 'Choosing EPM rule the first time spotlights it on the builder'
+      Assert ((Get-Text '#tour-step-count') -like '*1 of 4*') 'Choosing EPM rule the first time spotlights it on the builder'
       Assert (Eval-Js "(function () { const r = document.getElementById('tour-card').getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + 20); return !!e && !!e.closest('#tour-card'); })()") 'The spotlight card is drawn on top of the builder'
       Invoke-Click '#tour-skip'
       Wait-Js "document.getElementById('tour-overlay').style.display === 'none'"
