@@ -1502,6 +1502,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (packaged && form.Mode !== 'simple') btn('segMode', 'simple').click();
     const epm = form.SimplePkgTarget === 'epm';
     sb.classList.toggle('epm', epm);
+    // EPM can also be the choice already in place, for example when the builder reopens with it selected.
+    if (epm && sb.classList.contains('on')) adviseEpmOnce();
     $('#btn-build-t').textContent = epm ? 'Create EPM rule' : 'Build package';
     sb.classList.toggle('simple', form.Mode === 'simple');
     $('#psadt-row').hidden = form.SimplePkgTarget !== 'psadt';
@@ -1592,6 +1594,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#buildbar').style.display = (id === 'build') ? 'flex' : 'none';
     if (id === 'build') {
       builderProgress();
+      if (form.SimplePkgTarget === 'epm') adviseEpmOnce();
     }
     else if (id === 'progress') renderPipe(2, 2, 2);
     else if (id === 'done') renderPipe(4, 5);
@@ -1718,7 +1721,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#bp-panel').style.display = (v === 'psadt' && window._bpExpanded) ? 'block' : 'none';
     if (v === 'psadt') updateBuildBrandingPreview();
     updateSummary();
-    if (v === 'epm') adviseEpmOnce();
   });
   // The first time EPM rule is chosen on this PC, explain what it makes and offer Intune; the answer is remembered.
   function adviseEpmOnce() {
@@ -2355,6 +2357,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           renderFleet(lastFleet);
           renderGettingStarted();
           window._intuneSuggested = !!payload.intuneSuggested;
+          if (form.SimplePkgTarget === 'epm' && $('#screen-build').classList.contains('on')) adviseEpmOnce();
           if (!payload.onboardingSeen && !window._tourAutoStarted) {
             window._tourAutoStarted = true;
             setTimeout(startTour, 600);
