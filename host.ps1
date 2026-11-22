@@ -787,8 +787,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
             <div class="bsec" id="sec-epm">
               <div class="bsec-h"><span class="bsec-n">03</span><span class="bsec-t">EPM rule</span><span class="bsec-rule"></span></div>
               <div class="brow"><span class="blbl">Rule</span><span class="bnote" id="epm-rule-desc">Publisher certificate and file name when the installer is signed, so it keeps matching after updates. Otherwise the file's SHA-256.</span></div>
-              <div class="brow"><label for="f-epm-policy">Policy name</label><input class="field mono" id="f-epm-policy" readonly><span class="bsrc">one policy per version</span></div>
-              <div class="brow"><span class="blbl">New versions</span><span class="bnote">Watch the vendor and get the next version's hash without downloading it here.</span><button type="button" class="btn sm" id="epm-watch-btn">Watch&hellip;</button></div>
+              <div class="brow" id="epm-policy-row" hidden><span class="blbl">Policy</span><span class="bnote" id="epm-policy-desc"></span></div>
+              <div class="brow" id="epm-watch-row" hidden><span class="blbl">New versions</span><span class="bnote">Watch the vendor and get the next version's hash without downloading it here.</span><button type="button" class="btn sm" id="epm-watch-btn">Watch&hellip;</button></div>
             </div>
 
             <div class="bsec" id="sec-wrap">
@@ -1553,7 +1553,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       : form.Mode === 'runtime' ? 'Devices check for new versions and install them on their own.'
       : 'You build and upload each new version.';
     const name = $('#f-displayname').value.trim() || 'App';
-    $('#f-epm-policy').value = `EPM · ${name} · ${window._selectedVersion || 'version'}`;
+    updateEpmRows();
   }
 
   function segInit(seg, onChange) {
@@ -1758,6 +1758,17 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (v === 'psadt') updateBuildBrandingPreview();
     updateSummary();
   });
+  // The builder's EPM section shows the policy only once Intune is connected, and watching only once
+  // vendor checks exist; before that, the rule itself is all there is to know.
+  function updateEpmRows() {
+    const name = $('#f-displayname').value.trim() || 'App', st = window._epmView || {};
+    const pol = st.policyFor ? st.policyFor(name) : null;
+    $('#epm-policy-row').hidden = !st.intune;
+    window._epmPolicyName = pol ? pol.name : `EPM \u00b7 ${name}`;
+    $('#epm-policy-desc').textContent = pol ? `Goes into ${pol.name}, the policy that already holds this app\u2019s rules (${assignedText(pol)}).`
+      : `A new policy, ${window._epmPolicyName}, is created when you add the rule to Intune. Later versions go into it too.`;
+    $('#epm-watch-row').hidden = !st.checks;
+  }
   // The first time EPM rule is chosen on this PC, explain what it makes and offer Intune; the answer is remembered.
   function adviseEpmOnce() {
     if (window._intuneSuggested !== false || window._tourActive) return;
@@ -3037,7 +3048,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (checks.length) groups.push({ t: 'Checks before deploying', p: 'Read these before you assign the app.', rows: checks });
     if (epm) {
       groups.push({ t: 'Create the rule in Intune', p: 'Endpoint security → Endpoint Privilege Management → Create an Elevation rules policy, then add one rule per row below.',
-        rows: [['Policy name', $('#f-epm-policy').value]].concat([].concat(payload.epm || []).flatMap(r => [
+        rows: [['Policy name', window._epmPolicyName || 'EPM']].concat([].concat(payload.epm || []).flatMap(r => [
           ['File name', r.FileName], ['SHA-256', r.SHA256],
           ['Rule type', r.SuggestedRule + (r.CertificateFile ? ' (certificate file ' + r.CertificateFile + ' is in the folder)' : '')]])), action: ['intune-add-build', 'Add it to Intune for me\u2026'] });
       groups.push({ t: 'Keep it current', p: 'Each new version of the installer needs its own rule. Watching the vendor gets the next hash without downloading it here.', action: ['epm-watch', 'Watch for new versions…'] });
@@ -3794,6 +3805,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const s = epmState || {}, apps = s.apps || [], res = s.results || {};
     const chip = $('[data-fleet-view="epm"] span');
     if (chip) chip.textContent = epmAppCount();
+    window._epmView = { intune: intune.signedIn, checks: !!s.cfg, policyFor: n => intune.signedIn ? policyForApp({ name: n }, '') : null };
+    updateEpmRows();
     // Until something is connected or built, the view is one line and the setup button.
     const empty = !intune.signedIn && !s.cfg && !apps.length && !lastFleet.some(a => a.type === 'epm');
     $('#epm-empty').hidden = !empty; $('#epm-main').hidden = empty;
