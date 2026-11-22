@@ -2380,12 +2380,27 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           } else uiProgressDone(false, payload.message || 'Microsoft did not return a sign-in code.');
           break;
         case 'intune-signed-in':
-          if (payload.ok) { intune.signedIn = true; intune.account = payload.account || ''; uiProgressDone(true, `Signed in as ${intune.account}. Reading your EPM policies…`); send('intune-read', {}); }
-          else uiProgressDone(false, payload.message || 'Sign-in did not finish.');
+          if (payload.ok) {
+            intune.signedIn = true; intune.account = payload.account || '';
+            $('#ui-dlg-body').innerHTML = ''; $('#ui-dlg-sub').textContent = 'Step 3 of 3';
+            uiProgressLine('ok', `Signed in as ${intune.account}`); uiProgressLine('step', 'Checking your tenant\u2026');
+            send('intune-read', {});
+          } else { intuneWizard = false; uiProgressDone(false, (payload.message || 'Sign-in did not finish.') + ' If Microsoft asked for approval, an administrator has to sign in once to approve it.'); }
           renderEpmScreen();
           break;
         case 'intune-data':
-          if (payload.ok) { intune.signedIn = true; intune.account = payload.account || intune.account; intune.policies = [].concat(payload.policies || []).map(p => Object.assign(p, { rules: [].concat(p.rules || []), assignments: [].concat(p.assignments || []) })); intune.loaded = true; }
+          if (payload.ok) {
+            intune.signedIn = true; intune.account = payload.account || intune.account; intune.settingsPolicies = Number(payload.settingsPolicies) || 0;
+            intune.policies = [].concat(payload.policies || []).map(p => Object.assign(p, { rules: [].concat(p.rules || []), assignments: [].concat(p.assignments || []) })); intune.loaded = true;
+            if (intuneWizard) {
+              intuneWizard = false;
+              const n = intune.policies.length, rules = intune.policies.reduce((t, p) => t + p.rules.length, 0);
+              uiProgressLine('ok', `${n} elevation rules polic${n === 1 ? 'y' : 'ies'} with ${rules} rule${rules === 1 ? '' : 's'}`);
+              if (intune.settingsPolicies) uiProgressLine('ok', 'EPM is switched on for devices by an elevation settings policy');
+              else uiProgressLine('warn', 'No elevation settings policy yet, so devices do not run EPM. Create one in Endpoint security \u203a Endpoint Privilege Management, set Endpoint Privilege Management to Enabled and assign it.');
+              uiProgressDone(true, 'Intune is connected. The EPM screen now compares your watched apps with these rules.');
+            }
+          } else if (intuneWizard && !payload.signedOut) { intuneWizard = false; uiProgressDone(false, payload.message || 'Could not read Intune.'); }
           else if (payload.signedOut) { intune = { signedIn: false, account: '', policies: [], loaded: false }; if (payload.message) toast('Sign in again', 'The Intune sign-in has expired.', true); }
           else toast('Could not read Intune', payload.message || 'Graph request failed.', true);
           renderEpmScreen();
@@ -3538,7 +3553,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const s = epmState || {}, apps = s.apps || [], res = s.results || {};
     $('#intune-signin').hidden = intune.signedIn; $('#intune-signout').hidden = $('#intune-refresh').hidden = !intune.signedIn;
     $('#intune-status').textContent = intune.signedIn
-      ? `Signed in as ${intune.account || 'your account'}. ${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}. Adding rules to Intune is switched off until it has been tested against a real tenant.`
+      ? `Signed in as ${intune.account || 'your account'}. ${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}.`
+        + (intune.settingsPolicies === 0 ? ' No elevation settings policy turns EPM on for devices yet.' : '') + ' Adding rules from AppUpdater is not available yet.'
       : 'Sign in with your Intune admin account to see the EPM policies you already have. AppUpdater only reads them.';
     $('#epm-cover').innerHTML = !s.cfg && !apps.length
       ? '<p class="bnote">Vendor release checks are not set up yet. They find each new version and its SHA-256 for you. <button class="linkbtn" data-epm-setup>Set up vendor checks…</button></p>'
@@ -3565,7 +3581,20 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           + (watched ? '<span class="pmeta">watched</span>' : `<button class="linkbtn" data-epm-watch-rule="${escapeHtml(p.id)}:${i}">Watch…</button>`) + '</div>';
       }).join('') + '</div>').join('') || '<p class="bnote">No elevation rules policies in this tenant yet.</p>';
   }
-  $('#intune-signin').addEventListener('click', () => { uiProgress('Sign in to Intune', 'waiting for a code'); send('intune-signin', {}); });
+  // Anyone can connect their own tenant: Microsoft's Graph Command Line Tools app signs in, so nothing is registered.
+  let intuneWizard = false;
+  async function openIntuneWizard() {
+    const v = await uiDialog({ title: 'Connect Intune for EPM', sub: 'Step 1 of 3', ok: 'Sign in\u2026',
+      text: 'AppUpdater reads your Endpoint Privilege Management policies to show which installer versions are already allowed, and which new ones still need a rule.\n\n'
+        + 'You need:\n\u2022 Endpoint Privilege Management licensed in your tenant: Intune Suite, the EPM add-on, or its free 90-day trial (Intune admin center \u203a Tenant administration \u203a Intune add-ons)\n'
+        + '\u2022 An account with the Intune Administrator or Endpoint Security Manager role\n\n'
+        + 'Sign-in uses Microsoft\u2019s own "Microsoft Graph Command Line Tools" app, so nothing is added to your tenant. The first time, Microsoft may ask an administrator to approve read access to device configuration and group names. The sign-in lasts for this session only.' });
+    if (!v) return;
+    intuneWizard = true;
+    uiProgress('Sign in to Intune', 'Step 2 of 3');
+    send('intune-signin', {});
+  }
+  $('#intune-signin').addEventListener('click', openIntuneWizard);
   $('#intune-signout').addEventListener('click', () => send('intune-signout', {}));
   $('#intune-refresh').addEventListener('click', () => { $('#intune-status').textContent = 'Reading your EPM policies…'; send('intune-read', {}); });
   $('#epm-screen-watch').addEventListener('click', () => { goTo('worker'); if (epmState && !epmState.cfg) openEpmWizard(); else { $('#epm-add').open = true; $('#epm-section').scrollIntoView({ block: 'start' }); } });
@@ -4791,7 +4820,7 @@ $_result.token = $t.token; $_result.expiresIn = $t.expiresIn; $_result.ok = $tru
               else {
                 Start-BackgroundAction -Wv $wv -Roots @('Get-IntuneEpmPolicies') -Event 'intune-data' -TimeoutSeconds 180 -Variables @{ _tok = $IntuneAuth.token; _acct = $IntuneAuth.account } -Script @'
 $_result.account = $_acct
-try { $_result.policies = @(Get-IntuneEpmPolicies -Token $_tok); $_result.ok = $true }
+try { $epm = Get-IntuneEpmPolicies -Token $_tok; $_result.policies = @($epm.policies); $_result.settingsPolicies = $epm.settingsPolicies; $_result.ok = $true }
 catch {
   $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch { }
   $_result.ok = $false
@@ -5795,13 +5824,13 @@ function ConvertFrom-EpmRuleSettings {
 }
 
 function Get-IntuneEpmPolicies([string]$Token) {
-  # Every EPM elevation rules policy with its assignments and rules.
+  # Every EPM elevation rules policy with its assignments and rules, plus how many elevation settings policies
+  # exist: without one, devices do not run EPM at all.
   $filter = [Uri]::EscapeDataString("templateReference/TemplateFamily eq 'endpointSecurityEndpointPrivilegeManagement'")
   $all = @(Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies?`$filter=$filter&`$select=id,name,description,lastModifiedDateTime,templateReference")
   $groupNames = @{}
-  foreach ($p in $all) {
-    # Elevation settings policies share the template family; only rules policies hold rules.
-    if (([string]$p.templateReference.templateId) -notlike 'cff02aad-51b1-498d-83ad-81161a393f56*') { continue }
+  $rulesPolicies = @($all | Where-Object { ([string]$_.templateReference.templateId) -like 'cff02aad-51b1-498d-83ad-81161a393f56*' })
+  $policies = @(foreach ($p in $rulesPolicies) {
     if ([string]$p.id -notmatch '^[0-9a-fA-F-]{36}$') { continue }
     $assignments = @(foreach ($a in @(Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies/$($p.id)/assignments")) {
       $t = $a.target; $type = [string]$t.'@odata.type'
@@ -5817,7 +5846,8 @@ function Get-IntuneEpmPolicies([string]$Token) {
     })
     @{ id = [string]$p.id; name = [string]$p.name; modified = [string]$p.lastModifiedDateTime; assignments = $assignments
        rules = @(ConvertFrom-EpmRuleSettings @(Invoke-GraphGet -Token $Token -Path "/deviceManagement/configurationPolicies/$($p.id)/settings")) }
-  }
+  })
+  @{ policies = $policies; settingsPolicies = $all.Count - $rulesPolicies.Count }
 }
 
 function Invoke-EpmWorker {

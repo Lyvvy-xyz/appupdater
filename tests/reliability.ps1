@@ -166,7 +166,8 @@ Assert ($EpmWorkflow -match 'id-token: write' -and $EpmCheckScript -match 'Get-A
     if ($Path -like '/groups/*') { return @{ displayName = 'IT-Devs' } }
     if ($Path -like '*/settings') { return $settings }
   }
-  $pols = @(Get-IntuneEpmPolicies -Token 't')
+  $epmRead = Get-IntuneEpmPolicies -Token 't'; $pols = @($epmRead.policies)
+  Assert ($epmRead.settingsPolicies -eq 1) 'Elevation settings policies are counted so setup can say whether EPM is on'
   Assert ($pols.Count -eq 1 -and $pols[0].name -eq 'EPM · 7-Zip' -and @($pols[0].rules).Count -eq 2) 'Only elevation rules policies are listed, with their rules'
   Assert ($pols[0].assignments[0].name -eq 'IT-Devs' -and -not $pols[0].assignments[0].exclude -and $pols[0].assignments[1].exclude) 'Policy assignments show group names and exclusions'
   Assert (@($calls | Where-Object { $_ -like '/groups/*' }).Count -eq 1) 'Each group name is looked up once'
