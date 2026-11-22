@@ -1712,7 +1712,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const prev = sel.value;
     sel.innerHTML = '<option value="">&mdash; none, use path below &mdash;</option>' + window._driverLibrary.map(d => {
       const noFiles = !d.HasFiles ? ' - driver files not yet supplied' : '';
-      return `<option value="${escapeHtml(d.DriverID)}">${escapeHtml(d.DisplayName)}${d.Manufacturer ? ' Â· ' + escapeHtml(d.Manufacturer) : ''}${d.Architecture ? ' (' + escapeHtml(d.Architecture) + ')' : ''}${noFiles}</option>`;
+      return `<option value="${escapeHtml(d.DriverID)}">${escapeHtml(d.DisplayName)}${d.Manufacturer ? ' \u00b7 ' + escapeHtml(d.Manufacturer) : ''}${d.Architecture ? ' (' + escapeHtml(d.Architecture) + ')' : ''}${noFiles}</option>`;
     }).join('');
     if (window._driverLibrary.some(d => d.DriverID === prev)) sel.value = prev;
     updateDriverModelRow();

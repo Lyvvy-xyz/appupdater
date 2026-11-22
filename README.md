@@ -22,6 +22,12 @@ Builds deployment-ready packages from `.exe`, `.msi`, `.msix` and portable `.zip
 
 <br/>
 
+<img src="assets/hero.gif" alt="Picking a 7-Zip installer, building an Intune package and testing it on this machine" width="900"/>
+
+<sub>Pick an installer, build, test it as Intune would: about a minute.</sub>
+
+<br/>
+
 [Overview](#overview) · [See it in action](#see-it-in-action) · [Why AppUpdater](#why-appupdater) · [How it works](#how-it-works) · [Quick Start](#quick-start) · [The Interface](#the-interface) · [Building a Package](#building-a-package) · [EPM rules](#endpoint-privilege-management-epm) · [Cloudflare Mode](#cloudflare-mode) · [Security](#security) · [Reference](#reference)
 
 </div>
@@ -113,31 +119,27 @@ The file you download is `AppUpdater.ps1`; in this repository it is `host.ps1`. 
 
 ## See it in action
 
-**Building a package** — pick an installer and AppUpdater reads its publisher, version, silent switches and blocking process; build, test it locally, take the suggested minimum version, recognise the app on its next installer, see a pre-deploy check stop a build whose signer changed, then build an EPM rule from the same installer with no package:
+Every part of the app has a short recording in its own section. Jump to one:
 
-![Building, testing and re-packaging 7-Zip](assets/build.gif)
-
-**Getting around** — Package builder, Home with the deployment feedback card, App fleet and its EPM view, History, Client profiles, Worker & settings and Docs & help:
-
-![Navigating the builder, Home, Fleet, the EPM view, History, Client profiles, settings and help screens](assets/tour.gif)
-
-> [!NOTE]
-> These two recordings are screenshots of the real app taken by the click-test on a clean Windows runner: it packages and locally tests the real 7-Zip installer. The paths are the runner's temporary test folders.
-
-**Connecting to Cloudflare** — why a worker helps, the API token, account and status page password, then setup with a live log. Afterwards every worker action (re-deploy, your own domain, password reset, two-step sign-in, token rotation, disconnect) opens in the same kind of in-app dialog:
-
-![Connecting a Cloudflare worker from inside the app](assets/cloudflare.gif)
-
-**EPM rules into Intune** — choose *EPM rule* and a spotlight walks through the screen; the rule is built with no package; switch on adding rules, connect Intune, see which versions your EPM policies already allow, and add the new one with a preview and a read-back check:
-
-![Building an EPM rule, connecting Intune and adding the rule to its policy](assets/epm.gif)
-
-**Keeping EPM rules current** — the setup screen's map runs example versions through the real path (a new release, a signer that isn't approved, a version that hasn't changed). Choose where checks run, with the cost of each; the Azure walkthrough creates everything, gets the Intune permission approved and runs a test; Settings shows the expected cost and Runs shows what each check did:
-
-![The EPM setup map, choosing GitHub or Azure, the Azure walkthrough, costs and runs](assets/epm-setup.gif)
+| Recording | Shows |
+|---|---|
+| [Getting around](#the-interface) | Home and its deployment check-in, App fleet filters and bulk actions, History, Client profiles, Settings, Docs |
+| [Ctrl K and display options](#the-interface) | The command search, high contrast and the colour-blind safe palette |
+| [Building a package](#building-a-package) | The three questions, an installer read for you, the manifest and checks, the finished package with every Intune value |
+| [Testing it here](#local-test-and-follow-ups) | Install, detect and uninstall as SYSTEM, then the suggested minimum version and a winget fix |
+| [A check stops a build](#pre-deploy-checks) | The next version recognised, a changed signer, and **Build anyway** |
+| [PSADT and branding](#phase-4--what-you-get) | Client profiles and the live PSADT v3 / v4 preview |
+| [Printers](#printer-packages) | Built-in driver families, one driver for a model family, queue and port |
+| [EPM rule](#building-a-rule) | The spotlight walkthrough, then a rule with no package |
+| [EPM into Intune](#add-to-intune) | Switching on writes, device-code sign-in, your policies, add and read back |
+| [Keeping EPM current](#vendor-release-checks) | The setup map, choosing GitHub or Azure with costs, the Azure walkthrough, Runs |
+| [Connecting Cloudflare](#connecting) | The four-step connect with a live setup log |
+| [Worker actions](#worker-actions) | Your own domain, token rotation, disconnect |
 
 > [!NOTE]
-> The three recordings above use example data (a sample tenant, worker and subscription), because a test runner has no Intune tenant or Azure subscription. They show the same interface code as the app; the *Example data* label marks them.
+> The recordings drive the real interface (the same HTML and script the app ships) with example data: a sample fleet, tenant, worker and subscription, marked *Example data*. The [click-test](#testing) separately drives the real app on Windows and packages a real 7-Zip installer on every push.
+
+<img src="assets/tour.gif" alt="Home, App fleet, History, Client profiles, Settings and Docs" width="900"/>
 
 ---
 
@@ -293,9 +295,13 @@ Keyboard: <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> with a visible focus 
 
 Every confirmation, choice and setup step is an in-app dialog drawn over the current screen; AppUpdater opens no separate windows of its own.
 
+<img src="assets/keys.gif" alt="Ctrl K command search, then high contrast and the colour-blind safe palette" width="900"/>
+
 ---
 
 ## Building a Package
+
+<img src="assets/build.gif" alt="Choosing the output, picking a 7-Zip installer, reviewing the detected values, manifest and checks, then building" width="900"/>
 
 ### Phase 1 — Pick Your Installer
 
@@ -387,6 +393,8 @@ The two questions at the top of the builder decide the output. **What do you nee
 
 Output lands under `C:\ProgramData\AppUpdater\_output\`, and **Open folder** in Fleet goes straight there.
 
+<img src="assets/psadt.gif" alt="A client profile's branding, then a PSADT build with the live v3 and v4 preview" width="900"/>
+
 > [!NOTE]
 > `IntuneWinAppUtil.exe` is downloaded from `https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool` on first use, verified against Microsoft's Authenticode certificate, then reused from the script directory. **No manual download required.**
 
@@ -394,12 +402,16 @@ Output lands under `C:\ProgramData\AppUpdater\_output\`, and **Open folder** in 
 
 Before every build the installer is checked. Red findings stop the build until you choose **Build anyway**; amber findings are shown with the finished package.
 
+<img src="assets/checks.gif" alt="A newer 7-Zip installer recognised with last build's settings, a changed signer stopping the build, then Build anyway" width="900"/>
+
 | Level | Finding |
 |---|---|
 | Red | The signature does not match the file, a previously signed app arrives unsigned, the signer changed, or the file's SHA-256 differs from winget's listing for that version |
 | Amber | Unsigned installer, version not newer than the last package, newer version in winget, last deployment reported as failed, CISA known-exploited product, NIST NVD CVEs for the exact version (opt-in in Settings) |
 
 ### Local Test and Follow-ups
+
+<img src="assets/test.gif" alt="Testing a package on this machine as SYSTEM, then the suggested minimum version and a winget contribution" width="900"/>
 
 **Test locally** in Fleet installs, detects and uninstalls the package on this machine as SYSTEM, or as the user for per-user installers, and reports the Add/Remove Programs entries it created. From there AppUpdater can:
 
@@ -436,7 +448,11 @@ Choose **What do you need? → EPM rule** in the builder and pick the installer.
 
 Signed installers get a publisher-and-file-name rule that keeps matching after updates; unsigned ones get a file-hash rule.
 
+<img src="assets/epm.gif" alt="Choosing EPM rule, the spotlight walkthrough, then the rule with its hash, signer and policy" width="900"/>
+
 ### Add to Intune
+
+<img src="assets/intune.gif" alt="Switching on rule writes, signing in to Intune, the EPM policies view, then adding PowerToys and reading it back" width="900"/>
 
 Adding rules is **off** until you switch it on in **Settings → 09 Intune for EPM**. Then **Add to Intune** (on the finished rule, or on any verified version in **App fleet → EPM**):
 
@@ -500,6 +516,8 @@ Each watched app names its source (a GitHub release, a redirect link or a vendor
 | **3 — Subscription and region** | Choose an enabled subscription and a region near you |
 | **4 — Create, then approve** | Registers the Automation and Storage providers, creates the resource group, storage, Automation account, runbook and schedule, and gives the identity *Storage Blob Data Contributor* on that one account. Then an admin signs in once to grant the identity Microsoft Graph `DeviceManagementConfiguration.ReadWrite.All` and nothing else |
 | **5 — Test** | Starts the runbook once, waits for it (usually 2 to 5 minutes) and reads the result back |
+
+<img src="assets/epm-setup.gif" alt="The setup map, choosing Azure with its cost, the Azure walkthrough and test, then Runs" width="900"/>
 
 **Remove from Azure** deletes the resource group and everything in it, and the container key on this PC. Your Intune policies are not touched.
 
@@ -630,6 +648,8 @@ question also offers **A printer** — deploys a printer queue, driver, and port
 printer cmdlets (`Add-PrinterDriver`, `Add-PrinterPort`, `Add-Printer`) instead of running
 an installer. No `.exe`/`.msi` needed at all.
 
+<img src="assets/printer.gif" alt="Importing built-in driver families, picking a Brother model, then the printer name, port and location" width="900"/>
+
 ### Driver Library
 
 Rather than re-supplying a driver source on every build, AppUpdater keeps a local
@@ -687,6 +707,8 @@ Cloudflare mode adds a web dashboard, per-device telemetry, and centralised mani
 
 Open **Worker & settings → Connect to Cloudflare** (or **Connect** on Home). Four steps run inside the app:
 
+<img src="assets/cloudflare.gif" alt="The four-step Cloudflare connect: why, API token, account and password, setup with a live log" width="900"/>
+
 | Step | What you do |
 |---|---|
 | **1 — Why** | What a worker adds: live fleet, self-updating apps, the status page, EPM vendor checks. Building works without it |
@@ -727,6 +749,8 @@ After setup, a `HOW TO USE.txt` file is written to the script directory with you
 ### Worker actions
 
 Once connected, **Worker & settings → 01** lists every action. Each opens an in-app dialog, and the ones that change Cloudflare run in the background with a live log. The Cloudflare API token is asked for each time and not saved.
+
+<img src="assets/worker.gif" alt="Setting up your own domain, then the token rotation and disconnect dialogs" width="900"/>
 
 | Action | What it does |
 |---|---|
