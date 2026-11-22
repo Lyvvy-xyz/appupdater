@@ -582,7 +582,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   .pf-layout{grid-template-columns:220px minmax(0,1fr)}.pf-list{grid-row:span 2}.pf-form{border-right:0;border-bottom:1px solid var(--edge)}}
 .crumb,.cmd-btn{white-space:nowrap}
 /* Below this the manifest column is too narrow to read, and five step labels push the window buttons off. */
-@media (max-width:1240px){.builder{grid-template-columns:minmax(0,1fr)}.plabel{display:none}.pnode.live .plabel{display:inline}}
+@media (max-width:1240px){.builder{grid-template-columns:minmax(0,1fr)}.plabel{display:none}.pnode.live .plabel{display:inline}
+  #fleet-table col:nth-child(5){display:none}#fleet-table tr>:nth-child(5){display:none}#fleet-table col:nth-child(3){width:130px!important}#fleet-table col:nth-child(7){width:170px!important}}
 </style>
 </head>
 <body>

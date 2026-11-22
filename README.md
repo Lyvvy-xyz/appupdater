@@ -22,7 +22,7 @@ Builds deployment-ready packages from `.exe`, `.msi`, `.msix` and portable `.zip
 
 <br/>
 
-<img src="assets/hero.gif" alt="Picking a 7-Zip installer, building an Intune package and testing it on this machine" width="900"/>
+<img src="assets/hero.gif" alt="Picking a 7-Zip installer, building an Intune package and testing it on this machine"/>
 
 <sub>Pick an installer, build, test it as Intune would: about a minute.</sub>
 
@@ -139,7 +139,7 @@ Every part of the app has a short recording in its own section. Jump to one:
 > [!NOTE]
 > The recordings drive the real interface (the same HTML and script the app ships) with example data: a sample fleet, tenant, worker and subscription, marked *Example data*. The [click-test](#testing) separately drives the real app on Windows and packages a real 7-Zip installer on every push.
 
-<img src="assets/tour.gif" alt="Home, App fleet, History, Client profiles, Settings and Docs" width="900"/>
+<img src="assets/tour.gif" alt="Home, App fleet, History, Client profiles, Settings and Docs"/>
 
 ---
 
@@ -285,7 +285,7 @@ A borderless window with a left sidebar. Every screen is part of the same page, 
 |---|---|
 | **Home** | Fleet stats (total / deployed / updates / pending), recent activity, getting-started checklist, shortcut to build, and a card asking whether apps deployed since the last launch installed correctly |
 | **Package builder** | Choose **An app** or **A printer**; for an app, **Intune app**, **EPM rule** or **PSADT app**, and whether it **updates itself** or **you push updates**. Drop or browse an installer, review the auto-detected identity, live PSADT v3/v4 branding preview, **Build**. Below 1240px wide the manifest panel moves under the form |
-| **App fleet** | Every app in the manifest with version, target, status badge and a note when winget has a newer version; filter, bulk-select, **Test locally** (with suggested fixes and a winget-pkgs contribution), **Mark deployed**, **Rebuild**, **Open folder**, **Remove**. The **EPM** filter shows EPM apps next to your Intune EPM policies, with **Add to Intune**, the vendor check **Runs** and **Set up** |
+| **App fleet** | Every app in the manifest with version, target, status badge and a note when winget has a newer version; filter, bulk-select, **Test locally** (with suggested fixes and a winget-pkgs contribution), **Mark deployed**, **Rebuild**, **Open folder**, **Remove**. The **EPM** filter shows EPM apps next to your Intune EPM policies, with **Add to Intune**, the vendor check **Runs** and **Set up**. Below 1240px wide the version history column is hidden so app names keep their room |
 | **Client profiles** | Named branding sets (org name, logo, banner, default target) applied per build — handy for MSPs |
 | **History** | Timeline of every build, deploy and removal |
 | **Worker & settings** | Connect Cloudflare and run every worker action, open the status dashboard, default org name, recovery bundle export/import, online lookups (release check, winget, CISA), the opt-in NIST vulnerability check, display options (reduce motion, high contrast, colour-blind safe palette with shape cues), Home and tour options, **08 Vendor release checks** (where checks run, expected cost, Remove from Azure) and **09 Intune for EPM** (connect, and the switch that lets AppUpdater add rules) |
@@ -295,13 +295,13 @@ Keyboard: <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> with a visible focus 
 
 Every confirmation, choice and setup step is an in-app dialog drawn over the current screen; AppUpdater opens no separate windows of its own.
 
-<img src="assets/keys.gif" alt="Ctrl K command search, then high contrast and the colour-blind safe palette" width="900"/>
+<img src="assets/keys.gif" alt="Ctrl K command search, then high contrast and the colour-blind safe palette"/>
 
 ---
 
 ## Building a Package
 
-<img src="assets/build.gif" alt="Choosing the output, picking a 7-Zip installer, reviewing the detected values, manifest and checks, then building" width="900"/>
+<img src="assets/build.gif" alt="Choosing the output, picking a 7-Zip installer, reviewing the detected values, manifest and checks, then building"/>
 
 ### Phase 1 — Pick Your Installer
 
@@ -393,7 +393,7 @@ The two questions at the top of the builder decide the output. **What do you nee
 
 Output lands under `C:\ProgramData\AppUpdater\_output\`, and **Open folder** in Fleet goes straight there.
 
-<img src="assets/psadt.gif" alt="A client profile's branding, then a PSADT build with the live v3 and v4 preview" width="900"/>
+<img src="assets/psadt.gif" alt="A client profile's branding, then a PSADT build with the live v3 and v4 preview"/>
 
 > [!NOTE]
 > `IntuneWinAppUtil.exe` is downloaded from `https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool` on first use, verified against Microsoft's Authenticode certificate, then reused from the script directory. **No manual download required.**
@@ -402,7 +402,7 @@ Output lands under `C:\ProgramData\AppUpdater\_output\`, and **Open folder** in 
 
 Before every build the installer is checked. Red findings stop the build until you choose **Build anyway**; amber findings are shown with the finished package.
 
-<img src="assets/checks.gif" alt="A newer 7-Zip installer recognised with last build's settings, a changed signer stopping the build, then Build anyway" width="900"/>
+<img src="assets/checks.gif" alt="A newer 7-Zip installer recognised with last build's settings, a changed signer stopping the build, then Build anyway"/>
 
 | Level | Finding |
 |---|---|
@@ -411,7 +411,7 @@ Before every build the installer is checked. Red findings stop the build until y
 
 ### Local Test and Follow-ups
 
-<img src="assets/test.gif" alt="Testing a package on this machine as SYSTEM, then the suggested minimum version and a winget contribution" width="900"/>
+<img src="assets/test.gif" alt="Testing a package on this machine as SYSTEM, then the suggested minimum version and a winget contribution"/>
 
 **Test locally** in Fleet installs, detects and uninstalls the package on this machine as SYSTEM, or as the user for per-user installers, and reports the Add/Remove Programs entries it created. From there AppUpdater can:
 
@@ -448,11 +448,11 @@ Choose **What do you need? → EPM rule** in the builder and pick the installer.
 
 Signed installers get a publisher-and-file-name rule that keeps matching after updates; unsigned ones get a file-hash rule.
 
-<img src="assets/epm.gif" alt="Choosing EPM rule, the spotlight walkthrough, then the rule with its hash, signer and policy" width="900"/>
+<img src="assets/epm.gif" alt="Choosing EPM rule, the spotlight walkthrough, then the rule with its hash, signer and policy"/>
 
 ### Add to Intune
 
-<img src="assets/intune.gif" alt="Switching on rule writes, signing in to Intune, the EPM policies view, then adding PowerToys and reading it back" width="900"/>
+<img src="assets/intune.gif" alt="Switching on rule writes, signing in to Intune, the EPM policies view, then adding PowerToys and reading it back"/>
 
 Adding rules is **off** until you switch it on in **Settings → 09 Intune for EPM**. Then **Add to Intune** (on the finished rule, or on any verified version in **App fleet → EPM**):
 
@@ -517,7 +517,7 @@ Each watched app names its source (a GitHub release, a redirect link or a vendor
 | **4 — Create, then approve** | Registers the Automation and Storage providers, creates the resource group, storage, Automation account, runbook and schedule, and gives the identity *Storage Blob Data Contributor* on that one account. Then an admin signs in once to grant the identity Microsoft Graph `DeviceManagementConfiguration.ReadWrite.All` and nothing else |
 | **5 — Test** | Starts the runbook once, waits for it (usually 2 to 5 minutes) and reads the result back |
 
-<img src="assets/epm-setup.gif" alt="The setup map, choosing Azure with its cost, the Azure walkthrough and test, then Runs" width="900"/>
+<img src="assets/epm-setup.gif" alt="The setup map, choosing Azure with its cost, the Azure walkthrough and test, then Runs"/>
 
 **Remove from Azure** deletes the resource group and everything in it, and the container key on this PC. Your Intune policies are not touched.
 
@@ -648,7 +648,7 @@ question also offers **A printer** — deploys a printer queue, driver, and port
 printer cmdlets (`Add-PrinterDriver`, `Add-PrinterPort`, `Add-Printer`) instead of running
 an installer. No `.exe`/`.msi` needed at all.
 
-<img src="assets/printer.gif" alt="Importing built-in driver families, picking a Brother model, then the printer name, port and location" width="900"/>
+<img src="assets/printer.gif" alt="Importing built-in driver families, picking a Brother model, then the printer name, port and location"/>
 
 ### Driver Library
 
@@ -707,7 +707,7 @@ Cloudflare mode adds a web dashboard, per-device telemetry, and centralised mani
 
 Open **Worker & settings → Connect to Cloudflare** (or **Connect** on Home). Four steps run inside the app:
 
-<img src="assets/cloudflare.gif" alt="The four-step Cloudflare connect: why, API token, account and password, setup with a live log" width="900"/>
+<img src="assets/cloudflare.gif" alt="The four-step Cloudflare connect: why, API token, account and password, setup with a live log"/>
 
 | Step | What you do |
 |---|---|
@@ -750,7 +750,7 @@ After setup, a `HOW TO USE.txt` file is written to the script directory with you
 
 Once connected, **Worker & settings → 01** lists every action. Each opens an in-app dialog, and the ones that change Cloudflare run in the background with a live log. The Cloudflare API token is asked for each time and not saved.
 
-<img src="assets/worker.gif" alt="Setting up your own domain, then the token rotation and disconnect dialogs" width="900"/>
+<img src="assets/worker.gif" alt="Setting up your own domain, then the token rotation and disconnect dialogs"/>
 
 | Action | What it does |
 |---|---|
