@@ -362,6 +362,8 @@ window.__errors = [];
     Invoke-Click '#btn-worker-connect'
     Wait-Js "!document.getElementById('ui-dlg').hidden"
     Assert ((Get-Text '#ui-dlg-sub') -eq 'Step 1 of 4') 'Connect opens the in-app walkthrough'
+    # An open dialog that is transparent or click-through would still pass the checks above.
+    Assert (Eval-Js "(function () { const r = document.querySelector('#ui-dlg .dlg').getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + 20); return !!e && !!e.closest('#ui-dlg'); })()") 'The walkthrough is drawn on top and takes clicks'
     Save-Shot 'cloudflare-connect'
     Invoke-Click '#ui-dlg [data-ui=ok]'
     Wait-Js "!!document.getElementById('ui-f-token')"
@@ -504,6 +506,7 @@ window.__errors = [];
       Invoke-Click '#segTarget button[data-val=epm]'
       Wait-Js "!document.getElementById('ui-dlg').hidden"
       Assert ((Get-Text '#ui-dlg-title') -eq 'About EPM rules') 'Choosing EPM rule the first time explains it and offers Intune'
+      Assert (Eval-Js "(function () { const r = document.querySelector('#ui-dlg .dlg').getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + 20); return !!e && !!e.closest('#ui-dlg'); })()") 'The EPM note is drawn on top of the builder'
       Invoke-Click '#ui-dlg [data-ui=cancel]'
       Wait-Js "document.getElementById('ui-dlg').hidden"
       Select-TestInstaller

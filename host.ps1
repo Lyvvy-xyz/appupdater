@@ -951,54 +951,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
         <!-- Local sanity check - runs the REAL detect/install/uninstall
              scripts (or PSADT's own test invocation) on this machine, no
              Intune needed. Separate from "Preview". -->
-        <div id="ui-dlg" class="modal" hidden>
-          <div class="dlg" style="width:min(520px,92vw)" role="dialog" aria-modal="true" aria-labelledby="ui-dlg-title">
-            <div class="dlg-h"><h2 id="ui-dlg-title"></h2><span class="pmeta" id="ui-dlg-sub"></span></div>
-            <div class="dlg-b" id="ui-dlg-body"></div>
-            <div class="log" id="ui-dlg-log" hidden></div>
-            <p class="ui-err" id="ui-dlg-err" role="alert" hidden></p>
-            <div class="dlg-f" id="ui-dlg-foot"></div>
-          </div>
-        </div>
-        <div id="epm-wiz" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:90;align-items:center;justify-content:center">
-          <div class="dlg" style="width:min(560px,92vw)" role="dialog" aria-labelledby="epm-wiz-title">
-            <div class="dlg-h"><h2 id="epm-wiz-title">Set up vendor release checks</h2><span class="pmeta" id="epm-wiz-count"></span></div>
-            <ol class="wiz-steps" id="epm-wiz-steps"><li>Where</li><li>Sign in</li><li>Set up</li><li>First check</li></ol>
-            <div class="dlg-b">
-              <div data-wiz="0">
-                <p class="bnote">A small job checks each vendor every 6 hours. When there is a new installer it downloads it on a throwaway machine, checks who signed it and takes its SHA-256. Only those come back to AppUpdater.</p>
-                <label class="dlg-opt wiz-pick"><input type="radio" name="epm-wiz-runner" value="github" checked><span><b>GitHub Actions</b><small>A private repo in your GitHub account. Free within GitHub's monthly Actions minutes.</small></span></label>
-                <label class="dlg-opt wiz-pick" style="opacity:.55"><input type="radio" name="epm-wiz-runner" value="azure" disabled><span><b>Azure Automation</b><small>Runs in your Azure subscription. Coming later.</small></span></label>
-                <p class="bnote wiz-warn" id="epm-wiz-noworker" hidden>Results come back through your Cloudflare worker, which is not connected yet. Connect it in Settings section 01 first.</p>
-              </div>
-              <div data-wiz="1" hidden>
-                <p class="bnote">Signing in lets AppUpdater do three things, once:</p>
-                <ul class="wiz-list"><li>Create a private repo, <span class="mono">appupdater-checks</span></li><li>Add the check script and its schedule</li><li>Start the first run</li></ul>
-                <p class="bnote">The sign-in is not kept. To change anything later, sign in again.</p>
-                <div id="epm-wiz-code-box" hidden>
-                  <p class="bnote" style="margin-top:10px">GitHub's sign-in page has opened. Enter this code there and approve:</p>
-                  <div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span class="epm-code" id="epm-wiz-code"></span>
-                    <button class="btn sm" id="epm-wiz-copy">Copy</button><button class="btn sm" id="epm-wiz-reopen">Open GitHub again</button></div>
-                </div>
-                <p class="bnote" id="epm-wiz-msg"></p>
-              </div>
-              <div data-wiz="2" hidden>
-                <ul class="wiz-list wiz-progress"><li class="done">Signed in to GitHub</li><li class="now">Creating the repo, adding the check, starting the first run</li></ul>
-                <p class="bnote" id="epm-wiz-msg2"></p>
-              </div>
-              <div data-wiz="3" hidden>
-                <p class="bnote" id="epm-wiz-repo"></p>
-                <ul class="wiz-list wiz-progress"><li class="done">Repo created and trusted by your worker</li><li id="epm-wiz-run" class="now">First run in progress, usually a few minutes</li></ul>
-                <p class="bnote">Next, tell it which apps to watch. Each one needs where its releases come from and the publisher that must have signed it.</p>
-              </div>
-            </div>
-            <div class="dlg-f">
-              <button class="btn" id="epm-wiz-close">Close</button>
-              <button class="btn" id="epm-wiz-back">Back</button>
-              <button class="btn primary" id="epm-wiz-next">Next</button>
-            </div>
-          </div>
-        </div>
         <div id="test-modal" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:90;align-items:center;justify-content:center">
           <div class="dlg">
             <div class="dlg-h"><h2 id="test-modal-title">Test locally</h2><span class="pmeta">installs on this machine</span></div>
@@ -1336,6 +1288,55 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 <div class="toasts" id="toasts"></div>
 <div class="chip-pop" id="chip-pop" hidden role="dialog" aria-live="polite"><div id="chip-pop-text"></div><button type="button" class="btn sm" id="chip-pop-link" hidden>Open</button></div>
 
+<!-- In-app dialogs sit outside the screens, which are transparent and click-through when inactive. -->
+        <div id="ui-dlg" class="modal" hidden>
+          <div class="dlg" style="width:min(520px,92vw)" role="dialog" aria-modal="true" aria-labelledby="ui-dlg-title">
+            <div class="dlg-h"><h2 id="ui-dlg-title"></h2><span class="pmeta" id="ui-dlg-sub"></span></div>
+            <div class="dlg-b" id="ui-dlg-body"></div>
+            <div class="log" id="ui-dlg-log" hidden></div>
+            <p class="ui-err" id="ui-dlg-err" role="alert" hidden></p>
+            <div class="dlg-f" id="ui-dlg-foot"></div>
+          </div>
+        </div>
+        <div id="epm-wiz" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:90;align-items:center;justify-content:center">
+          <div class="dlg" style="width:min(560px,92vw)" role="dialog" aria-labelledby="epm-wiz-title">
+            <div class="dlg-h"><h2 id="epm-wiz-title">Set up vendor release checks</h2><span class="pmeta" id="epm-wiz-count"></span></div>
+            <ol class="wiz-steps" id="epm-wiz-steps"><li>Where</li><li>Sign in</li><li>Set up</li><li>First check</li></ol>
+            <div class="dlg-b">
+              <div data-wiz="0">
+                <p class="bnote">A small job checks each vendor every 6 hours. When there is a new installer it downloads it on a throwaway machine, checks who signed it and takes its SHA-256. Only those come back to AppUpdater.</p>
+                <label class="dlg-opt wiz-pick"><input type="radio" name="epm-wiz-runner" value="github" checked><span><b>GitHub Actions</b><small>A private repo in your GitHub account. Free within GitHub's monthly Actions minutes.</small></span></label>
+                <label class="dlg-opt wiz-pick" style="opacity:.55"><input type="radio" name="epm-wiz-runner" value="azure" disabled><span><b>Azure Automation</b><small>Runs in your Azure subscription. Coming later.</small></span></label>
+                <p class="bnote wiz-warn" id="epm-wiz-noworker" hidden>Results come back through your Cloudflare worker, which is not connected yet. Connect it in Settings section 01 first.</p>
+              </div>
+              <div data-wiz="1" hidden>
+                <p class="bnote">Signing in lets AppUpdater do three things, once:</p>
+                <ul class="wiz-list"><li>Create a private repo, <span class="mono">appupdater-checks</span></li><li>Add the check script and its schedule</li><li>Start the first run</li></ul>
+                <p class="bnote">The sign-in is not kept. To change anything later, sign in again.</p>
+                <div id="epm-wiz-code-box" hidden>
+                  <p class="bnote" style="margin-top:10px">GitHub's sign-in page has opened. Enter this code there and approve:</p>
+                  <div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span class="epm-code" id="epm-wiz-code"></span>
+                    <button class="btn sm" id="epm-wiz-copy">Copy</button><button class="btn sm" id="epm-wiz-reopen">Open GitHub again</button></div>
+                </div>
+                <p class="bnote" id="epm-wiz-msg"></p>
+              </div>
+              <div data-wiz="2" hidden>
+                <ul class="wiz-list wiz-progress"><li class="done">Signed in to GitHub</li><li class="now">Creating the repo, adding the check, starting the first run</li></ul>
+                <p class="bnote" id="epm-wiz-msg2"></p>
+              </div>
+              <div data-wiz="3" hidden>
+                <p class="bnote" id="epm-wiz-repo"></p>
+                <ul class="wiz-list wiz-progress"><li class="done">Repo created and trusted by your worker</li><li id="epm-wiz-run" class="now">First run in progress, usually a few minutes</li></ul>
+                <p class="bnote">Next, tell it which apps to watch. Each one needs where its releases come from and the publisher that must have signed it.</p>
+              </div>
+            </div>
+            <div class="dlg-f">
+              <button class="btn" id="epm-wiz-close">Close</button>
+              <button class="btn" id="epm-wiz-back">Back</button>
+              <button class="btn primary" id="epm-wiz-next">Next</button>
+            </div>
+          </div>
+        </div>
 <div id="tour-overlay">
   <div id="tour-spot"></div>
   <div id="tour-card">
