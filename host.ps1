@@ -950,7 +950,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           <div id="fleet-epm" hidden>
             <div class="tglrow" style="margin:0 0 6px"><div><b id="intune-status-t">Intune not connected</b><small id="intune-status">Connect your Intune tenant to see which versions your EPM policies already allow, and to add new ones once adding rules is on in Settings &rsaquo; 09.</small></div>
               <div style="display:flex;gap:8px"><button class="btn sm" id="intune-refresh" hidden>Refresh</button><button class="btn sm" id="intune-signout" hidden>Sign out</button>
-                <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button><button class="btn sm ghost" id="epm-guide">How EPM rules work</button></div></div>
+                <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button><button class="btn sm" id="epm-setup">Set up&hellip;</button><button class="btn sm ghost" id="epm-guide">How EPM rules work</button></div></div>
             <div id="epm-cover"></div>
             <div class="bsec"><div class="bsec-h"><span class="bsec-t">EPM policies in Intune</span><span class="bsec-rule"></span></div>
               <div id="intune-policies"><p class="bnote">Connect Intune to list them.</p></div></div>
@@ -1474,6 +1474,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     });
   }
   const uiConfirm = (title, text, ok = 'OK', danger = false) => uiDialog({ title, text, ok, danger }).then(v => v !== null);
+  // Resolves when the user closes the finished log.
   function uiProgress(title, sub = '') {
     if (uiDlgResolve) uiClose(null);
     uiDlgFields = [];
@@ -1485,6 +1486,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#ui-dlg-foot').innerHTML = '<button class="btn" data-ui="close" disabled>Close</button>';
     uiDlg()._submit = null;
     uiDlg().hidden = false;
+    return new Promise(resolve => { uiDlgResolve = resolve; });
   }
   function uiProgressLine(tone, text) {
     const log = $('#ui-dlg-log'), line = document.createElement('div');
@@ -1754,39 +1756,68 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (window._intuneSuggested !== false || window._tourActive) return;
     window._intuneSuggested = true;
     send('mark-intune-suggested', {});
-    epmWalkthrough(1);
+    epmWalkthrough();
   }
-  // The first time EPM rule is chosen: what it is, what AppUpdater produces, and how to keep it current.
-  async function epmWalkthrough(start) {
-    const checks = !!(epmState && epmState.cfg);
-    const steps = [
-      () => uiDialog({ title: 'What an EPM rule does', sub: 'Step 1 of 3', ok: 'Next', cancel: 'Skip', walk: { step: [1, 3],
-        lead: 'An EPM rule lets people without admin rights run one specific installer, through Intune Endpoint Privilege Management.',
-        rows: [['↑', 'Standard users can run it elevated', 'No admin account or helpdesk call needed for this installer.'],
-               ['∅', 'No package is built', 'Instead of an app to upload, you get one rule for an Intune elevation rules policy.'],
-               ['#', 'Matched by the exact file', 'The rule names the file and its SHA-256 fingerprint, so a changed or different file is not elevated.']] } }),
-      () => uiDialog({ title: 'What AppUpdater gives you', sub: 'Step 2 of 3', ok: 'Next', cancel: 'Skip', back: 'Back', walk: { step: [2, 3],
-        lead: 'Pick the installer and choose Create EPM rule. The finished screen then shows each value with a copy button.',
-        rows: [['1', 'File name', 'For example 7z2607-x64.exe'],
-               ['2', 'SHA-256', 'The 64-character fingerprint of that exact file'],
-               ['3', 'Signer', 'Who signed it, so you can see it came from the real publisher'],
-               ['4', 'EPM-rules.csv', 'The same values in the output folder, for your records']] } }),
-      () => uiDialog({ title: 'Keep it current (optional)', sub: 'Step 3 of 3', ok: 'Start', cancel: '', back: 'Back', walk: { step: [3, 3],
-        lead: 'Each new version of an installer needs its own rule. These do that work for you; set them up now or any time later.',
-        rows: [[checks ? '✓' : '1', 'Watch for new versions', checks ? 'Vendor checks are set up.' : 'A free cloud machine hashes each new release, so you never download it yourself.', checks ? 'ok' : '', checks ? null : ['checks', 'Set up…']],
-               [intune.signedIn ? '✓' : '2', 'Connect Intune', intune.signedIn ? `Connected as ${intune.account}.` : 'See which versions your policies already allow.', intune.signedIn ? 'ok' : '', intune.signedIn ? null : ['intune', 'Connect…']],
-               [window._intuneWrite ? '✓' : '3', 'Let AppUpdater add rules', window._intuneWrite ? 'On: Add to Intune writes the rule and checks it.' : 'Off: you paste the values into Intune yourself.', window._intuneWrite ? 'ok' : '', window._intuneWrite ? null : ['write', 'Settings…']]],
-        note: 'All three are also in App fleet › EPM and Settings › 08 and 09.' } })
-    ];
-    for (let n = start - 1; n >= 0 && n < steps.length;) {
-      const v = await steps[n]();
-      if (!v) { if (n < 2) toast('Later', 'This guide is in App fleet › EPM › How EPM rules work.'); return; }
-      if (v.__back) { n--; continue; }
-      if (v.__act === 'checks') { goTo('worker'); openEpmWizard(); return; }
-      if (v.__act === 'intune') { openIntuneWizard(); return; }
-      if (v.__act === 'write') { goTo('worker'); $('#intune-section').scrollIntoView({ block: 'start' }); return; }
-      n++;
+
+  // One setup screen for keeping EPM rules current. Start runs each missing piece in order and tests it
+  // before moving on; the screen comes back after each one with a tick or the reason it did not pass.
+  const epmStateNow = () => new Promise(res => { window._epmStateWait = res; send('epm-state', {}); });
+  async function runEpmSetupItem(id) {
+    if (id === 'worker') {
+      await openConnectWizard();
+      if (!window._workerUrl) return 'The worker is not connected yet.';
+      const s = await epmStateNow();
+      return s.ok || !s.noWorker ? '' : 'The worker did not answer with this PC’s token.';
     }
+    if (id === 'checks') {
+      goTo('worker');
+      await openEpmWizard();
+      const s = await epmStateNow();
+      return s.ok && s.state && s.state.cfg ? '' : (s.message || 'Vendor checks are not set up yet.');
+    }
+    if (id === 'intune') {
+      await openIntuneWizard();
+      return intune.signedIn && intune.loaded ? '' : 'Intune is not connected yet.';
+    }
+    if (id === 'write') {
+      if (!window._intuneWrite) {
+        if (!(await uiConfirm('Let AppUpdater add rules?', 'Add to Intune will write rules into your EPM policies: the new version is added, older ones you tick are removed, and each change is read back and checked.\n\nNext, connect Intune again so the sign-in includes permission to change policies.', 'Switch on'))) return 'Adding rules is still off.';
+        window._intuneWrite = true; $('#tgl-intune-write').classList.add('on'); send('set-intune-write', { on: true });
+        intune = { signedIn: false, account: '', policies: [], loaded: false };
+      }
+      await openIntuneWizard();
+      return intune.canWrite ? '' : 'The sign-in did not include permission to change policies. An administrator may need to approve it.';
+    }
+    return '';
+  }
+  async function epmSetupHub() {
+    let started = false, failed = '', reason = '';
+    for (;;) {
+      const items = [
+        { id: 'worker', title: 'Cloudflare worker', done: !!window._workerUrl, todo: 'Where the vendor checks report. Needs a free Cloudflare account.', ok: 'Connected and answering.' },
+        { id: 'checks', title: 'Watch for new versions', done: !!(epmState && epmState.cfg), todo: 'A free cloud machine hashes each new release for you.', ok: `Running in ${epmState && epmState.cfg ? epmState.cfg.repo : ''}.` },
+        { id: 'intune', title: 'Connect Intune', done: intune.signedIn && intune.loaded, todo: 'See which versions your policies already allow.', ok: `Connected as ${intune.account}.` },
+        { id: 'write', title: 'Let AppUpdater add rules', done: !!(window._intuneWrite && intune.canWrite), todo: 'Add to Intune writes each new version and reads it back.', ok: 'On, with permission to change policies.' }];
+      const next = items.find(x => !x.done), doneCount = items.filter(x => x.done).length;
+      const v = await uiDialog({ title: 'Keep EPM rules current', sub: next ? `${doneCount} of 4 set up` : 'all set up',
+        ok: !next ? 'Done' : started ? (failed ? 'Try again' : 'Continue') : 'Start', cancel: !next ? '' : started ? 'Stop here' : 'Skip setup',
+        walk: { lead: 'Each new version of an installer needs its own rule. Start sets these up one at a time and tests each one before moving on.',
+          rows: items.map((x, i) => [x.done ? '✓' : x.id === failed ? '!' : String(i + 1), x.title, x.done ? x.ok : x.id === failed ? reason : x.todo, x.done ? 'ok' : x.id === failed ? 'warn' : '']),
+          note: next ? `Next: ${next.title}. You can also do each one later from App fleet › EPM or Settings.` : 'New versions now show up in App fleet › EPM, ready to add.' } });
+      if (!v || !next) { if (!v && next) toast('Setup paused', 'Pick it up again from App fleet › EPM › Set up.'); return; }
+      started = true;
+      reason = await runEpmSetupItem(next.id);
+      failed = reason ? next.id : '';
+    }
+  }
+  // The first time EPM rule is chosen, a spotlight walks through the real builder controls that make one.
+  function epmWalkthrough() {
+    runGuide('EPM rule', [
+      { screen: 'build', selector: '#choice-output', title: 'EPM rule', text: 'Lets standard users run one installer elevated through Intune Endpoint Privilege Management. No package is built; you get one rule.' },
+      { screen: 'build', selector: '#drop', title: 'Pick the installer', text: 'AppUpdater hashes this exact file. The rule only matches it, so a changed or different file is not elevated.' },
+      { screen: 'build', selector: '#sec-epm', title: 'The rule', text: 'Signed installers get a publisher and file name rule that keeps matching new versions; unsigned ones get the file’s SHA-256. One policy per app keeps them together.' },
+      { screen: 'build', selector: '#btn-build', title: 'Create EPM rule', text: 'The finished screen lists the file name, SHA-256 and signer with copy buttons, and can add the rule to Intune for you.' }
+    ], { lastLabel: 'Next', onDone: finished => { if (finished) epmSetupHub(); } });
   }
   segInit($('#segPsadtVersion'), v => { form.PSADTVersion = v; updateBuildBrandingPreview(); });
   segInit($('#segBpSwap'), v => { window._bpSwapVersion = v; updateBuildBrandingPreview(); });
@@ -2354,6 +2385,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           updateBuildBrandingPreview();
           break;
         case 'epm-state':
+          if (window._epmStateWait) { const r = window._epmStateWait; window._epmStateWait = null; setTimeout(() => r(payload)); }
           $('#epm-add-msg').textContent = '';
           if (payload.ok) {
             renderEpm(payload.state);
@@ -3207,11 +3239,45 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (!$('#screen-' + step.screen).classList.contains('on')) { goTo(step.screen); setTimeout(proceed, motionMs(320)); }
     else proceed();
   }
+  // Spotlight guide over the real screens: each step points at one element with a short title and text.
+  let guide = null;
+  function runGuide(label, steps, opts = {}) {
+    if (window._tourActive) return;
+    guide = Object.assign({ label, steps, i: 0 }, opts);
+    window._tourActive = true; window._miniGuideActive = true;
+    $('#tour-overlay').style.display = 'block';
+    showGuideStep(0, 1);
+  }
+  function showGuideStep(i, dir) {
+    const g = guide;
+    if (!g) return;
+    if (i >= g.steps.length) { const done = g.onDone; endMiniGuide(); if (done) done(true); return; }
+    if (i < 0) i = 0;
+    g.i = i;
+    const st = g.steps[i], moving = st.screen && !$('#screen-' + st.screen).classList.contains('on');
+    if (moving) goTo(st.screen);
+    setTimeout(() => {
+      const t = document.querySelector(st.selector);
+      // A control the current choices hide is skipped in the direction of travel.
+      if (!t || !t.getClientRects().length) { showGuideStep(i + (dir || 1), dir || 1); return; }
+      t.scrollIntoView({ block: 'center' });
+      positionTourSpot(t);
+      $('#tour-step-count').textContent = `${g.label} · ${i + 1} of ${g.steps.length}`;
+      $('#tour-title').textContent = st.title;
+      $('#tour-text').textContent = st.text;
+      $('#tour-cf-choice').style.display = 'none';
+      $('#tour-nav-buttons').style.display = 'flex';
+      $('#tour-back').style.display = i ? 'inline-flex' : 'none';
+      $('#tour-skip').textContent = i === g.steps.length - 1 ? 'Not now' : 'Skip';
+      $('#tour-next').textContent = i === g.steps.length - 1 ? (g.lastLabel || 'Done') : 'Next';
+    }, motionMs(moving ? 320 : 40));
+  }
   $('#tour-next').addEventListener('click', () => {
+    if (guide) { showGuideStep(guide.i + 1, 1); return; }
     if (window._miniGuideActive) { endMiniGuide(); return; }
     showTourStep(tourIndex + 1);
   });
-  $('#tour-back').addEventListener('click', () => showTourStep(tourIndex - 1, -1));
+  $('#tour-back').addEventListener('click', () => { if (guide) showGuideStep(guide.i - 1, -1); else showTourStep(tourIndex - 1, -1); });
   function showProfileGuide() {
     goTo('profiles');
     window._tourActive = true;
@@ -3231,6 +3297,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     }, motionMs(320));
   }
   function endMiniGuide() {
+    guide = null;
+    $('#tour-skip').textContent = 'Skip tour';
     window._miniGuideActive = false;
     window._tourActive = false;
     $('#tour-overlay').style.display = 'none';
@@ -3239,6 +3307,13 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   document.addEventListener('keydown', (e) => {
     if ($('#tour-overlay').style.display !== 'block') return;
     if ($('#tour-cf-choice').style.display === 'block') return; // let Tab reach the Yes/No buttons instead of hijacking arrows
+    if (guide) {
+      if (e.key === 'Escape') endMiniGuide();
+      else if (e.key === 'ArrowRight' || e.key === 'Enter') showGuideStep(guide.i + 1, 1);
+      else if (e.key === 'ArrowLeft') showGuideStep(guide.i - 1, -1);
+      else return;
+      e.preventDefault(); return;
+    }
     if (window._miniGuideActive) {
       if (e.key === 'Escape' || e.key === 'ArrowRight' || e.key === 'Enter') { endMiniGuide(); e.preventDefault(); }
       return;
@@ -3310,8 +3385,12 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#epm-wiz-msg').textContent = '';
     $('#epm-wiz').style.display = 'flex';
     wizShow(0);
+    return new Promise(resolve => { window._epmWizResolve = resolve; });
   }
-  function closeEpmWizard() { clearInterval(wizPoll); $('#epm-wiz').style.display = 'none'; }
+  function closeEpmWizard() {
+    clearInterval(wizPoll); $('#epm-wiz').style.display = 'none';
+    const r = window._epmWizResolve; window._epmWizResolve = null; if (r) r();
+  }
   $('#epm-wiz-close').addEventListener('click', closeEpmWizard);
   $('#epm-wiz-back').addEventListener('click', () => wizShow(wizStep - 1));
   $('#epm-wiz-next').addEventListener('click', () => {
@@ -3631,9 +3710,10 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       validate: v => !v.orgName.trim() ? 'Enter your organisation name.' : (v.pass.length < 12 || !/[A-Za-z]/.test(v.pass) || !/\d/.test(v.pass)) ? 'Use at least 12 characters, with a letter and a digit.' : v.pass !== v.again ? 'The passwords do not match.' : '' });
     if (!d) { token = ''; return; }
     const acct = accounts.length > 1 ? accounts.find(a => a.id === d.account) : accounts[0];
-    uiProgress('Setting up your worker', sub(4) + ' · about a minute');
+    const closed = uiProgress('Setting up your worker', sub(4) + ' · about a minute');
     send('cf-connect', { token, accountId: acct.id, accountName: acct.name, orgName: d.orgName.trim(), password: d.pass });
     token = '';
+    await closed;
   }
 
 
@@ -3759,12 +3839,14 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       note: 'The sign-in lasts until AppUpdater closes and is not saved.' } });
     if (!v) return;
     intuneWizard = true;
-    uiProgress('Sign in to Intune', 'Step 2 of 3');
+    const closed = uiProgress('Sign in to Intune', 'Step 2 of 3');
     send('intune-signin', {});
+    await closed;
   }
   $('#intune-signin').addEventListener('click', openIntuneWizard);
   $('#intune-set-connect').addEventListener('click', openIntuneWizard);
-  $('#epm-guide').addEventListener('click', () => epmWalkthrough(1));
+  $('#epm-setup').addEventListener('click', () => epmSetupHub());
+  $('#epm-guide').addEventListener('click', () => { goTo('build'); if (form.SimplePkgTarget !== 'epm') pickSeg('segTarget', 'epm'); epmWalkthrough(); });
   $('#tgl-intune-write').addEventListener('click', async () => {
     const on = !window._intuneWrite;
     if (on && !(await uiConfirm('Let AppUpdater add rules?', 'Add to Intune will then write rules into your EPM policies: the new version is added, older ones you tick are removed, and each change is read back and checked.\n\nThis has not been tried against every tenant yet. Try it on a test tenant first if you can. Connect Intune again afterwards so the sign-in includes permission to change policies.', 'Switch on'))) return;

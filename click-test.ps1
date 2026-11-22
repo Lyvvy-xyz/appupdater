@@ -506,11 +506,11 @@ window.__errors = [];
       Write-Field '#f-appid' 'placeholder-id'
       Write-Field '#f-registryname' 'placeholder name'
       Invoke-Click '#segTarget button[data-val=epm]'
-      Wait-Js "!document.getElementById('ui-dlg').hidden"
-      Assert ((Get-Text '#ui-dlg-title') -eq 'What an EPM rule does') 'Choosing EPM rule the first time starts the EPM walkthrough'
-      Assert (Eval-Js "(function () { const r = document.querySelector('#ui-dlg .dlg').getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + 20); return !!e && !!e.closest('#ui-dlg'); })()") 'The EPM note is drawn on top of the builder'
-      Invoke-Click '#ui-dlg [data-ui=cancel]'
-      Wait-Js "document.getElementById('ui-dlg').hidden"
+      Wait-Js "document.getElementById('tour-overlay').style.display === 'block' && document.getElementById('tour-title').textContent === 'EPM rule'"
+      Assert ((Get-Text '#tour-step-count') -like '*1 of 6*') 'Choosing EPM rule the first time spotlights it on the builder'
+      Assert (Eval-Js "(function () { const r = document.getElementById('tour-card').getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + 20); return !!e && !!e.closest('#tour-card'); })()") 'The spotlight card is drawn on top of the builder'
+      Invoke-Click '#tour-skip'
+      Wait-Js "document.getElementById('tour-overlay').style.display === 'none'"
       Select-TestInstaller
       Assert ((Get-ChipText) -like '*packaged before*') "The 'packaged before' chip is shown"
       Assert (Eval-Js "document.querySelector('#segTarget button[data-val=epm]').classList.contains('on')") 'Picking a packaged-before installer keeps the chosen output'
