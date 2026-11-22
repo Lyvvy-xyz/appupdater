@@ -4341,7 +4341,8 @@ function Update-PageInset {
   } catch { }
 }
 $window.Add_StateChanged({ Update-PageInset })
-$window.Add_SourceInitialized({ $window.Dispatcher.BeginInvoke([action]{ Update-PageInset }, 'Loaded') | Out-Null })
+# BeginInvoke(Delegate, params object[]) would pass the priority to the action as an argument.
+$window.Add_SourceInitialized({ $window.Dispatcher.BeginInvoke([System.Windows.Threading.DispatcherPriority]::Loaded, [action]{ Update-PageInset }) | Out-Null })
 $window.Add_DpiChanged({ Update-PageInset })
 
 $window.Add_Loaded({
