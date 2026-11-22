@@ -375,13 +375,16 @@ window.__errors = [];
     Assert ($proc -and -not $proc.HasExited) 'Closing the walkthrough leaves the app running'
   }
 
-  Invoke-Flow 'EPM screen' {
-    Invoke-Click '.nav-btn[data-go=epm]'
-    Wait-Js "document.getElementById('screen-epm').classList.contains('on')"
-    Assert ((Get-Text '.nav-btn[data-go=epm] .nav-num') -eq '4') 'EPM is the fourth screen on the rail'
-    Assert (Test-Shown '#intune-signin') 'EPM offers the Intune sign-in'
-    Assert ((Get-Text '#intune-policies') -like '*Sign in to list*') 'No Intune data is shown before sign-in'
-    Save-Shot 'epm-screen'
+  Invoke-Flow 'EPM in App fleet' {
+    Invoke-Click '.nav-btn[data-go=fleet]'
+    Wait-Js "!!document.querySelector('[data-fleet-view=epm]')"
+    Invoke-Click '[data-fleet-view=epm]'
+    Wait-Js "!document.getElementById('fleet-epm').hidden"
+    Assert (-not (Test-Shown '#fleet-grid')) 'The EPM chip swaps the app table for EPM apps'
+    Assert ((Get-Text '#intune-status-t') -eq 'Intune not connected') 'The EPM view says Intune is not connected yet'
+    Assert ((Get-Text '#intune-policies') -like '*Connect Intune to list*') 'No Intune data is shown before connecting'
+    Save-Shot 'fleet-epm'
+    Invoke-Click '[data-fleet-view=all]'
   }
 
   Invoke-Flow 'In-app dialogs' {
@@ -499,6 +502,10 @@ window.__errors = [];
       Write-Field '#f-appid' 'placeholder-id'
       Write-Field '#f-registryname' 'placeholder name'
       Invoke-Click '#segTarget button[data-val=epm]'
+      Wait-Js "!document.getElementById('ui-dlg').hidden"
+      Assert ((Get-Text '#ui-dlg-title') -eq 'About EPM rules') 'Choosing EPM rule the first time explains it and offers Intune'
+      Invoke-Click '#ui-dlg [data-ui=cancel]'
+      Wait-Js "document.getElementById('ui-dlg').hidden"
       Select-TestInstaller
       Assert ((Get-ChipText) -like '*packaged before*') "The 'packaged before' chip is shown"
       Assert (Eval-Js "document.querySelector('#segTarget button[data-val=epm]').classList.contains('on')") 'Picking a packaged-before installer keeps the chosen output'

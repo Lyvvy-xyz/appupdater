@@ -559,7 +559,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     <button class="nav-btn on" data-go="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span class="nav-tip">Home</span></button>
     <button class="nav-btn" data-go="build"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7l8.7 5 8.7-5M12 22V12"/></svg><span class="nav-tip">Package builder</span></button>
     <button class="nav-btn" data-go="fleet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="7" height="7" rx="1.3"/><path d="M13 5h8M13 8.5h8M3 15h18M3 18.5h12"/></svg><span class="nav-tip">App fleet</span></button>
-    <button class="nav-btn" data-go="epm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 4.5-3.4 8.1-8 9-4.6-.9-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg><span class="nav-tip">EPM</span></button>
     <button class="nav-btn" data-go="profiles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="7" rx="1.5"/><rect x="14" y="15" width="7" height="7" rx="1.5"/></svg><span class="nav-tip">Client profiles</span></button>
     <button class="nav-btn" data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v5h5"/><path d="M3.05 13a9 9 0 1 0 2.13-7.83L3 8"/><path d="M12 7v5l4 2"/></svg><span class="nav-tip">History</span></button>
     <button class="nav-btn" data-go="worker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nav-tip">Worker &amp; settings</span></button>
@@ -938,7 +937,15 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
             <button class="btn sm primary" id="fleet-bulk-mark-deployed">Mark deployed</button>
             <button class="btn sm ghost" id="fleet-bulk-clear">Clear selection</button>
           </div>
-          <div class="grid-wrap"><table class="grid" id="fleet-table"></table></div>
+          <div class="grid-wrap" id="fleet-grid"><table class="grid" id="fleet-table"></table></div>
+          <div id="fleet-epm" hidden>
+            <div class="tglrow" style="margin:0 0 6px"><div><b id="intune-status-t">Intune not connected</b><small id="intune-status">Connect your Intune tenant to see which versions your EPM policies already allow. AppUpdater only reads them.</small></div>
+              <div style="display:flex;gap:8px"><button class="btn sm" id="intune-refresh" hidden>Refresh</button><button class="btn sm" id="intune-signout" hidden>Sign out</button>
+                <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button></div></div>
+            <div id="epm-cover"></div>
+            <div class="bsec"><div class="bsec-h"><span class="bsec-t">EPM policies in Intune</span><span class="bsec-rule"></span></div>
+              <div id="intune-policies"><p class="bnote">Connect Intune to list them.</p></div></div>
+          </div>
         </div>
 
         <!-- Local sanity check - runs the REAL detect/install/uninstall
@@ -1006,20 +1013,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
               <button class="btn primary" id="test-modal-start">Start test</button>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- ========== EPM ========== -->
-      <section class="screen page-flush" data-screen="epm" id="screen-epm">
-        <div class="page">
-          <div class="phead"><h2>EPM</h2><span class="pmeta">elevation rules that let standard users run installers</span><span class="grow"></span>
-            <button class="btn sm" id="intune-refresh" hidden>Refresh</button><button class="btn sm" id="intune-signout" hidden>Sign out</button>
-            <button class="btn sm primary" id="intune-signin">Sign in to Intune&hellip;</button></div>
-          <p class="bnote" id="intune-status" style="margin:0 0 14px">Sign in with your Intune admin account to see the EPM policies you already have. AppUpdater only reads them.</p>
-          <div class="bsec"><div class="bsec-h"><span class="bsec-t">Watched apps</span><span class="bsec-rule"></span><button type="button" class="linkbtn" id="epm-screen-watch">Watch an app&hellip;</button></div>
-            <div id="epm-cover"></div></div>
-          <div class="bsec"><div class="bsec-h"><span class="bsec-t">EPM policies in Intune</span><span class="bsec-rule"></span></div>
-            <div id="intune-policies"><p class="bnote">Sign in to list them.</p></div></div>
         </div>
       </section>
 
@@ -1590,7 +1583,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     this.classList.remove('spin'); void this.offsetWidth; this.classList.add('spin');
   });
 
-  const screens = ['home', 'build', 'progress', 'done', 'fleet', 'epm', 'profiles', 'history', 'worker', 'docs'];
+  const screens = ['home', 'build', 'progress', 'done', 'fleet', 'profiles', 'history', 'worker', 'docs'];
   const crumbs = { home: 'AppUpdater', build: 'Package builder', progress: 'Building', done: 'Package ready', fleet: 'App fleet', profiles: 'Client profiles', history: 'History', worker: 'Worker & settings', accessibility: 'Accessibility', docs: 'Docs & help' };
   function goTo(id) {
     screens.forEach(s => $('#screen-' + s).classList.toggle('on', s === id));
@@ -1606,7 +1599,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (id === 'fleet') send('get-fleet', {});
     if (id === 'profiles') { send('get-profiles', {}); if (!window._profileEditorInit) { window._profileEditorInit = true; openProfileEditor(null); } }
     if (id === 'history') send('get-history', {});
-    if (id === 'epm') { send('epm-state', {}); if (intune.signedIn) send('intune-read', {}); renderEpmScreen(); }
     if (id === 'worker') { send('get-config', {}); send('get-settings', {}); send('get-fleet', {}); send('epm-state', {}); send('get-worker', {}); }
   }
   document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) goTo(g.dataset.go); });
@@ -1726,7 +1718,20 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     $('#bp-panel').style.display = (v === 'psadt' && window._bpExpanded) ? 'block' : 'none';
     if (v === 'psadt') updateBuildBrandingPreview();
     updateSummary();
+    if (v === 'epm') adviseEpmOnce();
   });
+  // The first time EPM rule is chosen on this PC, explain what it makes and offer Intune; the answer is remembered.
+  function adviseEpmOnce() {
+    if (window._intuneSuggested !== false || window._tourActive) return;
+    window._intuneSuggested = true;
+    send('mark-intune-suggested', {});
+    uiDialog({ title: 'About EPM rules', ok: intune.signedIn ? 'Got it' : 'Connect Intune\u2026', cancel: intune.signedIn ? '' : 'Later',
+      text: 'An EPM rule lets standard users run this installer elevated through Intune Endpoint Privilege Management. No package is built.\n\n'
+        + 'After you pick the installer, AppUpdater gives you everything the rule needs: the file name, its SHA-256 and who signed it, with copy buttons, plus a CSV.\n\n'
+        + (intune.signedIn ? 'Intune is connected, so App fleet \u203a EPM shows whether this version is already allowed.'
+          : 'Connecting your Intune tenant lets AppUpdater show whether each version is already allowed and which policy holds an app\u2019s rules. It only reads, and takes a minute. You can also do it later from App fleet \u203a EPM or Settings \u203a 09 Intune for EPM.') })
+      .then(v => { if (v && !intune.signedIn) openIntuneWizard(); else if (!v && !intune.signedIn) toast('Later', 'Connect Intune from App fleet \u203a EPM or Settings \u203a 09.'); });
+  }
   segInit($('#segPsadtVersion'), v => { form.PSADTVersion = v; updateBuildBrandingPreview(); });
   segInit($('#segBpSwap'), v => { window._bpSwapVersion = v; updateBuildBrandingPreview(); });
   $('#bp-disclosure').addEventListener('click', () => {
@@ -2405,7 +2410,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
               uiProgressLine('ok', `${n} elevation rules polic${n === 1 ? 'y' : 'ies'} with ${rules} rule${rules === 1 ? '' : 's'}`);
               if (intune.settingsPolicies) uiProgressLine('ok', 'EPM is switched on for devices by an elevation settings policy');
               else uiProgressLine('warn', 'No elevation settings policy yet, so devices do not run EPM. Create one in Endpoint security \u203a Endpoint Privilege Management, set Endpoint Privilege Management to Enabled and assign it.');
-              uiProgressDone(true, 'Intune is connected. The EPM screen now compares your watched apps with these rules.');
+              uiProgressDone(true, 'Intune is connected. App fleet \u203a EPM now compares your watched apps with these rules.');
             }
           } else if (intuneWizard && !payload.signedOut) { intuneWizard = false; uiProgressDone(false, payload.message || 'Could not read Intune.'); }
           else if (payload.signedOut) { intune = { signedIn: false, account: '', policies: [], loaded: false }; if (payload.message) toast('Sign in again', 'The Intune sign-in has expired.', true); }
@@ -2927,7 +2932,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           ['File name', r.FileName], ['SHA-256', r.SHA256],
           ['Rule type', r.SuggestedRule + (r.CertificateFile ? ' (certificate file ' + r.CertificateFile + ' is in the folder)' : '')]])) });
       groups.push({ t: 'Keep it current', p: 'Each new version of the installer needs its own rule. Watching the vendor gets the next hash without downloading it here.', action: ['epm-watch', 'Watch for new versions…'] });
-      if (!intune.signedIn) groups.push({ t: 'Check it against Intune (optional)', p: 'Connect your Intune tenant to see whether this version is already allowed and which policy holds this app\u2019s rules. You can connect any time from the EPM screen or Settings \u203a 09 Intune for EPM.', action: ['intune-connect', 'Connect Intune\u2026'] });
+      if (!intune.signedIn) groups.push({ t: 'Check it against Intune (optional)', p: 'Connect your Intune tenant to see whether this version is already allowed and which policy holds this app\u2019s rules. You can connect any time from App fleet \u203a EPM or Settings \u203a 09 Intune for EPM.', action: ['intune-connect', 'Connect Intune\u2026'] });
     } else {
       groups.push({ t: 'Add it in Intune', p: 'Apps → Windows → Add → Windows app (Win32), then upload this file from the folder.', rows: [['Package file', pkgFile]] });
       let install, uninstall, detect;
@@ -2961,15 +2966,6 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (watch) watch.addEventListener('click', () => $('#epm-watch-btn').click());
     const connect = $('#done-sheet [data-done-action="intune-connect"]');
     if (connect) connect.addEventListener('click', openIntuneWizard);
-    // The first EPM rule built on this PC suggests connecting Intune once; after that the step above is enough.
-    if (epm && !intune.signedIn) {
-      const asked = window._intuneSuggested !== false;
-      window._intuneSuggested = true;
-      if (!asked) send('mark-intune-suggested', {});
-      if (!asked) setTimeout(() => uiDialog({ title: 'Connect Intune?', ok: 'Connect Intune\u2026', cancel: 'Later',
-        text: 'Your first EPM rule is ready. Connecting your Intune tenant lets AppUpdater show whether each version is already allowed, which policy holds an app\u2019s rules, and whether EPM is switched on for your devices.\n\nIt takes a minute and only reads. If you skip it now, it is on the EPM screen and in Settings \u203a 09 Intune for EPM.' })
-        .then(v => { if (v) openIntuneWizard(); else toast('Later', 'Connect Intune from the EPM screen or Settings \u203a 09.'); }), motionMs(500));
-    }
     // Testing installs a package; an EPM rule has none.
     // An EPM rule can only be tried on an enrolled device after it is created, so its steps are worded for that.
     const stepText = { 'done-step-test': ['Test it here', 'Runs the real package on this machine as Intune would, then checks detection.'],
@@ -3329,9 +3325,17 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     return '<div class="ledger">' + l.map(v => `<div class="lv" title="${escapeHtml(v.v)}: built${v.t ? ', tested' : ''}${v.d ? ', deployed' : ''}${v.o === 'ok' ? ', installed fine' : v.o === 'failed' ? ', reported failing' : ''}">
       <div class="sq"><i class="b"></i><i class="${v.t ? 't' : ''}"></i><i class="${v.d ? 'd' : ''}"></i><i class="${v.o === 'ok' ? 'o' : v.o === 'failed' ? 'x' : ''}"></i></div><span>${escapeHtml(v.v)}</span></div>`).join('') + '</div>';
   }
+  // EPM apps are the vendor-watched ones plus EPM rules built here; they share Fleet under their own chip.
+  const epmAppCount = () => { const w = ((epmState || {}).apps || []).map(a => lettersOf(a.name)); return w.length + lastFleet.filter(a => a.type === 'epm' && !w.includes(lettersOf(a.name))).length; };
+  function refreshEpmView() { send('epm-state', {}); if (intune.signedIn) send('intune-read', {}); renderEpmScreen(); }
+  function showFleetEpm(open) { goTo('fleet'); fleetView = 'epm'; paintFleet(); refreshEpmView(); if (open) openIntuneWizard(); }
   function paintFleet() {
     const q = ($('#fleet-filter') ? $('#fleet-filter').value : '').toLowerCase();
-    $('#fleet-chips').innerHTML = fleetViews.map(v => `<button class="fchip${fleetView === v[0] ? ' on' : ''}" data-fleet-view="${v[0]}">${v[1]} <span>${lastFleet.filter(v[2]).length}</span></button>`).join('');
+    $('#fleet-chips').innerHTML = fleetViews.map(v => `<button class="fchip${fleetView === v[0] ? ' on' : ''}" data-fleet-view="${v[0]}">${v[1]} <span>${lastFleet.filter(v[2]).length}</span></button>`).join('')
+      + `<button class="fchip${fleetView === 'epm' ? ' on' : ''}" data-fleet-view="epm">EPM <span>${epmAppCount()}</span></button>`;
+    const epmView = fleetView === 'epm';
+    $('#fleet-grid').hidden = epmView; $('#fleet-epm').hidden = !epmView;
+    if (epmView) { $('#fleet-bulk-bar').style.display = 'none'; renderEpmScreen(); return; }
     const pred = (fleetViews.find(v => v[0] === fleetView) || fleetViews[0])[2];
     const apps = lastFleet.filter(a => pred(a) && (!q || a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q)));
     const rowsHtml = apps.map(a => {
@@ -3365,7 +3369,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   }
   document.addEventListener('click', e => {
     const v = e.target.closest('[data-fleet-view]');
-    if (v) { fleetView = v.dataset.fleetView; paintFleet(); }
+    if (v) { fleetView = v.dataset.fleetView; paintFleet(); if (fleetView === 'epm') refreshEpmView(); }
     // Close any open row menu when clicking elsewhere, or after choosing from it.
     $$('.rowmenu[open]').forEach(m => { if (!m.contains(e.target) || e.target.closest('.rowmenu>div button')) m.open = false; });
   });
@@ -3558,7 +3562,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     token = '';
   }
 
-  // EPM screen: what the vendor checks found next to the elevation rules already in Intune. Read-only.
+  // App fleet's EPM view: what the vendor checks found next to the elevation rules already in Intune. Read-only.
   let intune = { signedIn: false, account: '', policies: [], loaded: false };
   const lettersOf = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const ruleType = t => ({ automatic: 'Automatic', self: 'User confirmed', supportarbitrated: 'Support approved', deny: 'Deny' })[String(t || '').toLowerCase()] || t || 'Unknown type';
@@ -3570,22 +3574,27 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   const assignedText = p => !p.assignments.length ? 'not assigned' : 'assigned to ' + p.assignments.map(a => (a.exclude ? 'not ' : '') + (a.name || 'a group')).join(', ');
   function renderEpmScreen() {
     const s = epmState || {}, apps = s.apps || [], res = s.results || {};
+    const chip = $('[data-fleet-view="epm"] span');
+    if (chip) chip.textContent = epmAppCount();
     $('#intune-signin').hidden = intune.signedIn; $('#intune-signout').hidden = $('#intune-refresh').hidden = !intune.signedIn;
     $('#intune-set-connect').hidden = intune.signedIn; $('#intune-set-out').hidden = $('#intune-set-open').hidden = !intune.signedIn;
     $('#intune-set-t').textContent = intune.signedIn ? `Connected as ${intune.account || 'your account'}` : 'Not connected';
     $('#intune-set-s').textContent = intune.signedIn
       ? `${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}` + (intune.settingsPolicies === 0 ? '. No elevation settings policy turns EPM on for devices yet.' : '') + '. The sign-in lasts until AppUpdater closes.'
       : 'Needs EPM licensed in the tenant and an Intune Administrator or Endpoint Security Manager account.';
+    $('#intune-status-t').textContent = intune.signedIn ? `Intune: connected as ${intune.account || 'your account'}` : 'Intune not connected';
     $('#intune-status').textContent = intune.signedIn
-      ? `Signed in as ${intune.account || 'your account'}. ${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}.`
+      ? `${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}.`
         + (intune.settingsPolicies === 0 ? ' No elevation settings policy turns EPM on for devices yet.' : '') + ' Adding rules from AppUpdater is not available yet.'
-      : 'Sign in with your Intune admin account to see the EPM policies you already have. AppUpdater only reads them.';
-    $('#epm-cover').innerHTML = !s.cfg && !apps.length
-      ? '<p class="bnote">Vendor release checks are not set up yet. They find each new version and its SHA-256 for you. <button class="linkbtn" data-epm-setup>Set up vendor checks…</button></p>'
+      : 'Connect your Intune tenant to see which versions your EPM policies already allow. AppUpdater only reads them.';
+    const watchedNames = apps.map(a => lettersOf(a.name));
+    const builtOnly = lastFleet.filter(a => a.type === 'epm' && !watchedNames.includes(lettersOf(a.name)));
+    $('#epm-cover').innerHTML = (!s.cfg && !apps.length
+      ? '<p class="bnote">Vendor release checks are not set up yet. They find each new version and its SHA-256 for you. <button class="linkbtn" data-epm-setup>Set up vendor checks\u2026</button></p>'
       : apps.map(app => {
         const r = res[app.id] || null, ok = r && r.status === 'ok', hash = ok ? String(r.sha256 || '').toUpperCase() : '';
         const found = ok ? `${r.version} verified, signed by ${r.signer}` : r ? (r.status === 'blocked' ? `${r.version || 'latest'} blocked: ${r.reason}` : `check failed: ${r.reason || 'unknown'}`) : 'waiting for the first check';
-        let st = ['dim', intune.signedIn ? 'nothing to compare yet' : 'sign in to compare'], act = '';
+        let st = ['dim', intune.signedIn ? 'nothing to compare yet' : 'connect Intune to compare'], act = '';
         if (intune.signedIn && ok) {
           const holding = intune.policies.filter(p => p.rules.some(x => x.hash === hash));
           const pol = policyForApp(app, hash);
@@ -3594,8 +3603,10 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           else { st = ['warn', `${r.version} is not in Intune yet` + (pol ? ` (its rules are in ${pol.name})` : '')]; act = `<button class="btn sm" data-epm-add="${escapeHtml(app.id)}">Add to Intune…</button>`; }
         }
         return `<div class="cov"><div><b>${escapeHtml(app.name)}</b><small>${escapeHtml(found)}</small></div><span class="st ${st[0]}">${escapeHtml(st[1])}</span>${act || '<span></span>'}</div>`;
-      }).join('') || '<p class="bnote">No apps watched yet.</p>';
-    if (!intune.signedIn) { $('#intune-policies').innerHTML = '<p class="bnote">Sign in to list them.</p>'; return; }
+      }).join('')) + builtOnly.map(a => `<div class="cov"><div><b>${escapeHtml(a.name)}</b><small>EPM rule built here for ${escapeHtml(a.version)}; not watched for new versions</small></div>`
+        + `<span class="st dim">${intune.signedIn ? 'compare once it is watched' : 'connect Intune to compare'}</span><button class="btn sm" data-epm-watch-built="${escapeHtml(a.id)}">Watch\u2026</button></div>`).join('')
+      || '<p class="bnote">No EPM apps yet. Build an EPM rule, or watch an app for new versions.</p>';
+    if (!intune.signedIn) { $('#intune-policies').innerHTML = '<p class="bnote">Connect Intune to list them.</p>'; return; }
     const watchedHashes = new Set(apps.map(a => res[a.id] && String(res[a.id].sha256 || '').toUpperCase()).filter(Boolean));
     $('#intune-policies').innerHTML = intune.policies.map(p => `<div class="pol"><h3>${escapeHtml(p.name)}</h3><div class="meta">${escapeHtml(assignedText(p))} · ${p.rules.length} rule${p.rules.length === 1 ? '' : 's'}${p.rules.length >= 90 ? ' · near the 100-rule limit' : ''}</div>`
       + p.rules.map((r, i) => {
@@ -3621,11 +3632,11 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   $('#intune-signin').addEventListener('click', openIntuneWizard);
   $('#intune-set-connect').addEventListener('click', openIntuneWizard);
   $('#intune-set-out').addEventListener('click', () => send('intune-signout', {}));
-  $('#intune-set-open').addEventListener('click', () => goTo('epm'));
+  $('#intune-set-open').addEventListener('click', () => showFleetEpm(false));
   $('#intune-signout').addEventListener('click', () => send('intune-signout', {}));
   $('#intune-refresh').addEventListener('click', () => { $('#intune-status').textContent = 'Reading your EPM policies…'; send('intune-read', {}); });
   $('#epm-screen-watch').addEventListener('click', () => { goTo('worker'); if (epmState && !epmState.cfg) openEpmWizard(); else { $('#epm-add').open = true; $('#epm-section').scrollIntoView({ block: 'start' }); } });
-  $('#screen-epm').addEventListener('click', e => {
+  $('#fleet-epm').addEventListener('click', e => {
     if (e.target.closest('[data-epm-setup]')) { goTo('worker'); openEpmWizard(); return; }
     const add = e.target.closest('[data-epm-add]');
     if (add) {
@@ -3637,6 +3648,15 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           + `Policy: ${pol ? pol.name + ' (' + assignedText(pol) + ')' : 'EPM · ' + app.name + ' (new; you choose its group when it is created)'}\n`
           + `Rule name: ${app.name} ${r.version}\nFile name: ${r.file || 'from the download'}\nSHA-256: ${String(r.sha256).toUpperCase()}\nSigned by: ${r.signer}\nType: user confirmed\n\n`
           + `The previous version's rule stays; older ones are offered for removal.\n\nWriting to Intune is switched off until it has been tested against a real tenant.` });
+      return;
+    }
+    const built = e.target.closest('[data-epm-watch-built]');
+    if (built) {
+      const a = lastFleet.find(x => x.id === built.dataset.epmWatchBuilt);
+      goTo('worker');
+      if (epmState && !epmState.cfg) { openEpmWizard(); return; }
+      $('#epm-add').open = true; $('#epm-name').value = a ? a.name : '';
+      $('#epm-section').scrollIntoView({ block: 'start' }); $('#epm-source').focus();
       return;
     }
     const w = e.target.closest('[data-epm-watch-rule]');
@@ -3714,13 +3734,13 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   setInterval(() => send('get-status', {}), 60000);
 
   // Keyboard layer: number keys for the rail, Ctrl+O to pick an installer, Ctrl+Enter to build, Ctrl+K for every command.
-  $$('.rail .nav-btn[data-go]').forEach((b, i) => { if (i < 7) b.insertAdjacentHTML('beforeend', `<span class="nav-num" aria-hidden="true">${i + 1}</span>`); });
-  const railScreens = ['home', 'build', 'fleet', 'epm', 'profiles', 'history', 'worker'];
+  $$('.rail .nav-btn[data-go]').forEach((b, i) => { if (i < 6) b.insertAdjacentHTML('beforeend', `<span class="nav-num" aria-hidden="true">${i + 1}</span>`); });
+  const railScreens = ['home', 'build', 'fleet', 'profiles', 'history', 'worker'];
   const pickInstaller = () => { goTo('build'); if (form.Kind !== 'printer') send('browse-installer', {}); };
   const buildNow = () => { if (!$('#screen-build').classList.contains('on')) goTo('build'); else if (!$('#btn-build').disabled) $('#btn-build').click(); };
   const commands = [
-    ['Go', 'Home', () => goTo('home'), '1'], ['Go', 'Package builder', () => goTo('build'), '2'], ['Go', 'App fleet', () => goTo('fleet'), '3'], ['Go', 'EPM', () => goTo('epm'), '4'],
-    ['Go', 'Client profiles', () => goTo('profiles'), '5'], ['Go', 'History', () => goTo('history'), '6'], ['Go', 'Worker & settings', () => goTo('worker'), '7'],
+    ['Go', 'Home', () => goTo('home'), '1'], ['Go', 'Package builder', () => goTo('build'), '2'], ['Go', 'App fleet', () => goTo('fleet'), '3'],
+    ['Go', 'Client profiles', () => goTo('profiles'), '4'], ['Go', 'History', () => goTo('history'), '5'], ['Go', 'Worker & settings', () => goTo('worker'), '6'], ['Go', 'Fleet: EPM apps and Intune', () => showFleetEpm(false)],
     ['Build', 'Pick an installer', pickInstaller, 'Ctrl O'], ['Build', 'Build package', buildNow, 'Ctrl \u21b5'],
     ['Build', 'Delivery: Simple', () => { goTo('build'); pickSeg('segMode', 'simple'); }], ['Build', 'Delivery: Runtime', () => { goTo('build'); pickSeg('segMode', 'runtime'); }],
     ['Build', 'Output: .intunewin', () => { goTo('build'); pickSeg('segTarget', 'intunewin'); }], ['Build', 'Output: PSADT', () => { goTo('build'); pickSeg('segTarget', 'psadt'); }], ['Build', 'Output: EPM rule', () => { goTo('build'); pickSeg('segTarget', 'epm'); }],
@@ -3755,7 +3775,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
     if (ctrl && e.key === 'Enter') { e.preventDefault(); buildNow(); }
     else if (ctrl && key === 'o') { e.preventDefault(); pickInstaller(); }
-    else if (!ctrl && !e.altKey && !typing && /^[1-7]$/.test(e.key) && $('#test-modal').style.display !== 'flex') goTo(railScreens[Number(e.key) - 1]);
+    else if (!ctrl && !e.altKey && !typing && /^[1-6]$/.test(e.key) && $('#test-modal').style.display !== 'flex') goTo(railScreens[Number(e.key) - 1]);
   });
 
   window._gotFleetData = false;
@@ -4854,7 +4874,12 @@ catch {
   if ($code -eq 401) { $_result.signedOut = $true }
   $_result.message = if ($code -eq 403) { 'This account cannot read Intune device configuration. Sign in with an Intune administrator.' } else { $_.Exception.Message }
 }
-'@ -OnDone ({ param($r) if ($r.signedOut) { $IntuneAuth.Clear() } }.GetNewClosure())
+'@ -OnDone ({
+                  param($r)
+                  if ($r.signedOut) { $IntuneAuth.Clear() }
+                  # A read that was already running when the user signed out must not show the tenant again.
+                  elseif (-not $IntuneAuth.token) { $r.Clear(); $r.ok = $false; $r.signedOut = $true }
+                }.GetNewClosure())
               }
             }
             'epm-open-device' { try { Start-Process 'https://github.com/login/device' } catch { } }
