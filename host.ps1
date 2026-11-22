@@ -488,6 +488,15 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 .pol h3{margin:0;font:600 13px var(--font-b)} .pol .meta{color:var(--faint);font-size:11.5px;margin:2px 0 6px}
 .rule{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--rule);font-size:12px}
 .rule .mono{font-family:var(--font-m);font-size:11px;color:var(--dim);overflow-wrap:anywhere}
+.wz-dots{display:flex;gap:6px;margin:0 0 12px} .wz-dots i{flex:1;height:3px;border-radius:2px;background:var(--edge)} .wz-dots i.on{background:var(--signal)}
+.wz-lead{margin:0 0 10px;font-size:13px;color:var(--ink)}
+.wz-rows{display:grid;gap:8px;margin:0 0 6px}
+.wz-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel-2)}
+.wz-ic{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:rgba(var(--signal-rgb),.14);color:var(--signal);font:600 12px var(--font-m)}
+.wz-row.ok .wz-ic{background:rgba(var(--ok-rgb),.14);color:var(--ok)} .wz-row.warn .wz-ic{background:rgba(var(--warn-rgb),.14);color:var(--warn)}
+.wz-row b{display:block;font-size:12.5px} .wz-row small{display:block;color:var(--faint);font-size:11.5px;overflow-wrap:anywhere}
+.wz-row code{font:11px var(--font-m);color:var(--dim)}
+.wz-note{margin:8px 0 0;font-size:11.5px;color:var(--faint)}
 .modal{position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:95;display:flex;align-items:center;justify-content:center}
 .ui-text{margin:0 0 10px;white-space:pre-line}
 .ui-field{margin:0 0 10px} .ui-field .field{height:32px;padding:0 10px} .ui-field small{display:block;color:var(--faint);font-size:11.5px;margin-top:3px}
@@ -941,7 +950,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           <div id="fleet-epm" hidden>
             <div class="tglrow" style="margin:0 0 6px"><div><b id="intune-status-t">Intune not connected</b><small id="intune-status">Connect your Intune tenant to see which versions your EPM policies already allow, and to add new ones once adding rules is on in Settings &rsaquo; 09.</small></div>
               <div style="display:flex;gap:8px"><button class="btn sm" id="intune-refresh" hidden>Refresh</button><button class="btn sm" id="intune-signout" hidden>Sign out</button>
-                <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button></div></div>
+                <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button><button class="btn sm ghost" id="epm-guide">How EPM rules work</button></div></div>
             <div id="epm-cover"></div>
             <div class="bsec"><div class="bsec-h"><span class="bsec-t">EPM policies in Intune</span><span class="bsec-rule"></span></div>
               <div id="intune-policies"><p class="bnote">Connect Intune to list them.</p></div></div>
@@ -1425,16 +1434,27 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const r = uiDlgResolve; uiDlgResolve = null;
     if (r) r(result);
   }
-  function uiDialog({ title, sub = '', text = '', fields = [], ok = 'OK', danger = false, cancel = 'Cancel', validate, extra }) {
+  // Walkthrough content: a step bar, one lead sentence, then rows of [icon, title, detail, tone, action].
+  // Strings are escaped; only the icon glyph and row layout come from here.
+  function uiWalkHtml({ step, lead, rows = [], note }) {
+    return (step ? `<div class="wz-dots" aria-label="Step ${step[0]} of ${step[1]}">${Array.from({ length: step[1] }, (_, i) => `<i class="${i < step[0] ? 'on' : ''}"></i>`).join('')}</div>` : '')
+      + (lead ? `<p class="wz-lead">${escapeHtml(lead)}</p>` : '')
+      + (rows.length ? '<div class="wz-rows">' + rows.map(([ic, t, d, tone, act]) => `<div class="wz-row ${tone || ''}"><span class="wz-ic" aria-hidden="true">${escapeHtml(ic)}</span>`
+        + `<div><b>${escapeHtml(t)}</b>${d ? `<small>${escapeHtml(d)}</small>` : ''}</div>`
+        + (act ? `<button class="btn sm" data-wz-act="${escapeHtml(act[0])}">${escapeHtml(act[1])}</button>` : '<span></span>') + '</div>').join('') + '</div>' : '')
+      + (note ? `<p class="wz-note">${escapeHtml(note)}</p>` : '');
+  }
+  function uiDialog({ title, sub = '', text = '', fields = [], ok = 'OK', danger = false, cancel = 'Cancel', validate, extra, walk, back }) {
     if (uiDlgResolve) uiClose(null);
     uiDlgFields = fields;
     $('#ui-dlg-title').textContent = title;
     $('#ui-dlg-sub').textContent = sub;
-    $('#ui-dlg-body').innerHTML = (text ? `<p class="bnote ui-text">${escapeHtml(text)}</p>` : '') + fields.map(uiFieldHtml).join('');
+    $('#ui-dlg-body').innerHTML = (walk ? uiWalkHtml(walk) : '') + (text ? `<p class="bnote ui-text">${escapeHtml(text)}</p>` : '') + fields.map(uiFieldHtml).join('');
     $('#ui-dlg-log').hidden = true;
     $('#ui-dlg-err').hidden = true;
     uiDlg()._extra = extra ? extra[1] : null;
     $('#ui-dlg-foot').innerHTML = (extra ? `<button class="btn" data-ui="extra" style="margin-right:auto">${escapeHtml(extra[0])}</button>` : '')
+      + (back ? `<button class="btn" data-ui="back">${escapeHtml(back)}</button>` : '')
       + (cancel ? `<button class="btn" data-ui="cancel">${escapeHtml(cancel)}</button>` : '')
       + `<button class="btn ${danger ? 'danger-solid' : 'primary'}" data-ui="ok">${escapeHtml(ok)}</button>`;
     uiRefresh();
@@ -1481,10 +1501,12 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   $('#ui-dlg').addEventListener('click', e => {
     const b = e.target.closest('[data-ui]');
     if (!b) return;
-    if (b.dataset.ui === 'extra' && uiDlg()._extra) uiDlg()._extra();
+    if (b.dataset.ui === 'back') uiClose({ __back: true });
+    else if (b.dataset.ui === 'extra' && uiDlg()._extra) uiDlg()._extra();
     else if (b.dataset.ui === 'ok' && uiDlg()._submit) uiDlg()._submit();
     else if (b.dataset.ui === 'cancel' || b.dataset.ui === 'close') uiClose(null);
   });
+  $('#ui-dlg').addEventListener('click', e => { const a = e.target.closest('[data-wz-act]'); if (a) uiClose({ __act: a.dataset.wzAct }); });
   $('#ui-dlg').addEventListener('input', uiRefresh);
   $('#ui-dlg').addEventListener('change', uiRefresh);
   $('#ui-dlg').addEventListener('keydown', e => {
@@ -1732,12 +1754,39 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (window._intuneSuggested !== false || window._tourActive) return;
     window._intuneSuggested = true;
     send('mark-intune-suggested', {});
-    uiDialog({ title: 'About EPM rules', ok: intune.signedIn ? 'Got it' : 'Connect Intune\u2026', cancel: intune.signedIn ? '' : 'Later',
-      text: 'An EPM rule lets standard users run this installer elevated through Intune Endpoint Privilege Management. No package is built.\n\n'
-        + 'After you pick the installer, AppUpdater gives you everything the rule needs: the file name, its SHA-256 and who signed it, with copy buttons, plus a CSV.\n\n'
-        + (intune.signedIn ? 'Intune is connected, so App fleet \u203a EPM shows whether this version is already allowed.'
-          : 'Connecting your Intune tenant lets AppUpdater show whether each version is already allowed and which policy holds an app\u2019s rules. With adding rules switched on in Settings \u203a 09, Add to Intune also puts each new version into the app\u2019s policy and checks it. You can connect later from App fleet \u203a EPM or Settings \u203a 09.') })
-      .then(v => { if (v && !intune.signedIn) openIntuneWizard(); else if (!v && !intune.signedIn) toast('Later', 'Connect Intune from App fleet \u203a EPM or Settings \u203a 09.'); });
+    epmWalkthrough(1);
+  }
+  // The first time EPM rule is chosen: what it is, what AppUpdater produces, and how to keep it current.
+  async function epmWalkthrough(start) {
+    const checks = !!(epmState && epmState.cfg);
+    const steps = [
+      () => uiDialog({ title: 'What an EPM rule does', sub: 'Step 1 of 3', ok: 'Next', cancel: 'Skip', walk: { step: [1, 3],
+        lead: 'An EPM rule lets people without admin rights run one specific installer, through Intune Endpoint Privilege Management.',
+        rows: [['↑', 'Standard users can run it elevated', 'No admin account or helpdesk call needed for this installer.'],
+               ['∅', 'No package is built', 'Instead of an app to upload, you get one rule for an Intune elevation rules policy.'],
+               ['#', 'Matched by the exact file', 'The rule names the file and its SHA-256 fingerprint, so a changed or different file is not elevated.']] } }),
+      () => uiDialog({ title: 'What AppUpdater gives you', sub: 'Step 2 of 3', ok: 'Next', cancel: 'Skip', back: 'Back', walk: { step: [2, 3],
+        lead: 'Pick the installer and choose Create EPM rule. The finished screen then shows each value with a copy button.',
+        rows: [['1', 'File name', 'For example 7z2607-x64.exe'],
+               ['2', 'SHA-256', 'The 64-character fingerprint of that exact file'],
+               ['3', 'Signer', 'Who signed it, so you can see it came from the real publisher'],
+               ['4', 'EPM-rules.csv', 'The same values in the output folder, for your records']] } }),
+      () => uiDialog({ title: 'Keep it current (optional)', sub: 'Step 3 of 3', ok: 'Start', cancel: '', back: 'Back', walk: { step: [3, 3],
+        lead: 'Each new version of an installer needs its own rule. These do that work for you; set them up now or any time later.',
+        rows: [[checks ? '✓' : '1', 'Watch for new versions', checks ? 'Vendor checks are set up.' : 'A free cloud machine hashes each new release, so you never download it yourself.', checks ? 'ok' : '', checks ? null : ['checks', 'Set up…']],
+               [intune.signedIn ? '✓' : '2', 'Connect Intune', intune.signedIn ? `Connected as ${intune.account}.` : 'See which versions your policies already allow.', intune.signedIn ? 'ok' : '', intune.signedIn ? null : ['intune', 'Connect…']],
+               [window._intuneWrite ? '✓' : '3', 'Let AppUpdater add rules', window._intuneWrite ? 'On: Add to Intune writes the rule and checks it.' : 'Off: you paste the values into Intune yourself.', window._intuneWrite ? 'ok' : '', window._intuneWrite ? null : ['write', 'Settings…']]],
+        note: 'All three are also in App fleet › EPM and Settings › 08 and 09.' } })
+    ];
+    for (let n = start - 1; n >= 0 && n < steps.length;) {
+      const v = await steps[n]();
+      if (!v) { if (n < 2) toast('Later', 'This guide is in App fleet › EPM › How EPM rules work.'); return; }
+      if (v.__back) { n--; continue; }
+      if (v.__act === 'checks') { goTo('worker'); openEpmWizard(); return; }
+      if (v.__act === 'intune') { openIntuneWizard(); return; }
+      if (v.__act === 'write') { goTo('worker'); $('#intune-section').scrollIntoView({ block: 'start' }); return; }
+      n++;
+    }
   }
   segInit($('#segPsadtVersion'), v => { form.PSADTVersion = v; updateBuildBrandingPreview(); });
   segInit($('#segBpSwap'), v => { window._bpSwapVersion = v; updateBuildBrandingPreview(); });
@@ -3547,21 +3596,21 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   async function openConnectWizard() {
     if (window._workerUrl) { goTo('worker'); return; }
     const sub = n => `Step ${n} of 4`;
-    const intro = await uiDialog({ title: 'Connect to Cloudflare', sub: sub(1), ok: 'Next',
-      text: 'A Cloudflare worker is a small free service on your own Cloudflare account. With it:\n'
-        + '• Devices report which version they have and whether installs worked, so Fleet and Home show it live\n'
-        + '• Self-updating apps check it for new versions\n'
-        + '• You get a password-protected status page you can open from anywhere\n'
-        + '• Vendor release checks for EPM send their results through it\n\n'
-        + 'You need a Cloudflare account; the free plan is enough. Building packages works without any of this.' });
+    const intro = await uiDialog({ title: 'Connect to Cloudflare', sub: sub(1), ok: 'Next', walk: { step: [1, 4],
+      lead: 'A Cloudflare worker is a small free service on your own Cloudflare account. It is how deployed devices report back.',
+      rows: [['●', 'Live fleet', 'Devices report which version they have and whether installs worked; Fleet and Home show it.'],
+             ['↻', 'Self-updating apps', 'Apps built to update themselves check the worker for new versions.'],
+             ['⌂', 'Status page', 'A password-protected page with your fleet that opens in any browser.'],
+             ['#', 'EPM vendor checks', 'New versions and their SHA-256 arrive through it.']],
+      note: 'You need a Cloudflare account; the free plan is enough. Building packages works without any of this.' } });
     if (!intro) return;
     let accounts = null, token = '';
     while (!accounts) {
-      const t = await uiDialog({ title: 'Create a Cloudflare API token', sub: sub(2), ok: 'Check token',
-        text: '1. Open Cloudflare’s API token page (button below) and choose Create Token.\n'
-          + '2. Next to "Edit Cloudflare Workers", choose Use template.\n'
-          + '3. Make sure it has: Workers Scripts › Edit, Workers KV Storage › Edit and Account Settings › Read.\n'
-          + '4. Create it and paste it here. AppUpdater uses it for setup only and does not save it.',
+      const t = await uiDialog({ title: 'Create a Cloudflare API token', sub: sub(2), ok: 'Check token', walk: { step: [2, 4],
+        rows: [['1', 'Open the token page', 'Use the button below, then choose Create Token.'],
+               ['2', 'Use the "Edit Cloudflare Workers" template', 'Choose Use template next to it.'],
+               ['3', 'Check its permissions', 'Workers Scripts: Edit · Workers KV Storage: Edit · Account Settings: Read'],
+               ['4', 'Create it and paste it below', 'It is used for setup only and not saved.']] },
         fields: [{ id: 'token', label: 'API token', type: 'password', mono: true, value: token }],
         validate: v => v.token.trim() ? '' : 'Paste the token Cloudflare showed you.', extra: ['Open Cloudflare token page', () => send('cf-open-tokens', {})] });
       if (!t) return;
@@ -3572,8 +3621,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       else { uiProgressDone(false, r.message || 'Cloudflare did not accept the token.'); await new Promise(res => { const c = $('#ui-dlg-foot [data-ui="close"]'); c.textContent = 'Try again'; c.addEventListener('click', res, { once: true }); }); }
     }
     const org = window._defaultOrgName || '';
-    const d = await uiDialog({ title: 'Account and status page', sub: sub(3), ok: 'Connect',
-      text: 'The status page shows your fleet from any browser. Choose its password now; it goes straight to your worker.',
+    const d = await uiDialog({ title: 'Account and status page', sub: sub(3), ok: 'Connect', walk: { step: [3, 4],
+      lead: 'Last details before setup. The password goes straight to your worker and is not kept on this PC.' },
       fields: [
         accounts.length > 1 ? { id: 'account', type: 'choice', label: 'Cloudflare account', options: accounts.map(a => ({ value: a.id, label: a.name })) } : null,
         { id: 'orgName', label: 'Organisation name', value: org, hint: 'Shown to users in update windows.' },
@@ -3701,11 +3750,13 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   // Anyone can connect their own tenant: Microsoft's Graph Command Line Tools app signs in, so nothing is registered.
   let intuneWizard = false;
   async function openIntuneWizard() {
-    const v = await uiDialog({ title: 'Connect Intune for EPM', sub: 'Step 1 of 3', ok: 'Sign in\u2026',
-      text: 'AppUpdater reads your Endpoint Privilege Management policies to show which installer versions are already allowed, and which new ones still need a rule.' + (window._intuneWrite ? ' Adding rules is on, so it will also ask to change those policies.' : ' With adding rules switched on in Settings \u203a 09, it can also add new versions for you.') + '\n\n'
-        + 'You need:\n\u2022 Endpoint Privilege Management licensed in your tenant: Intune Suite, the EPM add-on, or its free 90-day trial (Intune admin center \u203a Tenant administration \u203a Intune add-ons)\n'
-        + '\u2022 An account with the Intune Administrator or Endpoint Security Manager role\n\n'
-        + 'Sign-in uses Microsoft\u2019s own "Microsoft Graph Command Line Tools" app, so nothing is added to your tenant. The first time, Microsoft may ask an administrator to approve read access to device configuration and group names. The sign-in lasts for this session only.' });
+    const v = await uiDialog({ title: 'Connect Intune for EPM', sub: 'Step 1 of 3', ok: 'Sign in…', walk: { step: [1, 3],
+      lead: 'AppUpdater compares your EPM policies with the versions it knows about' + (window._intuneWrite ? ', and adds new ones for you.' : '.'),
+      rows: [['✓', 'EPM licensed in the tenant', 'Intune Suite, the EPM add-on, or its free 90-day trial (Intune admin center › Tenant administration › Intune add-ons).'],
+             ['✓', 'An Intune admin account', 'Intune Administrator or Endpoint Security Manager.'],
+             ['i', 'Nothing is installed in your tenant', 'Sign-in uses Microsoft’s own Graph Command Line Tools app. The first time, an administrator may need to approve it.'],
+             ['i', window._intuneWrite ? 'Read and change policies' : 'Read only', window._intuneWrite ? 'Adding rules is on, so it also asks to change device configuration policies.' : 'Adding rules can be switched on later in Settings › 09.']],
+      note: 'The sign-in lasts until AppUpdater closes and is not saved.' } });
     if (!v) return;
     intuneWizard = true;
     uiProgress('Sign in to Intune', 'Step 2 of 3');
@@ -3713,6 +3764,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   }
   $('#intune-signin').addEventListener('click', openIntuneWizard);
   $('#intune-set-connect').addEventListener('click', openIntuneWizard);
+  $('#epm-guide').addEventListener('click', () => epmWalkthrough(1));
   $('#tgl-intune-write').addEventListener('click', async () => {
     const on = !window._intuneWrite;
     if (on && !(await uiConfirm('Let AppUpdater add rules?', 'Add to Intune will then write rules into your EPM policies: the new version is added, older ones you tick are removed, and each change is read back and checked.\n\nThis has not been tried against every tenant yet. Try it on a test tenant first if you can. Connect Intune again afterwards so the sign-in includes permission to change policies.', 'Switch on'))) return;
