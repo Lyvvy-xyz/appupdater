@@ -1117,6 +1117,12 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                   </div>
                 </details>
               </div>
+              <div class="bsec" id="intune-section">
+                <div class="bsec-h"><span class="bsec-n">09</span><span class="bsec-t">Intune for EPM</span><span class="bsec-rule"></span></div>
+                <p class="bnote" style="margin:4px 0 6px">Connect your own Intune tenant to see your Endpoint Privilege Management policies next to the versions the vendor checks find. Any Intune administrator can connect; nothing is installed in the tenant.</p>
+                <div class="tglrow"><div><b id="intune-set-t">Not connected</b><small id="intune-set-s">Needs EPM licensed in the tenant and an Intune Administrator or Endpoint Security Manager account.</small></div>
+                  <div style="display:flex;gap:8px"><button class="btn sm" id="intune-set-open" hidden>Open EPM</button><button class="btn sm" id="intune-set-out" hidden>Sign out</button><button class="btn sm primary" id="intune-set-connect">Connect Intune&hellip;</button></div></div>
+              </div>
             </div>
           </div>
         </div>
@@ -3552,6 +3558,11 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   function renderEpmScreen() {
     const s = epmState || {}, apps = s.apps || [], res = s.results || {};
     $('#intune-signin').hidden = intune.signedIn; $('#intune-signout').hidden = $('#intune-refresh').hidden = !intune.signedIn;
+    $('#intune-set-connect').hidden = intune.signedIn; $('#intune-set-out').hidden = $('#intune-set-open').hidden = !intune.signedIn;
+    $('#intune-set-t').textContent = intune.signedIn ? `Connected as ${intune.account || 'your account'}` : 'Not connected';
+    $('#intune-set-s').textContent = intune.signedIn
+      ? `${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}` + (intune.settingsPolicies === 0 ? '. No elevation settings policy turns EPM on for devices yet.' : '') + '. The sign-in lasts until AppUpdater closes.'
+      : 'Needs EPM licensed in the tenant and an Intune Administrator or Endpoint Security Manager account.';
     $('#intune-status').textContent = intune.signedIn
       ? `Signed in as ${intune.account || 'your account'}. ${intune.policies.length} elevation rules polic${intune.policies.length === 1 ? 'y' : 'ies'}.`
         + (intune.settingsPolicies === 0 ? ' No elevation settings policy turns EPM on for devices yet.' : '') + ' Adding rules from AppUpdater is not available yet.'
@@ -3595,6 +3606,9 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     send('intune-signin', {});
   }
   $('#intune-signin').addEventListener('click', openIntuneWizard);
+  $('#intune-set-connect').addEventListener('click', openIntuneWizard);
+  $('#intune-set-out').addEventListener('click', () => send('intune-signout', {}));
+  $('#intune-set-open').addEventListener('click', () => goTo('epm'));
   $('#intune-signout').addEventListener('click', () => send('intune-signout', {}));
   $('#intune-refresh').addEventListener('click', () => { $('#intune-status').textContent = 'Reading your EPM policies…'; send('intune-read', {}); });
   $('#epm-screen-watch').addEventListener('click', () => { goTo('worker'); if (epmState && !epmState.cfg) openEpmWizard(); else { $('#epm-add').open = true; $('#epm-section').scrollIntoView({ block: 'start' }); } });
