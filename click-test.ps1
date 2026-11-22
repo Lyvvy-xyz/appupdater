@@ -437,7 +437,7 @@ window.__errors = [];
     Invoke-Flow 'Build guards' {
       Wait-Js "!document.querySelector('.tgl[data-val=BundleFolder]').disabled" 60
       Invoke-Click '.tgl[data-val=BundleFolder]'
-      Test-BuildGuard 'Folder bundling is Simple only' 'Runtime mode with folder bundling'
+      Test-BuildGuard 'Bundling needs "You push updates"' 'Runtime mode with folder bundling'
       Save-Shot 'guard-bundle-runtime' -KeepToasts
       Invoke-Click '.tgl[data-val=BundleFolder]'
 
