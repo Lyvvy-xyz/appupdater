@@ -3837,7 +3837,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       text: `Policy: ${pol ? `${pol.name} (${assignedText(pol)})` : `${policyName} (new, assigned to ${target.label})`}\nRule: ${item.name} ${item.version}\nFile name: ${item.file}\nSHA-256: ${hash}\nSigned by: ${item.signer || 'not signed'}\n\nAfterwards AppUpdater reads the policy back and checks every value.` });
     if (!v) return;
     uiProgress(`Adding ${item.name} ${item.version}`, 'writing to Intune');
-    send('intune-apply', { source: item.source, appId: item.appId || '', appName: item.name, version: item.version, policyId: pol ? pol.id : '', policyName,
+    send('intune-apply', { source: item.source, appId: item.appId || '', hash, appName: item.name, version: item.version, policyId: pol ? pol.id : '', policyName,
       target: target ? target.id : '', ruleType: v.ruleType, removeNames: v.remove || [] });
   }
 
@@ -3915,7 +3915,8 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       const closed = uiProgress('Sign in to Azure', 'to remove the resource group');
       send('azure-signin', {});
       const code = await waitFor('azure-code');
-      if (code.ok) $('#ui-dlg-body').innerHTML = `<p class="bnote">Enter this code on Microsoft’s page:</p><div class="epm-code">${escapeHtml(code.code)}</div>`;
+      if (!code.ok) { uiProgressDone(false, code.message || 'Microsoft did not return a sign-in code.'); await closed; send('epm-state', {}); return; }
+      $('#ui-dlg-body').innerHTML = `<p class="bnote">Enter this code on Microsoft’s page:</p><div class="epm-code">${escapeHtml(code.code)}</div>`;
       const signed = await waitFor('azure-signed-in');
       uiProgressDone(signed.ok, signed.ok ? 'Signed in. Removing…' : (signed.message || 'Sign-in did not finish.'));
       if (signed.ok) { send('azure-remove', {}); r = await waitFor('azure-removed'); uiProgressLine(r.ok ? 'ok' : 'bad', r.ok ? 'Resource group deletion started; Azure finishes it in a few minutes.' : (r.message || 'Azure refused the delete.')); }
@@ -4102,7 +4103,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
       goTo('worker');
       if (epmState && !epmState.cfg) { openEpmWizard(); return; }
       $('#epm-add').open = true;
-      $('#epm-name').value = r.product || r.name || r.fileName.replace(/\.(exe|msi)$/i, '');
+      $('#epm-name').value = r.product || r.name || String(r.fileName || '').replace(/\.(exe|msi)$/i, '');
       $('#epm-section').scrollIntoView({ block: 'start' }); $('#epm-source').focus();
     }
   });
@@ -5328,20 +5329,22 @@ $_result.ok = $true
               $p = $msg.payload
               $fail = { param($m) Send-ToPage $wv 'intune-apply-done' @{ ok = $false; message = $m } }
               $remove = @(@($p.removeNames) | ForEach-Object { [string]$_ } | Where-Object { $_ })
+              # The hash, file and version come from this PC's own records, never from the page.
+              $src = $null
+              if ($p.source -eq 'build') {
+                $csv = if ($global:LastBuildDir) { Join-Path $global:LastBuildDir 'EPM-rules.csv' } else { '' }
+                $row = if ($csv -and (Test-Path -LiteralPath $csv)) { @(Import-Csv -LiteralPath $csv)[0] } else { $null }
+                if ($row) { $src = @{ name = [string]$p.appName; version = [string]$p.version; file = [string]$row.FileName; sha256 = [string]$row.SHA256; signer = [string]$row.Signer } }
+              }
               if (-not $config.IntuneWriteEnabled) { & $fail 'Adding rules is switched off. Turn it on in Settings › 09 Intune for EPM.' }
               elseif (-not $IntuneAuth.token -or (Get-Date) -ge $IntuneAuth.expires) { & $fail 'The Intune sign-in has expired. Connect Intune again.' }
               elseif (-not $IntuneAuth.canWrite) { & $fail 'This sign-in can only read. Sign out and connect Intune again to allow adding rules.' }
               elseif ([string]$p.policyId -and [string]$p.policyId -notmatch '^[0-9a-fA-F-]{36}$') { & $fail 'Unknown policy.' }
               elseif (-not [string]$p.policyId -and ([string]$p.target -notmatch '^([0-9a-fA-F-]{36}|allUsers|allDevices)$' -or ([string]$p.policyName).Length -notin 1..120)) { & $fail 'Choose who the new policy applies to.' }
               elseif ([string]$p.ruleType -notin @('self', 'automatic')) { & $fail 'Unknown rule type.' }
+              # The page's hash is only a cross-check: a later build replaces the record the page was showing.
+              elseif ($p.source -eq 'build' -and (-not $src -or [string]$src.sha256 -ne [string]$p.hash)) { & $fail 'A newer build replaced the one shown here. Build this app again, then add it.' }
               else {
-                # The hash, file and version come from this PC's own records, never from the page.
-                $src = $null
-                if ($p.source -eq 'build') {
-                  $csv = if ($global:LastBuildDir) { Join-Path $global:LastBuildDir 'EPM-rules.csv' } else { '' }
-                  $row = if ($csv -and (Test-Path -LiteralPath $csv)) { @(Import-Csv -LiteralPath $csv)[0] } else { $null }
-                  if ($row) { $src = @{ name = [string]$p.appName; version = [string]$p.version; file = [string]$row.FileName; sha256 = [string]$row.SHA256; signer = [string]$row.Signer } }
-                }
                 $job = @{ _tok = $IntuneAuth.token; _src = $src; _appId = [string]$p.appId; _wurl = [string]$config.WorkerURL; _wtok = [string]$config.ManifestToken
                           _policyId = [string]$p.policyId; _policyName = [string]$p.policyName; _target = [string]$p.target; _ruleType = [string]$p.ruleType; _remove = $remove }
                 Start-BackgroundAction -Wv $wv -Roots @('Invoke-EpmWorker', 'New-EpmRuleValue', 'Set-IntuneEpmPolicyRules', 'New-IntuneEpmPolicy', 'Confirm-IntuneEpmRule') `
@@ -5483,14 +5486,16 @@ $_result.ok = $true
               if (-not $AzureAuth.arm -or (Get-Date) -ge $AzureAuth.expires) { Send-ToPage $wv 'azure-tested' @{ ok = $false; message = 'The Azure sign-in has expired. Sign in again.' } }
               elseif (-not $config.EpmAzure -or -not $azSas) { Send-ToPage $wv 'azure-tested' @{ ok = $false; message = 'Create the Azure pieces first.' } }
               else {
-                # The first run checks the apps already watched through the worker, if there are any.
-                $seed = @()
-                if ($config.WorkerURL -and $config.ManifestToken) { try { $seed = @((Invoke-EpmWorker -WorkerUrl $config.WorkerURL -Token $config.ManifestToken).apps) } catch { } }
-                Start-BackgroundAction -Wv $wv -Roots @('Invoke-EpmAzureBlob', 'Set-EpmAzureApps', 'Start-EpmAzureRun', 'Get-EpmAzureState') -Event 'azure-tested' -LogEvent 'azure-log' -TimeoutSeconds 1200 `
-                  -Variables @{ _tok = $AzureAuth.arm; _agent = ConvertTo-PlainHashtable $config.EpmAzure; _sas = $azSas; _seed = $seed; AzureEpmNames = $AzureEpmNames } -Script @'
+                Start-BackgroundAction -Wv $wv -Roots @('Invoke-EpmWorker', 'Invoke-EpmAzureBlob', 'Set-EpmAzureApps', 'Start-EpmAzureRun', 'Get-EpmAzureState') -Event 'azure-tested' -LogEvent 'azure-log' -TimeoutSeconds 1200 `
+                  -Variables @{ _tok = $AzureAuth.arm; _agent = ConvertTo-PlainHashtable $config.EpmAzure; _sas = $azSas; _wurl = [string]$config.WorkerURL; _wtok = [string]$config.ManifestToken; AzureEpmNames = $AzureEpmNames } -Script @'
 Write-Step '1/3' 'Checking AppUpdater can reach the storage'
 $apps = Invoke-EpmAzureBlob -Account $_agent.storageAccount -Sas $_sas -Name 'apps.json'
-if (-not $apps) { Set-EpmAzureApps -Agent $_agent -Sas $_sas -Apps @($_seed); Write-OK "Watch list started with $(@($_seed).Count) app(s)" } else { Write-OK 'Storage reachable' }
+if (-not $apps) {
+  # The first run checks the apps already watched through the worker, if there are any.
+  $_seed = @()
+  if ($_wurl -and $_wtok) { try { $_seed = @((Invoke-EpmWorker -WorkerUrl $_wurl -Token $_wtok).apps) } catch { } }
+  Set-EpmAzureApps -Agent $_agent -Sas $_sas -Apps @($_seed); Write-OK "Watch list started with $(@($_seed).Count) app(s)"
+} else { Write-OK 'Storage reachable' }
 Write-Step '2/3' 'Running the check once now'
 Start-EpmAzureRun -Token $_tok -Agent $_agent
 Write-Step '3/3' 'Reading the result back'
