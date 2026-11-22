@@ -340,10 +340,15 @@ window.__errors = [];
   Invoke-Flow 'Vendor release checks without a worker' {
     Invoke-Click '.nav-btn[data-go=worker]'
     Wait-Js "window.__msgs.indexOf('epm-state') >= 0"
-    Assert ((Get-Text '#epm-status-t') -eq 'Needs the Cloudflare worker') 'Release checks ask for the worker first'
+    Assert ((Get-Text '#epm-status-t') -eq 'Not set up') 'Release checks show as not set up'
     Assert (Eval-Js "document.getElementById('epm-add').hidden") 'Apps can only be watched once checks are set up'
     Invoke-Click '#epm-setup'
-    Assert (Eval-Js "document.getElementById('epm-wiz').style.display === 'flex'") 'Set up opens the walkthrough'
+    Wait-Js "!document.getElementById('ui-dlg').hidden"
+    Assert ((Get-Text '#ui-dlg-title') -eq 'Where should checks run?' -and (Get-Text '#ui-dlg-body') -like '*GitHub*free*Azure*0 to *0.05*') 'Set up first offers GitHub or Azure, with their costs'
+    Eval-Js "document.querySelector('#ui-dlg input[value=github]').click()" | Out-Null
+    Invoke-Click '#ui-dlg [data-ui=ok]'
+    Wait-Js "document.getElementById('epm-wiz').style.display === 'flex'"
+    Assert (Eval-Js "document.getElementById('epm-wiz').style.display === 'flex'") 'Choosing GitHub opens its walkthrough'
     Assert (-not (Eval-Js "document.getElementById('epm-wiz-noworker').hidden")) 'The walkthrough asks for the worker first'
     Assert (Eval-Js "document.getElementById('epm-wiz-next').disabled") 'The walkthrough cannot go on without the worker'
     Invoke-Click '#epm-wiz-close'

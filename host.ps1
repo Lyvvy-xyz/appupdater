@@ -497,6 +497,30 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 .wz-row b{display:block;font-size:12.5px} .wz-row small{display:block;color:var(--faint);font-size:11.5px;overflow-wrap:anywhere}
 .wz-row code{font:11px var(--font-m);color:var(--dim)}
 .wz-note{margin:8px 0 0;font-size:11.5px;color:var(--faint)}
+#ui-dlg.wide .dlg{width:min(980px,94vw)!important}
+#ui-dlg.wide .ui-choice{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.runs{display:grid;gap:6px;margin:8px 0 0}.run{border:1px solid var(--edge);border-radius:var(--r-sm);padding:8px 10px}
+.run b{font-size:12.5px}.run .ri{display:grid;grid-template-columns:16px minmax(0,1fr);gap:6px;font-size:11.5px;color:var(--dim);padding:2px 0}
+.run .ri.ok i{color:var(--ok)}.run .ri.bad i{color:var(--bad)}.run .ri.warn i{color:var(--warn)}.run .ri i{font-style:normal}
+.sw{position:relative;overflow:hidden;margin-top:6px;border-top:1px solid var(--edge)}
+.sw-in{position:absolute;left:0;top:0;width:948px;height:280px;transform-origin:0 0;--sw-gh:#4ade9b;--sw-az:#f0a35e}
+.sw-line{position:absolute;border-radius:3px;background:var(--signal)}.sw-line.gh{background:var(--sw-gh)}.sw-line.az{background:var(--sw-az)}
+.sw-line.off,.sw-tag.off,.sw-stop.off{opacity:.32}.sw-line.dim,.sw-stop.dim{opacity:.3}
+.sw-dash{position:absolute;height:0;border-top:3px dashed var(--edge-hi)}.sw-note{position:absolute;font-size:10.5px;color:var(--faint)}
+.sw-tag{position:absolute;font:10.5px var(--font-m)}.sw-tag.gh{color:var(--sw-gh)}.sw-tag.az{color:var(--sw-az)}
+.sw-stop{position:absolute;width:20px;display:flex;flex-direction:column;align-items:center}
+.sw-stop i{display:block;width:14px;height:14px;border-radius:50%;background:var(--void);border:3px solid var(--c,var(--signal));transition:background .3s,box-shadow .3s}
+.sw-stop.big i{width:18px;height:18px;border-width:4px;--c:var(--signal)}
+.sw-stop.on i{background:var(--c,var(--signal));box-shadow:0 0 0 5px rgba(var(--signal-rgb),.2)}.sw-stop.bad i{background:var(--bad);border-color:var(--bad)}
+.sw-stop span{position:absolute;top:24px;width:96px;text-align:center;font-size:10.5px;line-height:1.25;color:var(--ink)}.sw-stop.big span{width:116px;font-size:12px;font-weight:600}
+.sw-stop span.up{top:auto;bottom:22px}.sw-stop.big span.up{bottom:28px}.sw-stop em{font-style:normal;color:var(--warn)}.sw-stop small{font-size:10.5px;font-weight:400;color:var(--dim)}
+.sw-train{position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 14px 5px rgba(74,222,155,.85);transition:left .85s ease-in-out,top .85s ease-in-out;z-index:3}
+.sw-train.az{box-shadow:0 0 14px 5px rgba(240,163,94,.85)}.sw-train.bad{box-shadow:0 0 14px 5px rgba(255,107,107,.9)}
+.sw-bubble{position:absolute;width:230px;padding:6px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--edge-hi);box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:2;transition:left .85s ease-in-out,top .85s ease-in-out}
+.sw-bubble b{display:block;font:10px var(--font-m);color:var(--signal)}.sw-bubble span{font-size:11.5px;line-height:1.35}
+.sw-bubble.ok{border-color:var(--ok)}.sw-bubble.ok b{color:var(--ok)}.sw-bubble.bad{border-color:var(--bad)}.sw-bubble.bad b{color:var(--bad)}.sw-bubble.warn{border-color:var(--warn)}.sw-bubble.warn b{color:var(--warn)}
+@media (prefers-reduced-motion:reduce){.sw-train,.sw-bubble,.sw-stop i{transition:none}}
+#ui-dlg.wide .wz-rows{grid-template-columns:repeat(3,minmax(0,1fr))}
 .modal{position:fixed;inset:0;background:rgba(5,5,10,.65);z-index:95;display:flex;align-items:center;justify-content:center}
 .ui-text{margin:0 0 10px;white-space:pre-line}
 .ui-field{margin:0 0 10px} .ui-field .field{height:32px;padding:0 10px} .ui-field small{display:block;color:var(--faint);font-size:11.5px;margin-top:3px}
@@ -956,8 +980,10 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
             <div id="epm-main">
             <div class="tglrow" style="margin:0 0 6px"><div><b id="intune-status-t">Intune not connected</b><small id="intune-status">Connect your Intune tenant to see which versions your EPM policies already allow, and to add new ones once adding rules is on in Settings &rsaquo; 09.</small></div>
               <div style="display:flex;gap:8px"><button class="btn sm" id="intune-refresh" hidden>Refresh</button><button class="btn sm" id="intune-signout" hidden>Sign out</button>
-                <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button><button class="btn sm" id="epm-setup">Set up&hellip;</button><button class="btn sm ghost" id="epm-guide">How EPM rules work</button></div></div>
+                <button class="btn sm primary" id="intune-signin">Connect Intune&hellip;</button><button class="btn sm" id="epm-screen-watch">Watch an app&hellip;</button><button class="btn sm" id="epm-fleet-setup">Set up&hellip;</button><button class="btn sm ghost" id="epm-guide">How EPM rules work</button></div></div>
             <div id="epm-cover"></div>
+            <div class="bsec" id="epm-runs-sec" hidden><div class="bsec-h"><span class="bsec-t">Runs</span><span class="bsec-rule"></span><span class="pmeta" id="epm-runs-meta"></span></div>
+              <div class="runs" id="epm-runs"></div></div>
             <div class="bsec" id="intune-pol-sec"><div class="bsec-h"><span class="bsec-t">EPM policies in Intune</span><span class="bsec-rule"></span></div>
               <div id="intune-policies"></div></div>
             </div>
@@ -1056,7 +1082,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
                 <div class="bsec-h"><span class="bsec-n">08</span><span class="bsec-t">Vendor release checks</span><span class="bsec-rule"></span></div>
                 <p class="bnote" style="margin:4px 0 6px">Watches each vendor for a new installer, then downloads it on a throwaway GitHub runner, checks who signed it and takes its SHA-256 for EPM rules. Nothing is downloaded to this PC; only the version, hash and signer come back, through your Cloudflare worker.</p>
                 <div class="srow2"><span class="k">Checks run on</span><select class="field" id="epm-runner"><option value="github">GitHub Actions, in a private repo</option><option value="azure" disabled>Azure Automation (not connected)</option></select></div>
-                <div class="tglrow"><div><b id="epm-status-t">Not set up</b><small id="epm-status">&nbsp;</small></div><button class="btn sm primary" id="epm-setup">Set up…</button></div>
+                <div class="tglrow"><div><b id="epm-status-t">Not set up</b><small id="epm-status">&nbsp;</small><small id="epm-cost" hidden></small></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn sm" id="epm-azure-pricing" hidden>Azure pricing</button><button class="btn sm danger" id="epm-azure-remove" hidden>Remove from Azure&hellip;</button><button class="btn sm primary" id="epm-setup">Set up…</button></div></div>
                 <div id="epm-code-box" class="tglrow" hidden><div><b>Enter this code on GitHub</b><small>The sign-in page has opened in your browser. The sign-in is used once to set up the repo and is not kept.</small></div><span class="epm-code" id="epm-code"></span></div>
                 <div id="epm-apps"></div>
                 <details id="epm-add" style="padding:8px 0">
@@ -1451,12 +1477,14 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
         + (act ? `<button class="btn sm" data-wz-act="${escapeHtml(act[0])}">${escapeHtml(act[1])}</button>` : '<span></span>') + '</div>').join('') + '</div>' : '')
       + (note ? `<p class="wz-note">${escapeHtml(note)}</p>` : '');
   }
-  function uiDialog({ title, sub = '', text = '', fields = [], ok = 'OK', danger = false, cancel = 'Cancel', validate, extra, walk, back }) {
+  function uiDialog({ title, sub = '', text = '', fields = [], ok = 'OK', danger = false, cancel = 'Cancel', validate, extra, walk, back, wide, after }) {
     if (uiDlgResolve) uiClose(null);
+    uiDlg().classList.toggle('wide', !!wide);
     uiDlgFields = fields;
     $('#ui-dlg-title').textContent = title;
     $('#ui-dlg-sub').textContent = sub;
     $('#ui-dlg-body').innerHTML = (walk ? uiWalkHtml(walk) : '') + (text ? `<p class="bnote ui-text">${escapeHtml(text)}</p>` : '') + fields.map(uiFieldHtml).join('');
+    if (after) { const box = document.createElement('div'); $('#ui-dlg-body').appendChild(box); after(box); }
     $('#ui-dlg-log').hidden = true;
     $('#ui-dlg-err').hidden = true;
     uiDlg()._extra = extra ? extra[1] : null;
@@ -1484,6 +1512,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   // Resolves when the user closes the finished log.
   function uiProgress(title, sub = '') {
     if (uiDlgResolve) uiClose(null);
+    uiDlg().classList.remove('wide');
     uiDlgFields = [];
     $('#ui-dlg-title').textContent = title;
     $('#ui-dlg-sub').textContent = sub || 'working…';
@@ -1782,11 +1811,14 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   const epmStateNow = () => new Promise(res => { window._epmStateWait = res; send('epm-state', {}); });
   async function runEpmSetupItem(id) {
     if (id === 'checks') {
+      const runner = await chooseCheckMachine();
+      if (!runner) return 'No check machine chosen yet.';
+      if (runner === 'azure') return (await openAzureSetup()) ? '' : 'Azure is not set up yet.';
       if (!window._workerUrl) {
         await openConnectWizard();
-        if (!window._workerUrl) return 'Vendor checks need the Cloudflare worker, which is not connected yet.';
+        if (!window._workerUrl) return 'GitHub results come back through the Cloudflare worker, which is not connected yet.';
         const w = await epmStateNow();
-        if (!w.ok && w.noWorker) return 'The worker did not answer with this PC\u2019s token.';
+        if (!w.ok && w.noWorker) return 'The worker did not answer with this PC’s token.';
       }
       goTo('worker');
       await openEpmWizard();
@@ -1815,10 +1847,11 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
         { id: 'intune', title: 'Connect Intune', done: intune.signedIn && intune.loaded, todo: 'See which versions your EPM policies already allow.', ok: `Connected as ${intune.account}.` },
         { id: 'write', title: 'Let AppUpdater add rules', done: !!(window._intuneWrite && intune.canWrite), todo: 'Add to Intune writes each new version and reads it back.', ok: 'On, with permission to change policies.' },
         { id: 'checks', title: 'Watch for new versions (optional)', done: !!(epmState && epmState.cfg),
-          todo: window._workerUrl ? 'A free GitHub machine hashes each new release for you.' : 'A free GitHub machine hashes each new release for you. Its results come back through a free Cloudflare worker, which this step sets up first.',
+          todo: 'A hosted machine, on GitHub or Azure, hashes each new release for you. Both fit in their free allowances.',
           ok: `Running in ${epmState && epmState.cfg ? epmState.cfg.repo : ''}.` }];
       const next = items.find(x => !x.done), doneCount = items.filter(x => x.done).length;
-      const v = await uiDialog({ title: 'Keep EPM rules current', sub: next ? `${doneCount} of ${items.length} set up` : 'all set up',
+      const v = await uiDialog({ title: 'Keep EPM rules current', sub: next ? `${doneCount} of ${items.length} set up` : 'all set up', wide: true,
+        after: box => mountSubway(box, next ? next.id : 'overview'),
         ok: !next ? 'Done' : started ? (failed ? 'Try again' : 'Continue') : 'Start', cancel: !next ? '' : started ? 'Stop here' : 'Skip setup',
         walk: { lead: 'Each new version of an installer needs its own rule. Start sets these up one at a time and tests each one before moving on. Building EPM rules needs none of them.',
           rows: items.map((x, i) => [x.done ? '✓' : x.id === failed ? '!' : String(i + 1), x.title, x.done ? x.ok : x.id === failed ? reason : x.todo, x.done ? 'ok' : x.id === failed ? 'warn' : '']),
@@ -2132,6 +2165,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   if (bridge) {
     bridge.addEventListener('message', (e) => {
       const { type, payload } = e.data;
+      if (window._waiters && window._waiters[type]) { const w = window._waiters[type]; delete window._waiters[type]; setTimeout(() => w(payload)); }
       switch (type) {
         case 'browse-installer-result':
           if (payload.ok) {
@@ -2412,9 +2446,10 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
             if (wizStep === 3) wizRun();
             if (payload.saved) ['#epm-name', '#epm-source', '#epm-publisher', '#epm-winget', '#epm-asset', '#epm-vregex', '#epm-download'].forEach(id => { $(id).value = ''; });
           } else {
+            // Nothing set up yet reads as "not set up"; Azure needs no worker, so the worker is not asked for here.
+            if (payload.noWorker) renderEpm({});
+            else { $('#epm-status-t').textContent = 'Could not load'; $('#epm-status').textContent = payload.message; }
             $('#epm-add').hidden = true;
-            $('#epm-status-t').textContent = payload.noWorker ? 'Needs the Cloudflare worker' : 'Could not load';
-            $('#epm-status').textContent = payload.noWorker ? 'Connect your worker in section 01 first; check results come back through it.' : payload.message;
           }
           break;
         case 'epm-code':
@@ -2537,6 +2572,9 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
           uiProgressDone(payload.ok, payload.ok ? `${payload.name} is in Intune and was checked by reading the policy back.` : (payload.message || 'Intune did not accept the change.'));
           if (payload.ok) send('intune-read', {});
           break;
+        case 'azure-log':
+          uiProgressLine(payload.tone, payload.text);
+          break;
         case 'cf-lookup-result':
           if (window._cfLookup) { const r = window._cfLookup; window._cfLookup = null; r(payload); }
           break;
@@ -2622,11 +2660,15 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     if (st) epmState = st;
     const s = epmState || {}, cfg = s.cfg, last = s.last && s.last.at;
     const stale = last && Date.now() - new Date(last).getTime() > 36 * 3600e3;
-    $('#epm-status-t').textContent = !cfg ? 'Not set up' : stale ? 'Checks have stopped' : last ? 'Checking every 6 hours' : 'Waiting for the first run';
-    $('#epm-status').textContent = !cfg ? 'Sign in once and AppUpdater creates a private repo, appupdater-checks, in your GitHub account to run the checks.'
-      : stale ? `Last run ${ago(last)}. GitHub pauses Actions when the monthly spending limit is reached, and resumes on the 1st.`
+    const onAzure = !!(cfg && cfg.runner === 'azure');
+    $('#epm-status-t').textContent = !cfg ? 'Not set up' : stale ? 'Checks have stopped' : (last ? 'Checking every 6 hours' : 'Waiting for the first run') + (onAzure ? ' on Azure' : ' on GitHub');
+    $('#epm-status').textContent = !cfg ? 'A hosted machine on GitHub or Azure checks each vendor every 6 hours. Set up shows the costs of each before anything is created.'
+      : stale ? `Last run ${ago(last)}. ` + (onAzure ? 'Check the Automation account’s Jobs in the Azure portal.' : 'GitHub pauses Actions when the monthly spending limit is reached, and resumes on the 1st.')
       : cfg.repo + (last ? ' · last run ' + ago(last) : '');
-    $('#epm-setup').textContent = cfg ? 'Set up again' : 'Set up…';
+    $('#epm-cost').hidden = !onAzure;
+    $('#epm-cost').textContent = 'Expected Azure cost: $0 to $0.05 a month (Automation free minutes plus a few KB of storage). Review it on your Azure bill; prices can change.';
+    $('#epm-azure-remove').hidden = $('#epm-azure-pricing').hidden = !onAzure;
+    $('#epm-setup').textContent = cfg ? 'Change…' : 'Set up…';
     $('#epm-add').hidden = !cfg;
     const apps = s.apps || [], res = s.results || {};
     $('#epm-apps').innerHTML = apps.map(a => {
@@ -3421,7 +3463,14 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     try { await navigator.clipboard.writeText($('#epm-wiz-code').textContent); toast('Copied', 'Sign-in code on clipboard'); } catch (_) { }
   });
   $('#epm-wiz-reopen').addEventListener('click', () => send('epm-open-device', {}));
-  $('#epm-setup').addEventListener('click', openEpmWizard);
+  // Settings › 08: the same choice as the setup screen, then that machine's own walkthrough.
+  $('#epm-setup').addEventListener('click', async () => {
+    const runner = await chooseCheckMachine();
+    if (runner === 'azure') { if (await openAzureSetup()) send('epm-state', {}); }
+    else if (runner === 'github') openEpmWizard();
+  });
+  $('#epm-azure-remove').addEventListener('click', removeAzureAgent);
+  $('#epm-azure-pricing').addEventListener('click', () => send('open-azure-pricing', {}));
   $('#epm-apps').addEventListener('click', function (ev) {
     const b = ev.target.closest('[data-epm-remove]');
     if (!b || !epmState) return;
@@ -3791,6 +3840,141 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     send('intune-apply', { source: item.source, appId: item.appId || '', appName: item.name, version: item.version, policyId: pol ? pol.id : '', policyName,
       target: target ? target.id : '', ruleType: v.ruleType, removeNames: v.remove || [] });
   }
+
+  // Pick where vendor checks run. Both are hosted machines made for each run; the costs are shown before anything is created.
+  const AZURE_REGIONS = [['uksouth', 'UK South'], ['westeurope', 'West Europe'], ['northeurope', 'North Europe'], ['eastus', 'East US'], ['eastus2', 'East US 2'], ['westus2', 'West US 2'], ['australiaeast', 'Australia East'], ['southeastasia', 'Southeast Asia'], ['canadacentral', 'Canada Central']];
+  const waitFor = type => new Promise(res => { (window._waiters = window._waiters || {})[type] = res; });
+  async function chooseCheckMachine() {
+    const v = await uiDialog({ title: 'Where should checks run?', ok: 'Next', wide: true,
+      walk: { lead: 'A hosted machine is created for each run, downloads the new installer, checks it and takes its SHA-256, then is deleted. Nothing downloads on your PC.' },
+      fields: [{ id: 'runner', type: 'choice', options: [
+        { value: 'github', label: 'GitHub · free', desc: 'A private repo in your GitHub account. Private repos get 2,000 free Actions minutes a month; this uses about 15 to 60.\nNew versions wait for you to click Add to Intune. Results come back through your Cloudflare worker.' },
+        { value: 'azure', label: 'Azure · expected $0 to $0.05 a month', desc: 'An Automation account and a small storage account in your Azure subscription. Automation includes 500 free job minutes a month; this uses about 120 to 250. Storage for a few KB costs pennies a year.\nIt adds each verified version to Intune by itself. Needs an Azure subscription, which asks for a card.' }] }],
+      extra: ['Azure pricing', () => send('open-azure-pricing', {})] });
+    return v ? v.runner : '';
+  }
+  async function openAzureSetup() {
+    const intro = await uiDialog({ title: 'Run checks on Azure', sub: 'Step 1 of 5', ok: 'Sign in to Azure…', wide: true, extra: ['Azure pricing', () => send('open-azure-pricing', {})], walk: { step: [1, 5],
+      lead: 'AppUpdater creates one resource group, appupdater-epm, in a subscription you choose. Removing that group removes everything.',
+      rows: [['1', 'Automation account with its own identity', 'Runs the check every 6 hours. 500 free job minutes a month, then about $0.002 a minute; this uses roughly 120 to 250.'],
+             ['2', 'Storage account, one private container', 'Holds the watch list and results. A few KB: well under $0.05 a month.'],
+             ['3', 'Permission for that identity', 'Change Intune device configuration only. Free.'],
+             ['$', 'Expected total: $0 to $0.05 a month', 'Prices vary by region and can change, so review them yourself on Azure’s pricing page and keep an eye on your Azure bill.', 'warn']],
+      note: 'You need the Owner role on the subscription now, and a Global or Privileged Role Administrator for the Intune permission in step 4.' } });
+    if (!intro) return false;
+    // 2: sign in
+    let closed = uiProgress('Sign in to Azure', 'Step 2 of 5');
+    send('azure-signin', {});
+    const code = await waitFor('azure-code');
+    if (!code.ok) { uiProgressDone(false, code.message || 'Microsoft did not return a sign-in code.'); await closed; return false; }
+    $('#ui-dlg-body').innerHTML = `<p class="bnote">Microsoft’s sign-in page has opened. Enter this code with an account that is Owner of the subscription:</p><div class="epm-code">${escapeHtml(code.code)}</div>`;
+    const signed = await waitFor('azure-signed-in');
+    if (!signed.ok) { uiProgressDone(false, signed.message || 'Sign-in did not finish.'); await closed; return false; }
+    uiClose(null);
+    // 3: subscription and region
+    const subs = [].concat(signed.subscriptions || []);
+    const where = await uiDialog({ title: 'Subscription and region', sub: 'Step 3 of 5', ok: 'Create in Azure', wide: true, walk: { step: [3, 5], lead: `Signed in as ${signed.account}. Choose where the resource group goes.` },
+      fields: [{ id: 'sub', type: 'choice', label: 'Subscription', options: subs.map(x => ({ value: x.id, label: x.name, desc: x.id })) },
+               { id: 'loc', type: 'choice', label: 'Region (pick one near you; prices differ slightly)', options: AZURE_REGIONS.map(([value, label]) => ({ value, label })) }] });
+    if (!where) return false;
+    // 4: create, then the Intune permission
+    closed = uiProgress('Creating in Azure', 'Step 4 of 5 · a few minutes');
+    send('azure-create', { subscriptionId: where.sub, location: where.loc });
+    const made = await waitFor('azure-created');
+    uiProgressDone(made.ok, made.ok ? `Created. Storage ${made.storageAccount}; the container key is in Windows Credential Manager.` : (made.message || 'Azure did not finish.'));
+    await closed;
+    if (!made.ok) return false;
+    const admin = await uiDialog({ title: 'Allow it to change Intune policies', sub: 'Step 4 of 5', ok: 'Sign in as admin…', wide: true, walk: { step: [4, 5],
+      lead: 'The Automation account’s identity needs one Microsoft Graph permission: change Intune device configuration. An admin approves it once.',
+      rows: [['i', 'Who can approve', 'A Global Administrator or Privileged Role Administrator.'], ['i', 'What it can do', 'Read and change device configuration policies, which include EPM. Nothing else in your tenant.']] } });
+    if (!admin) return false;
+    closed = uiProgress('Approving the permission', 'Step 4 of 5');
+    send('azure-grant', {});
+    const gcode = await waitFor('azure-grant-code');
+    if (!gcode.ok) { uiProgressDone(false, gcode.message || 'Microsoft did not return a sign-in code.'); await closed; return false; }
+    uiProgressLine('step', `Enter ${gcode.code} on Microsoft’s page with an admin account`);
+    const granted = await waitFor('azure-granted');
+    uiProgressDone(granted.ok, granted.ok ? 'Permission approved.' : (granted.message || 'The permission was not approved.'));
+    await closed;
+    if (!granted.ok) return false;
+    // 5: test run
+    closed = uiProgress('Testing the Azure machine', 'Step 5 of 5 · 2 to 5 minutes');
+    send('azure-test', {});
+    const tested = await waitFor('azure-tested');
+    uiProgressDone(tested.ok, tested.ok ? 'Test passed. Checks now run every 6 hours on Azure.' : (tested.message || 'The test run did not finish.'));
+    await closed;
+    if (tested.ok && tested.state) { renderEpm(tested.state); renderEpmScreen(); }
+    return !!tested.ok;
+  }
+  async function removeAzureAgent() {
+    const yes = await uiConfirm('Remove from Azure', 'Deletes the appupdater-epm resource group: the Automation account, its schedule and the storage with the results. Vendor checks stop. Your Intune policies are not touched.', 'Delete from Azure', true);
+    if (!yes) return;
+    send('azure-remove', {});
+    let r = await waitFor('azure-removed');
+    if (!r.ok && r.needSignIn) {
+      const closed = uiProgress('Sign in to Azure', 'to remove the resource group');
+      send('azure-signin', {});
+      const code = await waitFor('azure-code');
+      if (code.ok) $('#ui-dlg-body').innerHTML = `<p class="bnote">Enter this code on Microsoft’s page:</p><div class="epm-code">${escapeHtml(code.code)}</div>`;
+      const signed = await waitFor('azure-signed-in');
+      uiProgressDone(signed.ok, signed.ok ? 'Signed in. Removing…' : (signed.message || 'Sign-in did not finish.'));
+      if (signed.ok) { send('azure-remove', {}); r = await waitFor('azure-removed'); uiProgressLine(r.ok ? 'ok' : 'bad', r.ok ? 'Resource group deletion started; Azure finishes it in a few minutes.' : (r.message || 'Azure refused the delete.')); }
+      await closed;
+    } else toast(r.ok ? 'Removed from Azure' : 'Not removed', r.ok ? 'Azure is deleting the resource group.' : (r.message || 'Azure refused the delete.'), !r.ok);
+    send('epm-state', {});
+  }
+
+  // The setup screen's map: a train runs example versions through the real path, on the GitHub or Azure line.
+  // Lines and stops are fixed markup; only positions, colours and the bubble text change as it runs.
+  function mountSubway(host, focus) {
+    const runner = epmState && epmState.cfg && epmState.cfg.runner === 'azure' ? 'azure' : 'github', az = runner === 'azure';
+    const lit = { overview: ['vendor', 'machine', 'au', 'intune', 'dev'], intune: ['au', 'intune'], write: ['intune'], checks: ['vendor', 'machine', 'au', 'intune'] }[focus] || ['vendor', 'machine', 'au', 'intune', 'dev'];
+    const dim = g => lit.includes(g) ? '' : ' dim';
+    const checks = [['New version?', 'no → skip'], ['Download', ''], ['Approved signer?', 'no → blocked'], ['SHA-256', ''], ['Same as winget?', 'differs → blocked'], ['Report', '']];
+    const stop = (line, i, y) => `<div class="sw-stop${dim('machine')}${(line === 'az') !== az ? ' off' : ''}" style="left:${200 + i * 72}px;top:${y}px" data-stop="${line}${i}"><i style="--c:${line === 'az' ? 'var(--sw-az)' : 'var(--sw-gh)'}"></i><span class="${line === 'az' ? 'up' : ''}">${checks[i][0]}<br><em>${checks[i][1]}</em></span></div>`;
+    const main = (g, x, label, sub, up) => `<div class="sw-stop big${dim(g)}" style="left:${x}px;top:125px" data-stop="${g}"><i></i><span class="${up ? 'up' : ''}">${label}<br><small>${sub}</small></span></div>`;
+    host.innerHTML = `<div class="sw" style="height:280px"><div class="sw-in">
+      <div class="sw-line${dim('vendor')}" style="left:60px;top:134px;width:100px;height:6px"></div>
+      <div class="sw-dash" style="left:160px;top:135px;width:440px"></div><div class="sw-note" style="left:245px;top:143px">without a check machine: you pick the installer, hashed on your PC</div>
+      <div class="sw-line" style="left:600px;top:134px;width:300px;height:6px"></div>
+      <div class="sw-line gh${dim('machine')}${az ? ' off' : ''}" style="left:157px;top:59px;width:6px;height:81px"></div><div class="sw-line gh${dim('machine')}${az ? ' off' : ''}" style="left:157px;top:59px;width:443px;height:6px"></div><div class="sw-line gh${dim('machine')}${az ? ' off' : ''}" style="left:597px;top:59px;width:6px;height:81px"></div>
+      <div class="sw-tag gh${az ? ' off' : ''}" style="left:175px;top:22px">GitHub · optional · free · you click Add</div>
+      <div class="sw-line az${dim('machine')}${az ? '' : ' off'}" style="left:157px;top:134px;width:6px;height:81px"></div><div class="sw-line az${dim('machine')}${az ? '' : ' off'}" style="left:157px;top:209px;width:553px;height:6px"></div><div class="sw-line az${dim('machine')}${az ? '' : ' off'}" style="left:707px;top:134px;width:6px;height:81px"></div>
+      <div class="sw-tag az${az ? '' : ' off'}" style="left:175px;top:258px">Azure · optional · about $0–0.05 a month · adds to Intune itself</div>
+      ${checks.map((_, i) => stop('gh', i, 52)).join('')}${checks.map((_, i) => stop('az', i, 202)).join('')}
+      ${main('vendor', 48, 'Vendor', 'new release', true)}${main('au', 588, 'AppUpdater', 'App fleet › EPM, Runs')}${main('intune', 698, 'Intune', az ? 'added by Azure, read back' : 'you click Add, read back')}${main('dev', 888, 'Devices', 'elevated if hash matches')}
+      <div class="sw-bubble"><b></b><span></span></div><div class="sw-train"></div></div></div>`;
+    const inner = host.querySelector('.sw-in'), w = host.clientWidth;
+    if (w && w < 948) { inner.style.transform = `scale(${w / 948})`; host.firstElementChild.style.height = (280 * w / 948) + 'px'; }
+    const y = az ? 212 : 62, cx = i => 210 + i * 72, line = az ? 'az' : 'gh';
+    const into = [{ x: 60, y: 137, stop: 'vendor' }, { x: 160, y: 137 }, { x: 160, y }];
+    const scenes = [
+      ['7-Zip 26.07', [['Vendor', '7-Zip 26.07 released'], ['Check machine', `Fresh ${az ? 'Azure' : 'GitHub'} machine for this run`], ['Check machine', 'Starting the checks'],
+        ['New version?', 'Yes: 26.07 (was 26.06)'], ['Download', '7z2607-x64.exe · 1.6 MB'], ['Approved signer?', 'Signed by Igor Pavlov ✓'], ['SHA-256', '9B697F65ECC2…DACF40F42EC'],
+        ['Same as winget?', 'winget lists the same hash ✓'], ['Report', 'File deleted, machine gone, result sent']].concat(az
+          ? [['Intune', 'Added to Dev Tools EPM, read back ✓', 'ok'], ['Devices', 'A standard user runs it: elevated', 'ok']]
+          : [['AppUpdater', 'App fleet › EPM: 26.07 ready to add'], ['Intune', 'You click Add: in Dev Tools EPM, read back ✓', 'ok'], ['Devices', 'A standard user runs it: elevated', 'ok']])],
+      ['PowerToys', [['Vendor', 'PowerToys page checked'], ['Check machine', 'Fresh machine for this run'], ['Check machine', 'Starting the checks'], ['New version?', 'Still 0.102.3101. Download skipped.', 'warn']]],
+      ['Notepad++ 8.7', [['Vendor', 'Notepad++ 8.7 released'], ['Check machine', 'Fresh machine for this run'], ['Check machine', 'Starting the checks'], ['New version?', 'Yes: 8.7'],
+        ['Download', 'npp.8.7.Installer.x64.exe · 4.9 MB'], ['Approved signer?', 'Signed by "Unknown Ltd". Blocked; nothing goes to Intune.', 'bad']]]];
+    const path = n => {
+      const pts = into.concat(Array.from({ length: 6 }, (_, i) => ({ x: cx(i), y, stop: line + i })));
+      return pts.concat(az ? [{ x: 710, y: 137, stop: 'intune' }, { x: 900, y: 137, stop: 'dev' }] : [{ x: 600, y: 137, stop: 'au' }, { x: 710, y: 137, stop: 'intune' }, { x: 900, y: 137, stop: 'dev' }]).slice(0, n);
+    };
+    let sc = 0, i = 0;
+    const train = inner.querySelector('.sw-train'), bubble = inner.querySelector('.sw-bubble');
+    const step = () => {
+      if (!host.isConnected) return;
+      const [, msgs] = scenes[sc], pts = path(msgs.length), p = pts[i], [head, text, tone] = msgs[i];
+      inner.querySelectorAll('.sw-stop').forEach(el => el.classList.remove('on', 'bad'));
+      pts.slice(0, i + 1).forEach(q => { const el = q.stop && inner.querySelector(`[data-stop="${q.stop}"]`); if (el) el.classList.add(tone === 'bad' && q === p ? 'bad' : 'on'); });
+      train.style.left = (p.x - 7) + 'px'; train.style.top = (p.y - 7) + 'px'; train.className = 'sw-train' + (tone === 'bad' ? ' bad' : az ? ' az' : '');
+      bubble.style.left = Math.min(Math.max(p.x - 115, 0), 948 - 230) + 'px'; bubble.style.top = (p.y < 100 ? p.y + 62 : p.y > 180 ? p.y - 92 : p.y + 56) + 'px';
+      bubble.className = 'sw-bubble ' + (tone || ''); bubble.firstElementChild.textContent = head; bubble.lastElementChild.textContent = text;
+      if (++i >= msgs.length) { i = 0; sc = (sc + 1) % scenes.length; setTimeout(step, 2600); } else setTimeout(step, 1300);
+    };
+    step();
+  }
   // App fleet's EPM view: what the vendor checks found next to the elevation rules already in Intune. Read-only.
   let intune = { signedIn: false, account: '', policies: [], loaded: false };
   const lettersOf = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -3811,6 +3995,13 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
     const empty = !intune.signedIn && !s.cfg && !apps.length && !lastFleet.some(a => a.type === 'epm');
     $('#epm-empty').hidden = !empty; $('#epm-main').hidden = empty;
     $('#intune-pol-sec').hidden = !intune.signedIn;
+    // Each run says what it checked, what it skipped or blocked and why, and what happened in Intune.
+    const runs = [].concat(s.runs || []).slice(0, 5);
+    $('#epm-runs-sec').hidden = !runs.length;
+    $('#epm-runs-meta').textContent = s.cfg && s.cfg.runner === 'azure' ? 'on Azure \u00b7 last 30 kept' : '';
+    const mark = { ok: ['ok', '\u2713'], unchanged: ['', '\u2013'], blocked: ['bad', '\u2715'], error: ['warn', '!'], 'source-error': ['warn', '!'] };
+    $('#epm-runs').innerHTML = runs.map(r => `<div class="run"><b>${escapeHtml(new Date(r.at).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }))}</b>`
+      + ([].concat(r.items || []).map(it => { const m = mark[it.status] || ['', '\u00b7']; return `<div class="ri ${m[0]}"><i>${m[1]}</i><span>${escapeHtml(it.name)}: ${escapeHtml(it.note || it.status)}</span></div>`; }).join('') || '<div class="ri"><i>\u2013</i><span>No apps watched yet.</span></div>') + '</div>').join('');
     $('#epm-screen-watch').hidden = !s.cfg;
     $('#intune-signin').hidden = intune.signedIn; $('#intune-signout').hidden = $('#intune-refresh').hidden = !intune.signedIn;
     $('#intune-set-connect').hidden = intune.signedIn; $('#intune-set-out').hidden = $('#intune-set-open').hidden = !intune.signedIn;
@@ -3870,7 +4061,7 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
   }
   $('#intune-signin').addEventListener('click', openIntuneWizard);
   $('#intune-set-connect').addEventListener('click', openIntuneWizard);
-  $('#epm-setup').addEventListener('click', () => epmSetupHub());
+  $('#epm-fleet-setup').addEventListener('click', () => epmSetupHub());
   $('#epm-empty-setup').addEventListener('click', () => epmSetupHub());
   $('#epm-empty-guide').addEventListener('click', () => $('#epm-guide').click());
   $('#epm-guide').addEventListener('click', () => { goTo('build'); if (form.SimplePkgTarget !== 'epm') pickSeg('segTarget', 'epm'); epmWalkthrough(); });
